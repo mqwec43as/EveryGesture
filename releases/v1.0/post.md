@@ -9,9 +9,11 @@
 &nbsp;
 
 ### Demo 
+https://files.catbox.moe/siid8w.mp4
 What's in the video.
-1. Manipulate volume at different speed.
-2. Scroll down until lifted up.
+1. Open Reddit by drawing R.
+2. Manipulate volume at different speed.
+3. Scroll down/up until lifted up.
 
 Video is also available in the comment as well. Can't embed in the post since r/tasker doesn't support that.
 

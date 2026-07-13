@@ -1,6 +1,6 @@
 
 <div align="center">
-<h4><b>This project were developed with the assistance of generative AI tools and owner doesn't have android dev experience.</b></h4>
+<h4><b>This project was developed with the assistance of generative AI tools and owner doesn't have android dev experience.</b></h4>
 
 
 &nbsp;
