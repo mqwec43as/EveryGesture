@@ -29,31 +29,31 @@ For bug/crash, you could report it here. https://github.com/mqwec43as/EveryGestu
 
 &nbsp;
 
-## ! Memory Leak !
+### ! Memory Leak !
 I notice sometimes I have a higher ram usage up to 100mb (from 350mb idle to 450mb) even after the activites are not foreground. Usually I always kill Tasker after done configuring the handle.
 
 It's probably because the activities are not finished properly since I only monitor the decor view. Or other stuff that I have no idea about (I'm not a dev.).
 
-## How to create a handle
+### How to create a handle
 1. Launch Main Activity task > Add button (FAB) > Add handle.
 
-## How to add a gesture and manage gesture templates
+### How to add a gesture and manage gesture templates
 1. (Pen icon) Gesture.
 2. FAB > Gesture.
 
-## How to add actions.
+### How to add actions.
 We can add action by.
    1. FAB button.
    2. Long pressing the card for the handle.
    3. Expand the handle card by clicking and click the action for registered gesture.
 
-## How to delete a handle?
+### How to delete a handle?
 Delete the handle folder inside `chosen folder/handles` or add "." as a prefix and it will not get listed.
 
-## How to delete an action?
+### How to delete an action?
 1. Click handle card > click gesture card outside the actions > trash bin icon.
 
-## Changing theme
+### Changing theme
 Go to When EveryGesture start profile and add this java code `everyGesture.useDarkTheme = false`.
 
 
