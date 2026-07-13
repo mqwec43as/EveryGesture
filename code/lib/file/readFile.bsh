@@ -1,0 +1,39 @@
+/*─────────────────────────────────────────────────────────────── 
+This code was generated using AI.
+───────────────────────────────────────────────────────────────*/
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+/* ---------------- Read file ---------------- */
+readFile(File file) {
+	if (!file.exists()) return null;
+
+	FileInputStream fis = null;
+	BufferedInputStream bis = null;
+	ByteArrayOutputStream baos = null;
+	try {
+		fis = new FileInputStream(file);
+		bis = new BufferedInputStream(fis);
+		baos = new java.io.ByteArrayOutputStream();
+		byte[] buf = new byte[8192];
+		while ((r = bis.read(buf)) != -1) {
+			baos.write(buf, 0, r);
+		}
+		String res = new String(baos.toByteArray(), "UTF-8");
+		return res;
+	} finally {
+		if (bis != null) bis.close();
+		if (fis != null) fis.close();
+		if (baos != null) baos.close();
+	}
+}
+
+readFile(String path) {
+	File file = new File(path);
+	return readFile(file);
+}

@@ -1,0 +1,66 @@
+importCommands("lib.misc");
+
+import bsh.This;
+import bsh.NameSpace;
+import android.view.accessibility.AccessibilityNodeInfo;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
+screenInfo() {
+    This TOP = this;
+    This every = tasker.getJavaVariable("everyGesture");
+    getRoot() {
+        return context.getAccessibilityService().getRootInActiveWindow();
+    }
+
+    Map recent = getUsageEvents();
+    String handle = gesture{"handle"};
+    boolean type = gesture{"longPress"};
+    String name = gesture{"name"};
+    String command = handle + "=:=" + name +  "=:=" + type;
+    AccessibilityNodeInfo root = getRoot();
+    String packageName = root.getPackageName();
+    String className = recent{"className"};
+    String appName = every.packageManager.getLabel(packageName);
+    
+    set() {
+        NameSpace callerSpace = this.caller.namespace;
+        String[] varNames = TOP.namespace.getVariableNames();
+        for (String varName: varNames) {
+            if (varName.equals("TOP")) continue;
+            callerSpace.setVariable(varName, TOP.namespace.getVariable(varName), false);
+        }
+    }
+
+    // * FIRING EVENTS
+
+    // * Check if the package name matches
+    isPackageMatch(String targetPackage) {
+        Pattern pattern = Pattern.compile(targetPackage);
+        Matcher matcher = pattern.matcher(packageName);
+        return matcher.matches(); 
+    }
+
+    runEvents(This event) {
+        Runnable runnable = new Runnable() {
+            run() {
+                try {
+                    boolean isTriggered = true;
+                    // * Check only when packageName is specified
+                    if (TOP.packageName != void) isTriggered = isPackageMatch(TOP.packageName);
+
+                    if (isTriggered) event.onTrigger(TOP);
+                } catch (e) {
+                    log("Error: " + e.getMessage());
+                }
+            }
+        };
+        every.executor.execute(runnable);
+    }
+
+    List events = new ArrayList(every.screenInfoEvents.values());
+    if (events.isEmpty()) return;
+    for (This event: events) {
+        runEvents(event);
+    }
+}

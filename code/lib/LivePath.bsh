@@ -1,0 +1,345 @@
+import android.view.WindowManager;
+import android.view.Gravity;
+import android.graphics.PathEffect;
+import android.graphics.CornerPathEffect;
+import android.graphics.DashPathEffect;
+import android.graphics.ComposePathEffect;
+import android.content.Context;
+import android.view.View;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Path;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
+import java.util.concurrent.Callable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import android.view.MotionEvent;
+import android.gesture.Gesture;
+import android.gesture.GesturePoint;
+import android.gesture.GestureStroke;
+import android.os.Handler;
+import android.os.Looper;
+import bsh.This;
+
+LivePath(This config) {
+	This TOP = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	This engine = config.getEngine();
+	This livePathListener = object();
+
+	boolean hasDown;
+	boolean hasHold;
+	boolean hasRelease;
+	boolean hasLongPress;
+	boolean hasUp;
+
+	boolean quickComplete = false;
+	Gesture GESTURE = new Gesture();
+	List GESTURE_FALLBACK = new ArrayList();
+	Map gestureStrokesMap = new HashMap();
+	Map gestureLongPressMap = new HashMap();
+	Map pointerToPathMap = new HashMap();
+	int pathCounter = 0;
+	Map STAY_CENTER_MAP = new HashMap();
+	Map STAY_TIMER_MAP = new HashMap();
+	boolean RECORDING = false;
+
+	int overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+	Context CONTEXT = context;
+	Map paths = new HashMap();
+	int color = config.livePath.color;
+	float width = config.livePath.width;
+	float cornerRadius = config.livePath.cornerRadius;
+	List dashInterval = config.livePath.dashInterval;
+	List effect = config.livePath.effect;
+
+	if (config.handle.useAccessibility) {
+		overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+		CONTEXT = tasker.getAccessibilityService();
+	}
+
+	WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+		WindowManager.LayoutParams.MATCH_PARENT,
+		WindowManager.LayoutParams.MATCH_PARENT,
+		overlayType,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+		WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+		WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+		PixelFormat.TRANSLUCENT
+	);
+	params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+
+	Paint paint = new Paint();
+	paint.setColor(color);
+	paint.setStyle(Paint.Style.STROKE);
+	paint.setStrokeWidth(width);
+	paint.setAntiAlias(true);
+	paint.setStrokeJoin(Paint.Join.ROUND);
+	paint.setStrokeCap(Paint.Cap.ROUND);
+	CornerPathEffect cornerEffect = new CornerPathEffect(cornerRadius);
+	PathEffect pathEffect = cornerEffect;
+
+	if (dashInterval != null && dashInterval.size() > 0) {
+		float[] dash = new float[dashInterval.size()];
+
+		for (int i = 0; i < dashInterval.size(); i++) {
+			dash[i] = dashInterval.get(i) != null ? (float) dashInterval.get(i) : 0.0f;
+		}
+
+		try {
+			DashPathEffect dashEffect = new DashPathEffect(dash, 0);
+			if (effect != null && effect.size() > 0 && "DashCorner".equals(effect.get(0))) {
+				pathEffect = new ComposePathEffect(dashEffect, cornerEffect);
+			} else {
+				pathEffect = new ComposePathEffect(cornerEffect, dashEffect);
+			}
+		} catch (Exception ignored) {}
+	}
+	paint.setPathEffect(pathEffect);
+
+	Drawable drawable = tasker.implementClass(Drawable.class, new ClassImplementation() {
+		run(Callable superCaller, String methodName, Object[] args) {
+			if (methodName.equals("draw")) {
+				Canvas canvas = (Canvas) args[0];
+				Object[] pathsArray = paths.values().toArray();
+				for (int i = 0; i < pathsArray.length; i++) {
+					canvas.drawPath((Path) pathsArray[i], paint);
+				}
+				return null;
+			} else if (methodName.equals("getOpacity")) {
+				return PixelFormat.TRANSLUCENT;
+			} else if (methodName.equals("setAlpha") || methodName.equals("setColorFilter")) {
+				return null;
+			}
+			return superCaller.call();
+		}
+	});
+
+	View view = new View(CONTEXT);
+	view.setBackgroundDrawable(drawable);
+	view.setVisibility(View.GONE);
+
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (livePathListener == null) return false;
+		if (classes == null) classes = new Class[] {};
+		return livePathListener.namespace.getMethod(methodName, classes) != null;
+	}
+
+	checkListenerMethods() {
+		hasDown = hasMethod("onDown", new Class[] { This.class, Gesture.class });
+		hasHold = hasMethod("onHold", new Class[] { This.class, Gesture.class });
+		hasRelease = hasMethod("onRelease", new Class[] { This.class, Gesture.class, boolean.class });
+		hasLongPress = hasMethod("onLongPress", new Class[] { This.class, Gesture.class, boolean.class });
+		hasUp = hasMethod("onUp", new Class[] { This.class, Gesture.class });
+	}
+
+	addFallbackPoint(float x, float y, int id) {
+		List point = engine.createPoint(x, y, id);
+		GESTURE_FALLBACK.add(point);
+	}
+
+	isAllLongPress() {
+		if (gestureLongPressMap.size() == 0) return false;
+		int count = 0;
+		Object[] values = gestureLongPressMap.values().toArray();
+		for (int i = 0; i < values.length; i++) {
+			if (values[i]) count++;
+		}
+		return count == gestureLongPressMap.size();
+	}
+
+	isLongPressExists() {
+		if (gestureLongPressMap.size() == 0) return false;
+		Object[] values = gestureLongPressMap.values().toArray();
+		for (int i = 0; i < values.length; i++) {
+			if (values[i]) return true;
+		}
+		return false;
+	}
+
+	longPressCount() {
+		int count = 0;
+		Object[] values = gestureLongPressMap.values().toArray();
+		for (int i = 0; i < values.length; i++) {
+			if (values[i]) count++;
+		}
+		return count;
+	}
+
+	reset() {
+		STAY_CENTER_MAP.clear();
+		STAY_TIMER_MAP.clear();
+		gestureStrokesMap.clear();
+		gestureLongPressMap.clear();
+		pointerToPathMap.clear();
+	}
+
+	triggerComplete() {
+		if (!RECORDING) return;
+		RECORDING = false;
+		view.setVisibility(View.GONE);
+
+		/* Commit active strokes before recognizing if GESTURE is empty */
+		if (GESTURE.getStrokesCount() <= 0) {
+			Object[] keys = gestureStrokesMap.keySet().toArray();
+			for (int i = 0; i < keys.length; i++) {
+				ArrayList pts = (ArrayList) gestureStrokesMap.get(keys[i]);
+				if (pts != null && pts.size() > 1) {
+					GESTURE.addStroke(new GestureStroke(pts));
+				}
+			}
+		}
+
+		view.invalidate();
+		paths.clear();
+		pathCounter = 0;
+		boolean isAllLongPress = isAllLongPress();
+		Gesture gesture = GESTURE.clone();
+
+		if (isAllLongPress && hasLongPress) livePathListener.onLongPress(TOP, gesture, isAllLongPress);
+		else if (hasRelease) livePathListener.onRelease(TOP, gesture, isAllLongPress);
+
+	}
+
+	onTouchEvent(View handleView, MotionEvent motionEvent) {
+		int action = motionEvent.getActionMasked();
+		int pointerIndex = motionEvent.getActionIndex();
+		int pointerId = motionEvent.getPointerId(pointerIndex);
+		long time = motionEvent.getEventTime();
+
+		int[] loc = new int[2];
+		handleView.getLocationOnScreen(loc);
+
+		if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+			RECORDING = true;
+			if (action == MotionEvent.ACTION_DOWN) {
+				reset();
+				GESTURE = new Gesture();
+				GESTURE_FALLBACK = new ArrayList();
+				if (hasDown) livePathListener.onDown(TOP, GESTURE.clone());
+			}
+
+			float x = motionEvent.getX(pointerIndex) + loc[0];
+			float y = motionEvent.getY(pointerIndex) + loc[1];
+
+			ArrayList strokePoints = new ArrayList();
+			strokePoints.add(new GesturePoint(x, y, time));
+			gestureStrokesMap.put(new Integer(pointerId), strokePoints);
+
+			Path path = new Path();
+			path.moveTo(x, y);
+
+			Integer strokeId = new Integer(pathCounter++);
+			paths.put(strokeId, path);
+			pointerToPathMap.put(new Integer(pointerId), strokeId);
+
+			view.setVisibility(View.VISIBLE);
+
+		} else if (action == MotionEvent.ACTION_MOVE) {
+
+			for (int i = 0; i < motionEvent.getPointerCount(); i++) {
+
+				int pId = motionEvent.getPointerId(i);
+				float coorX = motionEvent.getX(i) + loc[0];
+				float coorY = motionEvent.getY(i) + loc[1];
+
+				ArrayList points = (ArrayList) gestureStrokesMap.get(new Integer(pId));
+
+				/* Cast retrieval to avoid potential errors in BeanShell */
+				Boolean lpStatus = (Boolean) gestureLongPressMap.get(new Integer(pId));
+				boolean longPress = (lpStatus != null) ? lpStatus.booleanValue() : false;
+
+				boolean initialLongPress = longPress;
+				if (points != null) {
+					points.add(new GesturePoint(coorX, coorY, time));
+					addFallbackPoint(coorX, coorY, pId);
+				}
+
+				Integer strokeId = (Integer) pointerToPathMap.get(new Integer(pId));
+				if (strokeId != null) {
+					Path path = (Path) paths.get(strokeId);
+					if (path != null) path.lineTo(coorX, coorY);
+				}
+
+				if (config.livePath.stayRadius > 0 && config.livePath.stayDuration > 0) {
+					float[] stayCenterPosition = (float[]) STAY_CENTER_MAP.get(new Integer(pId));
+					Long stayTimerObj = (Long) STAY_TIMER_MAP.get(new Integer(pId));
+
+					if (stayCenterPosition == null) {
+						stayCenterPosition = new float[] { coorX, coorY };
+						STAY_CENTER_MAP.put(new Integer(pId), stayCenterPosition);
+					}
+
+					long stayTimer = (stayTimerObj != null) ? stayTimerObj.longValue() : 0;
+
+					float distanceX = coorX - stayCenterPosition[0];
+					float distanceY = coorY - stayCenterPosition[1];
+					float distance = (float) Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+					if (distance <= config.livePath.stayRadius) {
+						if (stayTimer == 0) {
+							stayTimer = time;
+						} else if (time - stayTimer >= config.livePath.stayDuration) {
+							longPress = true;
+						}
+					} else {
+						stayCenterPosition[0] = coorX;
+						stayCenterPosition[1] = coorY;
+						stayTimer = time;
+						longPress = false;
+					}
+
+					STAY_TIMER_MAP.put(new Integer(pId), new Long(stayTimer));
+					STAY_CENTER_MAP.put(new Integer(pId), stayCenterPosition);
+					gestureLongPressMap.put(new Integer(pId), new Boolean(longPress));
+
+					if (longPress && !initialLongPress) {
+						if (RECORDING && quickComplete) triggerComplete();
+					}
+				}
+			}
+
+			if (config.livePath.render) view.invalidate();
+			if (isAllLongPress() && RECORDING) triggerComplete();
+
+		} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
+			ArrayList points = (ArrayList) gestureStrokesMap.remove(new Integer(pointerId));
+			if (points != null && points.size() > 1 && GESTURE != null) {
+				GESTURE.addStroke(new GestureStroke(points));
+			}
+
+			pointerToPathMap.remove(new Integer(pointerId));
+
+			if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+				if (RECORDING) {
+					triggerComplete();
+				}
+				RECORDING = false;
+
+				if (hasUp) livePathListener.onUp(TOP, GESTURE.clone());
+			}
+
+		}
+		return false;
+	}
+
+	show() {
+		view.setVisibility(View.VISIBLE);
+	}
+
+	hide() {
+		view.setVisibility(View.GONE);
+	}
+	
+	setLivePathListener(This listener) {
+		livePathListener = listener;
+		checkListenerMethods();
+	}
+
+	return this;
+}

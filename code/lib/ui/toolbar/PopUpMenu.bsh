@@ -1,0 +1,80 @@
+importCommands("lib.ui.actions");
+importCommands("lib.ui.misc");
+
+import android.app.Activity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.Gravity;
+import android.graphics.drawable.Drawable;
+import android.content.res.ColorStateList;
+import com.google.android.material.appbar.MaterialToolbar;
+import bsh.This;
+import android.widget.PopupMenu;
+
+PopUpMenu(Activity activity, View anchorView) {
+	PopupMenu popup = new PopupMenu(activity, anchorView, Gravity.END);
+	Menu popupMenu = popup.getMenu();
+	/* Add options to the dropdown list */
+    This Popup = object();
+    Popup.REPO_LINK = (int) 201;
+    Popup.REFRESH_LIST = (int) 202;
+    Popup.DISCLAIMER = (int) 203;
+    String REPO_URL = "https://github.com/mqwec43as/EveryGesture";
+
+    Object[][] menus = new Object[][] {
+        {
+            Popup.REPO_LINK
+            , "Source code"
+            , new Runnable() {
+                run() {
+                    tasker.showToast("Opening Source Code");
+                    browseUrl(REPO_URL);
+                }
+            }
+        },
+        {
+            Popup.REFRESH_LIST
+            , "Refresh Action List"
+            , new Runnable() {
+                run() {
+                    This every = tasker.getJavaVariable("everyGesture");
+                    Runnable refresh = new Runnable() { 
+                        run() {
+                            every.Actions.refresh(true);
+                        }
+                    }; 
+                    every.execute(refresh);
+                }
+            }
+        },{
+            Popup.DISCLAIMER
+            , "Disclaimer"
+            , new Runnable() {
+                run() {
+                    notSupported("Disclaimer", "lib/ui/toolbar/PopUpMenu.bsh");
+                }
+            }
+        }
+    };
+
+    item(Object[] menuFormat) {
+        int id = menuFormat[0];
+        String title = menuFormat[1];
+        Runnable onClick = menuFormat[2];
+        return this;
+    }
+
+	for (int i = 0; i < menus.length; i++) {
+        This menu = item(menus[i]);
+        MenuItem menuItem = popupMenu.add(0, menu.id, i, menu.title);
+        menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            public boolean onMenuItemClick(MenuItem item) {
+                menu.onClick.run();
+                return true;
+            }
+        });
+    }
+
+	return popup;
+}

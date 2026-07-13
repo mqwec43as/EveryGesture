@@ -1,0 +1,821 @@
+importCommands("lib.ui.misc");
+
+/*─────────────────────────────────────────────────────────────── 
+This code was primarily generated using AI.
+───────────────────────────────────────────────────────────────*/
+import bsh.This;
+import org.json.JSONObject;
+import org.json.JSONArray;
+
+Actions() {
+	This every = tasker.getJavaVariable("everyGesture");
+	static final Object[][] mainActions = new Object[][] {
+		{
+			"Open App",
+			"Launches an application",
+			"openApp",
+			"Launch {0}"
+		},
+		{
+			"Launch Activity",
+			"Launches an application activity",
+			"launchActivity",
+			"Launch {0}"
+		},
+		{
+			"Apps Tray Menu",
+			"Opens selected apps on tray menu",
+			"showAppsTray",
+			"Open tray {0} Apps"
+		},
+		{
+			"Run Task",
+			"Executes a Tasker task",
+			"runTask",
+			"Perform {0} task"
+		},
+		{
+			"Global Action",
+			"Perform accessibility actions like Back or Home",
+			"globalAction",
+			"{0}"
+		},
+		{
+			"Media Key",
+			"Send media control command",
+			"sendMediaKey",
+			"{0}"
+		},
+		{
+			"Execute Script",
+			"Execute java code stored in /script folder or a file",
+			"runScript",
+			"Execute {0}"
+		},
+		{
+			"Tasker Command",
+			"Send a Tasker command",
+			"sendCommand",
+			"Tasker command"
+		},
+		{
+			"Evaluate String",
+			"Run eval() on a string.",
+			"evaluateString",
+			"Evaluate String {0}"
+		},
+		{
+			"Open URL",
+			"Opens a web link",
+			"browseUrl",
+			"Open {0}"
+		},
+		{
+			"Every Action",
+			"Run Every Gesture features",
+			"everyAction",
+			"{0}"
+		},
+		{
+			"Launch Assistant",
+			"Launch phone's assistant",
+			"launchAssistant",
+			"Launch Assistant"
+		},
+		{
+			"Circle To Search",
+			"Trigger circle to search",
+			"circleToSearch",
+			"Circle to search"
+		},
+		{
+			"Control Volume",
+			"Adjust volume by percentage",
+			"setVolume",
+			"Set volume {0}%"
+		}
+	};
+
+	static final Object[][] sendMediaKey = new Object[][] {
+		{
+			"Eject",
+			"Ejects the media from the device",
+			"eject",
+			"Eject media"
+		},
+		{
+			"Fast Forward",
+			"Fast-forwards the currently playing media",
+			"fastforward",
+			"Fast forward"
+		},
+		{
+			"Next",
+			"Skips to the next track or chapter",
+			"next",
+			"Next track"
+		},
+		{
+			"Pause",
+			"Pauses the currently playing media",
+			"pause",
+			"Pause"
+		},
+		{
+			"Play",
+			"Starts or resumes media playback",
+			"play",
+			"Play"
+		},
+		{
+			"Play / Pause",
+			"Toggles between play and pause states",
+			"playpause",
+			"Toggle play/pause"
+		},
+		{
+			"Previous",
+			"Returns to the previous track or chapter",
+			"previous",
+			"Previous track"
+		},
+		{
+			"Record",
+			"Starts recording the current media stream",
+			"record",
+			"Record"
+		},
+		{
+			"Rewind",
+			"Rewinds the currently playing media",
+			"rewind",
+			"Rewind"
+		},
+		{
+			"Skip Backward",
+			"Skips backward by a set time interval",
+			"skipbackward",
+			"Skip backward"
+		},
+		{
+			"Skip Forward",
+			"Skips forward by a set time interval",
+			"skipforward",
+			"Skip forward"
+		},
+		{
+			"Stop",
+			"Completely stops the media playback",
+			"stop",
+			"Stop"
+		}
+	};
+
+	static final Object[][] mediaAction = sendMediaKey;
+
+	static final Object[][] globalAction = new Object[][] {
+		{
+			"Back",
+			"Simulates a press of the back button",
+			"back",
+			"Back"
+		},
+		{
+			"Dismiss",
+			"Dismisses the current notification shade or open dialog",
+			"dismiss",
+			"Dismiss dialog"
+		},
+		{
+			"Home",
+			"Returns the user to the home screen",
+			"home",
+			"Go Home"
+		},
+		{
+			"LastApp",
+			"Switches to the previously used application",
+			"lastapp",
+			"Open last App"
+		},
+		{
+			"Lock",
+			"Locks the device screen immediately",
+			"lock",
+			"Lock screen"
+		},
+		{
+			"Notifications",
+			"Opens the notification shade",
+			"notifications",
+			"Open notifications"
+		},
+		{
+			"Power",
+			"Opens the power options/shutdown menu",
+			"power",
+			"Open power menu"
+		},
+		{
+			"Quick Settings",
+			"Opens the quick settings tiles menu",
+			"quicksettings",
+			"Open quick settings"
+		},
+		{
+			"Recents",
+			"Opens the recent apps/overview screen",
+			"recents",
+			"Open recents"
+		},
+		{
+			"Screenshot",
+			"Takes a screenshot of the current screen",
+			"screenshot",
+			"Screenshot"
+		},
+		{
+			"Shortcut",
+			"Triggers the accessibility shortcut action",
+			"shortcut",
+			"Accessibility Shortcut"
+		}
+	};
+
+	static final Object[][] globalActionName = globalAction;
+
+
+	static final Object[][] everyCommand = new Object[][] {
+		{
+			"Command Helper",
+			"Toggle helper mode to input Tasker Command pattern",
+			"helper",
+			"Toggle helper mode"
+		},
+		{
+			"Main Activity",
+			"Open main activity",
+			"activity",
+			"Open main activity"
+		}
+	};
+
+	import android.database.Cursor;
+	import android.net.Uri;
+	import java.util.ArrayList;
+	import java.util.HashMap;
+	import java.util.Map;
+
+	/**
+	 * getTaskerTasks()
+	 * * Queries the Tasker Content Provider for named tasks.
+	 * Returns an ArrayList of HashMaps compatible with AdvancedListDialog.
+	 * * Structure of each item:
+	 * { "title": "Task Name", "subtitle": "Project Name" }
+	 */
+	getTaskerTasks() {
+		ArrayList items = new ArrayList();
+
+		// URI for Tasker Tasks
+		Uri uri = Uri.parse("content://net.dinglisch.android.tasker/tasks");
+
+		// Querying: name, project_name. 
+		// Sorting: "name ASC" for alphabetical order.
+		Cursor c = context.getContentResolver().query(uri, null, null, null, "name ASC");
+		if (c != null) {
+			int nameCol = c.getColumnIndex("name");
+			int projNameCol = c.getColumnIndex("project_name");
+			while (c.moveToNext()) {
+				String taskName = c.getString(nameCol);
+				String projectName = c.getString(projNameCol);
+
+				// Construct the map for the advanced list
+				Map itemMap = new HashMap();
+				itemMap.put("title", taskName);
+				itemMap.put("subtitle", projectName);
+				itemMap.put("args", taskName);
+				itemMap.put("replacer", taskName);
+
+				items.add(itemMap);
+			}
+			c.close();
+		}
+		return items;
+	}
+
+
+
+	import android.content.Intent;
+	import android.content.pm.PackageManager;
+	import android.content.pm.ResolveInfo;
+	import android.content.pm.PackageInfo;
+	import java.util.ArrayList;
+	import java.util.Collections;
+	import java.util.Comparator;
+	import java.util.HashMap;
+	import java.util.List;
+	import java.util.Map;
+
+	/**
+	 * getLauncableApps()
+	 * Optimized: Only gathers Package Name and Resource ID to prevent Memory crashes.
+	 */
+	ArrayList getLauncableApps() {
+		ArrayList items = new ArrayList();
+		PackageManager pm = context.getPackageManager();
+
+		Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+		mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+		List apps = pm.queryIntentActivities(mainIntent, 0);
+
+		Collections.sort(apps, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				String label1 = ((ResolveInfo) o1).loadLabel(pm).toString();
+				String label2 = ((ResolveInfo) o2).loadLabel(pm).toString();
+				return label1.compareToIgnoreCase(label2);
+			}
+		});
+
+		for (int i = 0; i < apps.size(); i++) {
+			ResolveInfo info = (ResolveInfo) apps.get(i);
+
+			Map itemMap = new HashMap();
+			String label = info.loadLabel(pm).toString();
+			itemMap.put("title", label);
+			itemMap.put("subtitle", info.activityInfo.packageName);
+			itemMap.put("args", info.activityInfo.packageName);
+			itemMap.put("replacer", label);
+
+			// Use Resource ID instead of loading the full Drawable object
+			itemMap.put("iconResId", info.getIconResource());
+			itemMap.put("type", "app");
+
+			items.add(itemMap);
+		}
+		return items;
+	}
+
+	import java.io.File;
+	import com.joaomgcd.taskerm.action.java.JavaCodeException;
+
+	getScriptList() {
+
+		String scriptsDir = every.MAIN_DIRECTORY + "/scripts";
+		File folder = new File(scriptsDir);
+		List fileList = new ArrayList();
+
+		if (!folder.exists() || !folder.isDirectory()) {
+			return fileList;
+		}
+
+		File[] files = folder.listFiles();
+		if (files == null) {
+			return fileList;
+		}
+
+		for (i = 0; i < files.length; i++) {
+			File f = files[i];
+			if (f.isFile()) {
+				Map file = new HashMap();
+				file { "title" } = f.getName();
+				file { "args" } = f.getName();
+				file { "replacer" } = f.getName();
+				fileList.add(file);
+			}
+		}
+
+		return fileList;
+
+	}
+
+	String getProjectName(String taskName) {
+		if (taskName == null) {
+			return null;
+		}
+
+		Uri uri = Uri.parse("content://net.dinglisch.android.tasker/tasks");
+		String[] projection = new String[] { "project_name" };
+		String selection = "name = ?";
+		String[] selectionArgs = new String[] { taskName };
+
+		Cursor cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
+		if (cursor == null) {
+			return null;
+		}
+		String projectName = null;
+		try {
+			if (cursor.moveToFirst()) {
+				projectName = cursor.getString(0);
+			}
+		} finally {
+			cursor.close();
+		}
+
+		return projectName;
+
+	}
+
+	/* toList
+	 * Converts a 2D array to a List of Maps
+	 * * Structure of each item:
+	 * { "title": "Task Name", "subtitle": "Project Name" }
+	 */
+	List toList(String listName, Object[][] objects, String[] keys) {
+		List list = new ArrayList();
+		for (int i = 0; i < objects.length; i++) {
+			Map entry = new HashMap();
+			Object[] row = objects[i];
+			
+			/* Iterate through the keys to dictate the assignment */
+			for (int j = 0; j < keys.length; j++) {
+				String currentKey = keys[j];
+				Object value = null;
+
+				/* Assign value from row if index exists, otherwise remains null */
+				if (row != null && j < row.length) {
+					value = row[j];
+				}
+
+				entry.put(currentKey, value);
+			}
+
+			list.add(entry);
+
+			/* Assign args to icon if args is null */
+			String iconName = entry.containsKey("command") ? entry { "command" } : entry { "args" };
+			entry.put("iconPath", every.MAIN_DIRECTORY + "/res/actions/" + listName + "/" + iconName + ".svg");
+		}
+
+		return list;
+	}
+
+	sort(List list, String key) {
+		Collections.sort(list, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				String key1 = ((Map) o1) { key };
+				String key2 = ((Map) o2) { key };
+				return key1.compareToIgnoreCase(key2);
+			}
+		});
+	}
+
+	final This TOP = this;
+	List list = toList("command", mainActions, new String[] { "title", "subtitle", "command", "displayText" });
+	sort(list, "title");
+	
+	Map actionMenu = new HashMap();
+	Map newActionMenu = new HashMap();
+	for (Map action: list) {
+		String command = action { "command" };
+		if (TOP.namespace.getVariable(command) != void) {
+			List subAction = toList(command, TOP.namespace.getVariable(command), new String[] { "title", "subtitle", "args", "replacer" });
+			sort(subAction, "title");
+			actionMenu.put(command, subAction);
+		}
+	}
+
+	getTasks() {
+		actionMenu { "runTask" } = getTaskerTasks();
+		newActionMenu { "taskName" } = actionMenu { "runTask" };
+	}
+
+	getApps() {
+		actionMenu { "openApp" } = getLauncableApps();
+		actionMenu { "showAppsTray" } = actionMenu { "openApp" };
+		newActionMenu { "packageName" } = actionMenu { "openApp" };
+		newActionMenu { "packageNames" } = actionMenu { "openApp" };
+		newActionMenu { "labelOrPackageName" } = actionMenu { "openApp" };
+	}
+
+	getScripts() {
+		actionMenu { "runScript" } = getScriptList();
+		newActionMenu { "scriptPath" } = actionMenu { "runScript" };
+	}
+
+	getList(String command) {
+		if (command == null) return new ArrayList();
+		boolean hasKey = actionMenu.containsKey(command);
+
+		if (command.equals("showAppsTray")) command = "openApp";
+
+		if (hasKey) {
+			return actionMenu { command };
+		}
+
+		switch (command) {
+			case "runTask":
+				getTasks();
+				break;
+			case "openApp":
+			case "showAppsTray":
+				getApps();
+				break;
+			case "runScript":
+				getScripts();
+				break;
+		}
+		
+		hasKey = actionMenu.containsKey(command);
+		if (hasKey) {
+			return actionMenu { command };
+		}
+
+		return new ArrayList();
+	}
+
+	refresh(boolean withToast) {
+		getTasks();
+		getApps();
+		getScripts();
+
+		if (withToast) {
+			showToast("Action List Refreshed");
+		}
+	}
+
+	refresh() {
+		refresh(false);
+	}
+
+	String getTitle(String command) {
+		String description = "";
+		for (Map action: TOP.list) {
+			if (action { "command" }.equals(command)) {
+				description = action { "title" };
+				break;
+			}
+		}
+		return description;
+	}
+
+	// * get text version of an action
+	String getTextVersion(Map map) {
+		String argText = "";
+		if (map.containsKey("command")) {
+			if (map.containsKey("title")) {
+				argText = map { "title" };
+			} else {
+				argText = getTitle(map { "command" });
+			}
+		} else if (map.containsKey("args")) {
+			argText = map { "title" };
+		}
+		return argText;
+	}
+
+	// * get text version of command
+	String getCommandTextVersion(Map map) {
+		String argText = "";
+		if (map.containsKey("command")) {
+			if (map.containsKey("title")) {
+				argText = map { "title" };
+			} else {
+				argText = getTitle(map { "command" });
+			}
+		}
+		return argText;
+	}
+
+	getLabel(String packageName) {
+		String label = packageName;
+		try {
+			PackageManager pm = context.getPackageManager();
+			PackageInfo pi = pm.getPackageInfo(packageName, 0);
+			label = pi.applicationInfo.loadLabel(pm).toString();
+		} catch (Exception e) {}
+		return label;
+	}
+
+	/*
+	 ! This should be depecrated to avoid confusion
+	 Because config version it's not always from the selected map e.g args.
+	 Say className which needs to be resolved with the selected packageName
+	*/
+	String getConfigVersion(Map map) {
+		String argText = "";
+		if (map.containsKey("command")) {
+			argText = map { "command" };
+		} else if (map.containsKey("args")) {
+			argText = map { "args" };
+		}
+		return argText;
+	}
+
+	List getListConfigVersion(List mapList) {
+		List argList = new ArrayList();
+		for (Map map: mapList) {
+			argList.add(getConfigVersion(map));
+		}
+		return argList;
+	}
+
+	// * Return the command map
+	Map getCommandMap(String command) {
+		for (Map action: TOP.list) {
+			if (action { "command" }.equals(command)) {
+				return action;
+			}
+		}
+		return new HashMap();
+	}
+
+	// * Get the replacer for the target array, used as friendly value to be read
+	String getReplacer(String command, String argTarget) {
+		Map commandMap = getCommandMap(command);
+		List list = getList(command);
+		for (Map entry: list) {
+			String args = entry { "args" };
+			if (args.equals(argTarget)) {
+				return entry { "replacer" };
+			}
+		}
+		return null;
+	}
+
+	/*  
+		* For displaying action as one string row, e.g for TemplateCard
+		TODO might need to resolve all args and create based on command
+	*/
+	String getDisplayText(Map actionMap) {
+		String command = actionMap { "command" };
+		List args = actionMap { "args" };
+		Map commandMap = getCommandMap(command);
+		String placeHolderTemplate = commandMap { "displayText" };
+		String placeHolder = "";
+		if (actionMap.containsKey("length")) placeHolder += actionMap { "length" } + "px - ";
+		placeHolder += placeHolderTemplate;
+		if (args == null && placeHolder == null) return placeHolder;
+		if (args.isEmpty()) return placeHolder;
+		for (int i = 0; i < args.size(); i++) {
+			Object entry = args.get(i);
+			String replacer = "";
+			switch (entry.getClass()) {
+				case String.class:
+					replacer = getReplacer(command, entry);
+					break;
+				case List.class:
+					replacer = entry.size() + " items";
+					break;
+				default:
+					replacer = entry.toString();
+					break;
+			}
+
+			if (replacer == null) replacer = entry.toString();
+		
+			placeHolder = placeHolder.replace("{" + i + "}", replacer);
+		}
+		// clean leftover {\d+}
+		placeHolder = placeHolder.replaceAll("\\{\\d+\\}", "");
+
+		int maxLength = every.maxDisplayTextLength;
+		if (placeHolder.length() > maxLength) {
+			placeHolder = placeHolder.substring(0, maxLength) + "...";
+		}
+		return placeHolder;
+	}
+
+	hasParameterList(String parameterName) {
+		boolean hasKey = newActionMenu.containsKey(parameterName);
+		return hasKey;
+	}
+
+	// * Get the parameter list
+	getParameterList(String parameterName) {
+		boolean hasKey = hasParameterList(parameterName);
+
+		if (hasKey) {
+			return newActionMenu { parameterName };
+		}
+
+		switch (parameterName) {
+			case "taskName":
+				getTasks();
+				break;
+			case "packageName":
+			case "packageNames":
+				getApps();
+				break;
+			case "scriptPath":
+				getScripts();
+				break;
+			default:
+				try {
+					if (TOP.namespace.getVariable(parameterName) == void) break;
+					Object[][] objects = TOP.namespace.getVariable(parameterName);
+					List subAction = toList(parameterName, objects, new String[] { "title", "subtitle", "args", "replacer" });
+					sort(subAction, "title");
+					if (!subAction.isEmpty()) newActionMenu.put(parameterName, subAction);
+				} catch (Exception e) {
+					log(e.getMessage(), "ERROR");
+				}
+				break;
+		}
+
+		hasKey = hasParameterList(parameterName);
+		if (hasKey) {
+			return newActionMenu { parameterName };
+		}
+
+		return new ArrayList();
+	}
+
+	
+
+	// * Get map argValue for args key in the parameter list
+	Map getEntryMap(String parameter, Object argValue) {
+
+		createMap(Object title, Object subtitle, Object args, Object replacer) {
+			Map temp = new HashMap();
+			temp.put("args", args);
+			temp.put("replacer", replacer.toString());
+			temp.put("title", title.toString());
+			temp.put("subtitle", subtitle.toString());
+			return temp;
+		}
+
+		switch (parameter) {
+			case "packageName":
+				String label = getLabel(argValue);
+				if (label != null) return createMap(label, argValue, argValue, label);
+				break;
+			case "taskName":
+				String projectName = getProjectName(argValue);
+				if (projectName != null) return createMap(argValue, projectName, argValue, projectName);
+				break;
+			case "className":
+				break;
+		}
+
+		List list = getParameterList(parameter);
+		for (Map entry: list) {
+			String args = entry { "args" };
+			if (args.equals(argValue)) {
+				return entry;
+			}
+		}
+		
+		Map temp = createMap(argValue, argValue, argValue, argValue);
+		return temp;
+	}
+
+	List getEntryList(String parameter, List args) {
+		List list = new ArrayList();
+		for (String arg: args) {
+			Map entry = getEntryMap(parameter, arg);
+			list.add(entry);
+		}
+		return list;
+	}
+
+	String getParameterText(String parameter, Object argValue) {
+		Map entry = getEntryMap(parameter, argValue);
+		String title = entry { "title" };
+		return title;
+	}
+
+	String getParameterText(String parameter, List args) {
+		if (parameter.endsWith("s")) {
+			parameter = parameter.substring(0, parameter.length() - 1);
+		}
+		JSONArray jsonArray = new JSONArray();
+		for (Object arg: args) {
+			String title = getParameterText(parameter, arg);
+			jsonArray.put(title);
+		}
+		return jsonArray.toString(1);
+	}
+
+	String getParameterTextFromMap(Map map) {
+		Object argText = map.get("args");
+		if (argText instanceof List) {
+			argText = argText.toString();
+		} else if (!(argText instanceof String)) {
+			argText = argText.toString();
+		}
+		if (map.containsKey("args")) {
+			argText = map { "title" };
+		}
+		return argText;
+	}
+
+	String getParameterTextFromList(List mapList) {
+		JSONArray jsonArray = new JSONArray();
+		for (Map map: mapList) {
+			jsonArray.put(getParameterTextFromMap(map));
+		}
+		String argText = jsonArray.toString(1);
+		return argText;
+	}
+
+	return this;
+}
+
+
+
+// This actions =  Actions();
+// return actions.getList("runScript");
+// builtin() {
+// 	return;
+// }

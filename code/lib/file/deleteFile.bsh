@@ -1,0 +1,36 @@
+/*─────────────────────────────────────────────────────────────── 
+This code was generated using AI.
+───────────────────────────────────────────────────────────────*/
+
+import java.io.File;
+
+/**
+ * Deletes a file at the specified full path.
+ * Adheres to BeanShell syntax: No generics, no enhanced for-loops, explicit casting.
+ */
+deleteFile(String fullFilePathString) {
+    if (fullFilePathString == null || fullFilePathString.equals("")) {
+        tasker.log("deleteFile: Path is null or empty.");
+        return false;
+    }
+
+    File fileToDelete = new File(fullFilePathString);
+
+    if (fileToDelete.exists()) {
+        boolean deleted = fileToDelete.delete();
+        if (deleted) {
+            tasker.log("File deleted successfully: " + fileToDelete.getPath());
+            return true;
+        } else {
+            tasker.log("File deletion failed: " + fileToDelete.getPath());
+            return false;
+        }
+    } else {
+        tasker.log("File not found: " + fileToDelete.getPath());
+        return false;
+    }
+}
+
+/* --- Usage Example --- */
+// String internalPath = context.getFilesDir().getPath() + "/my_filename.txt";
+// deleteFile(internalPath);

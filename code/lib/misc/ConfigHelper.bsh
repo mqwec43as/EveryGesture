@@ -1,0 +1,450 @@
+import bsh.This;
+import org.json.JSONArray;
+import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Map;
+import bsh.This;
+import android.graphics.Color;
+import android.graphics.PointF;
+import android.graphics.Point;
+import bsh.Variable;
+import bsh.NameSpace;
+import android.content.ComponentName;
+import java.util.Comparator;
+import java.util.Collections;
+
+This ConfigHelper() {
+
+	config(String name) {
+		this.namespace.setName(name);
+		Map MAP = new HashMap();
+		List KEYS = new ArrayList();
+
+		getValue(String key) {
+			return this.namespace.getVariable(key);
+		}
+
+		getDefaultValue(String key) {
+			if (this.name.equals("Handle")) {
+				return Handle.namespace.getVariable(key);
+			} else if (this.name.equals("LivePath")) {
+				return LivePath.namespace.getVariable(key);
+			} else return null;
+		}
+
+		getKeys() {
+			Collections.sort(KEYS, new Comparator() {
+				compare(Object o1, Object o2) {
+					This t1 = (This) o1;
+					This t2 = (This) o2;
+
+					boolean isBool1 = (t1.type == Boolean.class);
+					boolean isBool2 = (t2.type == Boolean.class);
+
+					// Prioritize Boolean.class (true goes first)
+					if (isBool1 != isBool2) {
+						return isBool1 ? -1 : 1;
+					}
+
+					// Fallback to alphabetical sorting if types have the same priority
+					String key1 = t1.displayName;
+					String key2 = t2.displayName;
+					return key1.compareTo(key2);
+				}
+			});
+			return KEYS;
+		}
+
+		return this;
+	}
+	This Handle = config("Handle");
+	This LivePath = config("LivePath");
+	Map map = new HashMap();
+
+	// * key, type, inputType, defaultValue, defaultInput, displayName, description
+	Object[][] handleKeys = new Object[][] {
+		// Handle
+		{
+			"useAccessibility",
+			Boolean.class,
+			Boolean.class,
+			false,
+			false,
+			"Use Accessibility",
+			"Display handle over system window"
+		},
+		{
+			"autoEnable",
+			Boolean.class,
+			Boolean.class,
+			false,
+			false,
+			"Automatically Enable",
+			"Enable during startup"
+		},
+		{
+			"filterWithDollarQ",
+			Boolean.class,
+			Boolean.class,
+			false,
+			false,
+			"Filter with $Q Recognizer",
+			"Recognize straight lines better with additional delay"
+		},
+		{
+			"size",
+			Point.class,
+			Point.class,
+			new Point(0, 0),
+			new Point(0, 0),
+			"Size",
+			"Size of handle"
+		},
+		{
+			"color",
+			Integer.class,
+			Color.class,
+			Color.WHITE,
+			"#FFFFFFFF",
+			"Color",
+			"Color of handle"
+		},
+		{
+			"minConfidence",
+			Double.class,
+			Double.class,
+			3.0,
+			3.0,
+			"Minimum Score",
+			"Minimum score to recognize gesture"
+		},
+		{
+			"initialPosition",
+			Point.class,
+			Point.class,
+			new Point(-1, -1),
+			new Point(-1, -1),
+			"Initial Position",
+			"Initial position of handle"
+		},
+		{
+			"cornerRadius",
+			Integer.class,
+			Integer.class,
+			50,
+			50,
+			"Corner Radius",
+			"Corner radius of handle"
+		},
+		{
+			"initialPositionPercent",
+			PointF.class,
+			PointF.class,
+			new PointF(0, 0),
+			new PointF(0, 0),
+			"Initial Position Percent",
+			"Initial position of handle as percentage of screen"
+		}
+	};
+
+	Object[][] livePathKeys = new Object[][] {
+		// LivePath
+		{
+			"stayDuration",
+			Integer.class,
+			Integer.class,
+			300,
+			300,
+			"Long Press Duration",
+			"Minimum duration to recognize long press"
+		},
+		{
+			"color",
+			Integer.class,
+			Color.class,
+			Color.WHITE,
+			"#FFFFFFFF",
+			"Color",
+			"Color of live path"
+		},
+		{
+			"dashInterval",
+			List.class,
+			List.class,
+			new ArrayList(),
+			new ArrayList(),
+			"Dash Interval",
+			"Dash interval of trail"
+		},
+		{
+			"effect",
+			List.class,
+			List.class,
+			new ArrayList(),
+			new ArrayList(),
+			"Effect",
+			"Effect of trail"
+		},
+		{
+			"width",
+			Integer.class,
+			Integer.class,
+			20,
+			20,
+			"Width",
+			"Width of trail"
+		},
+		{
+			"stayRadius",
+			Integer.class,
+			Integer.class,
+			150,
+			150,
+			"Long Press Radius",
+			"Radius to recognize long press"
+		},
+		{
+			"render",
+			Boolean.class,
+			Boolean.class,
+			true,
+			true,
+			"Show Trail",
+			"Display trail on screen"
+		},
+		{
+			"cornerRadius",
+			Integer.class,
+			Integer.class,
+			50,
+			50,
+			"Corner Radius",
+			"Corner radius of trail"
+		}
+	};
+
+	loadConfiguration(Object[][] configKeys, This target) {
+		This KeyConfiguration(Object[] config) {
+			String key = config[0];
+			Class type = config[1];
+			Class inputType = config[2];
+			Object defaultValue = config[3];
+			Object defaultInput = config[4];
+			String displayName = config[5];
+			String description = config[6];
+			return this;
+		}
+		for (Object[] key: configKeys) {
+			This config = KeyConfiguration(key);
+			target.KEYS.add(config);
+			target.MAP.put(config.key, config);
+			map.put(config.key, config.inputType);
+			target.namespace.setTypedVariable(config.key, config.type, config.defaultValue, true);
+		}
+	}
+
+	loadConfiguration(handleKeys, Handle);
+	loadConfiguration(livePathKeys, LivePath);
+
+	getInputType(String key) {
+		return map.get(key);
+	}
+
+	toJsonPointF(PointF point) {
+		JSONArray list = new JSONArray();
+		list.put(point.x);
+		list.put(point.y);
+		return list;
+	}
+
+	toJsonPoint(Point point) {
+		JSONArray list = new JSONArray();
+		list.put(point.x);
+		list.put(point.y);
+		return list;
+	}
+
+	toJsonColor(int color) {
+		return String.format("#%08X", new Object[] {
+			color
+		});
+	}
+
+	toJsonList(List list) {
+		JSONArray array = new JSONArray();
+		for (int i = 0; i < list.size(); i++) {
+			array.put(list.get(i));
+		}
+		return array;
+	}
+
+	toJson(String string) {
+		return string;
+	}
+
+	toJsonDouble(double number) {
+		Float value = Float.valueOf(number.toString());
+		return value;
+	}
+
+	toJsonFloat(float number) {
+		return number;
+	}
+
+	toJsonInteger(int number) {
+		return number;
+	}
+
+	toJsonColor(int color) {
+		return String.format("#%08X", new Object[] {
+			color
+		});
+	}
+
+	isKeyNameValid(String key) {
+		return map.containsKey(key);
+	}
+
+	toJson(JSONObject json, NameSpace space) {
+		String[] varNames = space.getVariableNames();
+		for (String name: varNames) {
+			if (!isKeyNameValid(name)) continue;
+			Object value = space.getVariable(name);
+			Class type = getInputType(name);
+			Object newVarValue;
+			if (type != null) {
+				switch (type) {
+					case PointF.class:
+						newVarValue = toJsonPointF((PointF) value);
+						break;
+					case Point.class:
+						newVarValue = toJsonPoint((Point) value);
+						break;
+					case Color.class:
+						newVarValue = toJsonColor((int) value);
+						break;
+					case List.class:
+						newVarValue = toJsonList((List) value);
+						break;
+					default:
+						break;
+				}
+			}
+			if (newVarValue != null) {
+				json.put(name, newVarValue);
+			} else {
+				json.put(name, value);
+			}
+		}
+		return json;
+	}
+
+	toPointF(JSONArray array) {
+		PointF point = new PointF();
+		point.x = (float) array.get(0);
+		point.y = (float) array.get(1);
+		return point;
+	}
+
+	toPoint(JSONArray array) {
+		Point point = new Point();
+		point.x = (int) array.get(0);
+		point.y = (int) array.get(1);
+		return point;
+	}
+
+	toColor(String string) {
+		return Color.parseColor(string);
+	}
+
+	toFloat(double number) {
+		Float value = Float.valueOf(number.toString());
+		return value;
+	}
+
+	toList(JSONArray array) {
+		ArrayList list = new ArrayList();
+		for (int i = 0; i < array.length(); i++) {
+			list.add(array.get(i));
+		}
+		return list;
+	}
+
+	getVariableList(NameSpace space) {
+		String[] varNames = space.getVariableNames();
+		return Arrays.asList(varNames);
+	}
+
+	// * Set variables from a JSON object to NameSpace
+	toNameSpace(NameSpace space, JSONObject json, boolean setAll) {
+		Iterator keys = json.keys();
+		List varList = getVariableList(space);
+		while (keys.hasNext()) {
+			String varName = (String) keys.next();
+			if (!isKeyNameValid(varName) && !setAll) continue;
+			boolean hasVar = varList.contains(varName);
+			Object varValue = json.get(varName);
+			Class varType = getInputType(varName);
+			Object newVarValue;
+			if (Class != null) {
+				switch (varType) {
+					case PointF.class:
+						newVarValue = toPointF(varValue);
+						break;
+					case Point.class:
+						newVarValue = toPoint(varValue);
+						break;
+					case Color.class:
+						newVarValue = toColor(varValue);
+						break;
+					case Float.class:
+						newVarValue = toFloat(varValue);
+						break;
+					case List.class:
+						newVarValue = toList(varValue);
+						break;
+					case Double.class:
+						newVarValue = (double) varValue;
+					default:
+						break;
+				}
+			}
+
+			if (newVarValue != null) {
+				space.unsetVariable(varName);
+				space.setVariable(varName, newVarValue, false);
+			} else {
+				space.setVariable(varName, varValue, false);
+			}
+
+		}
+	}
+
+	toNameSpace(NameSpace space, JSONObject json) {
+		toNameSpace(space, json, false);
+	}
+
+	// * Set variables from NameSpace to NameSpace
+	toNameSpace(NameSpace targetSpace, NameSpace sourceSpace, boolean setAll) {
+		String[] varNames = sourceSpace.getVariableNames();
+		for (String name: varNames) {
+			if (!isKeyNameValid(name) && !setAll) continue;
+			Object value = sourceSpace.getVariable(name);
+			if (value != null) targetSpace.setVariable(name, value, false);
+		}
+	}
+
+	toNameSpace(NameSpace targetSpace, NameSpace sourceSpace) {
+		toNameSpace(targetSpace, sourceSpace, false);
+	}
+
+	getHandleDefaultValue(String key) {
+		return Handle.namespace.getVariable(key);
+	}
+
+	getLivePathDefaultValue(String key) {
+		return LivePath.namespace.getVariable(key);
+	}
+
+	return this;
+}

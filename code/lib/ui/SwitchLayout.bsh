@@ -1,0 +1,93 @@
+import java.util.function.Consumer;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import bsh.This;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
+import com.google.android.material.materialswitch.MaterialSwitch;
+
+
+SwitchLayout(Context inputContext) {
+	This TOP = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	This actions = every.Actions;
+	This switchListener;
+    String text;
+    Drawable thumbIcon;
+	MaterialSwitch materialSwitch = new MaterialSwitch(inputContext);
+
+	public int dp(int value) {
+		return (int) TypedValue.applyDimension(
+			TypedValue.COMPLEX_UNIT_DIP,
+			value,
+			inputContext.getResources().getDisplayMetrics()
+		);
+	}
+	
+	int p = dp(12);
+	int d = dp(4);
+	materialSwitch.setPadding(p-d, p, p-d, p);
+
+	setState(boolean initialState) {
+		materialSwitch.setChecked(initialState);
+	}
+
+	setThumbIcon(String iconPath) {
+		if (every.MAIN_DIRECTORY != void) iconPath = every.MAIN_DIRECTORY + "/res/" + iconPath;
+		listener() {
+			onSuccess(Drawable result) {
+				TOP.thumbIcon = result;
+				materialSwitch.setThumbIconDrawable(result);
+			}
+			return this;
+		}
+		loadSvgIcon(inputContext, iconPath, listener());
+	}
+
+	getView() {
+		return materialSwitch;
+	}
+
+	reset() {
+        materialSwitch.setChecked(false);
+	}
+
+	hide() {
+		materialSwitch.setVisibility(View.GONE);
+	}
+
+	unhide() {
+		materialSwitch.setVisibility(View.VISIBLE);
+	}
+
+	isVisible() {
+		return materialSwitch.getVisibility() == View.VISIBLE;
+	}
+
+	getState() {
+		return materialSwitch.isChecked();
+	}
+
+    setText(String textString) {
+        text = textString;
+        materialSwitch.setText(text);
+    }
+
+	return this;
+}

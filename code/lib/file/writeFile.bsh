@@ -1,0 +1,41 @@
+/*─────────────────────────────────────────────────────────────── 
+This code was generated using AI.
+───────────────────────────────────────────────────────────────*/
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+/*───────────────────────────────────────────────────────────────
+writeFile(String content, String filePath)
+**Writes content to a file, overwriting by default**
+
+Arguments:
+
+* content → Text to write into the file
+* filePath → Full path of the file to write to
+
+Returns:
+
+* true if write succeeded, false otherwise
+  ───────────────────────────────────────────────────────────────*/
+writeFile(String content, String filePath) {
+	try {
+		file = new java.io.File(filePath);
+		parent = file.getParentFile();
+		if (!parent.exists()) {
+			parent.mkdirs(); /* Create parent directories if needed */
+		}
+
+		writer = new java.io.FileWriter(file, false); /* false → overwrite */
+		writer.write(content);
+		writer.close();
+		return true;
+	} catch (Exception e) {
+		tasker.log("writeFile error: " + e);
+		return false;
+	}
+}

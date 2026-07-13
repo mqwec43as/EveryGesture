@@ -1,0 +1,92 @@
+import bsh.This;
+import android.graphics.drawable.Drawable;
+import java.util.Collections;
+import java.util.Comparator;
+import android.gesture.GestureLibrary;
+
+GestureSelection(This main) {
+	Map handleCards = main.handleCards;
+	This every = main.every;
+	
+	boolean hasMethod(This listener, String methodName, Class[] classes) {
+		if (listener == null) return false;
+		if (classes == null) classes = new Class[] {};
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+
+	getDialogConfig(String handleName, String dialogTitle, This listener) {
+		boolean hasSuccessMap = hasMethod(listener, "onSuccess", new Class[] { Map.class });
+		boolean hasSuccessList = hasMethod(listener, "onSuccess", new Class[] { List.class });
+		boolean hasCancel = hasMethod(listener, "onCancel", null);
+
+		This handleCard = handleCards.get(handleName);
+		GestureLibrary library = handleCard.library;
+		This config = handleCard.config;
+		Map rules = config.rules;
+		String title = dialogTitle;
+		List itemList = new ArrayList();
+		boolean multiSelect = true;
+		boolean showFilter = true;
+		int iconSize = 120;
+		float dimAmount = 0.5f;
+		library.load();
+		Set gestureNames = library.getGestureEntries();
+		int themeId = every.themeId;
+		ArrayList sortedGestures = new ArrayList(gestureNames);
+		Collections.sort(sortedGestures, String.CASE_INSENSITIVE_ORDER);
+
+		for (String name: sortedGestures) {
+			Map item = new HashMap();
+			item.put("title", name);
+			String description = "";
+			List gestures = library.getGestures(name);
+			Map gestureRules = rules.get(name);
+			description += "Gestures: " + gestures.size();
+			if (gestureRules != null) {
+				int totalRules;
+				Set keys = gestureRules.keySet();
+				Iterator keysIt = keys.iterator();
+				while (keysIt.hasNext()) {
+					String key = keysIt.next();
+					Object rule = gestureRules.get(key);
+					int ruleSize;
+					if (rule instanceof ArrayList) {
+						ruleSize = rule.size();
+					} else if (rule instanceof Map) {
+						if (!rule.isEmpty()) {
+							ruleSize = 1;
+						}
+					}
+					totalRules += ruleSize;
+				}
+				description += " Rules: " + totalRules;
+			}
+			Drawable icon = handleCard.snapshotManager.get(name);
+			item.put("icon", icon);
+			item.put("subtitle", description);
+			itemList.add(item);
+		}
+
+		onSuccess(List selecteds) {
+			if (hasSuccessList) listener.onSuccess(selecteds);
+		}
+
+		onSuccess(Map selecteds) {
+			if (hasSuccessMap) listener.onSuccess(selecteds);
+		}
+
+		onCancel() {
+			if (hasCancel) listener.onCancel();
+		}
+
+		return this;
+	}
+
+	showDialog(String handleName, String dialogTitle, This listener) {
+		This config = getDialogConfig(handleName, dialogTitle, listener);
+		This dialog = ListDialog(config);
+		dialog.show();
+	}
+	
+	return this;
+}

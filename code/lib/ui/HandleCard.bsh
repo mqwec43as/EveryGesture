@@ -1,0 +1,385 @@
+importCommands("lib.ui.card");
+
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import android.gesture.Gesture;
+import android.gesture.GestureLibraries;
+import android.gesture.GestureLibrary;
+import android.gesture.Prediction;
+import android.gesture.GestureStroke;
+import android.gesture.*;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.graphics.PixelFormat;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import java.util.*;
+import android.util.TypedValue;
+import android.content.Context;
+import bsh.This;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.chip.Chip;
+import android.view.GestureDetector;
+import java.util.Collections;
+import android.graphics.PorterDuff;
+
+HandleCard(This main, This handle) {
+	Context CONTEXT = main.activity;
+	final This TOP = this;
+	This every = main.every;
+	This tm = ThemeManager(CONTEXT);
+	tm.setTheme(every.themeId);
+	This drawDialog;
+	This topGesture;
+	This config = handle.config;
+	GestureLibrary library = config.library;
+	Map templateCards = new HashMap();
+	This snapshotManager;
+	MaterialSwitch handleSwitch;
+
+	dp(int value) {
+		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, CONTEXT.getResources().getDisplayMetrics());
+	}
+
+	This Actions = every.Actions != null ? every.Actions : Actions();
+	// Theme-aware handle card styling
+	Res.Card.HANDLE_NAME_TEXT_SIZE = 24;
+	Res.Card.PADDING = dp(8);
+	Res.Card.HANDLE_NAME_COLOR = tm.color("colorOnSurface");
+	Res.Card.HANDLE_BOTTOM_MARGIN = 8;
+	Res.Card.HANDLE_NAME_MARGIN_LEFT = 16;
+	Res.Card.HANDLE_NAME_MARGIN_RIGHT = 16;
+	Res.Card.HANDLE_RADIUS = dp(24);
+	Res.Card.HANDLE_BACKGROUND_COLOR = tm.color("colorSurface");
+	Res.Card.HANDLE_BACKGROUND_COLOR_FOCUSED = tm.color("colorSecondary");
+	Res.Card.Handle.TOP_ROW_BACKGROUND_COLOR = tm.color("colorSurfaceContainerHigh");
+	Res.Card.Handle.TOP_ROW_RADIUS = dp(8);
+	Res.Card.HEADER_HEIGHT = dp(50);
+	Res.Card.TOP_ROW_PADDING = dp(16);
+	Res.Card.Template.SPACE_HEIGHT = dp(2);
+
+	snapshotManager = SnapshotManager(this);
+
+	Runnable runnable = new Runnable() {
+		run() {
+			try {
+				snapshotManager.load();
+			} catch (Exception e) {
+				log("Error: " + e.getMessage(), "ERROR", TOP);
+			}
+			
+		}
+	};
+
+	every.executor.execute(runnable);
+
+	MaterialCardView cardRoot = new MaterialCardView(CONTEXT);
+	cardRoot.setStrokeWidth(0);
+	GradientDrawable cardBgRoot = new GradientDrawable();
+	cardBgRoot.setCornerRadius(Res.Card.HANDLE_RADIUS);
+	cardRoot.setBackground(cardBgRoot);
+	LinearLayout.LayoutParams cardRootLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+// 	cardRootLp.setMargins(Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING);
+// 	cardRoot.setPadding(Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING);
+	cardRoot.setLayoutParams(cardRootLp);
+
+	LinearLayout cardContent = new LinearLayout(CONTEXT);
+	cardContent.setOrientation(LinearLayout.VERTICAL);
+	cardContent.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+	
+	// Top row: title + switch and action chips
+	LinearLayout topRow = new LinearLayout(CONTEXT);
+	topRow.setOrientation(LinearLayout.VERTICAL);
+	LinearLayout.LayoutParams topLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	topRow.setLayoutParams(topLp);
+	topRow.setMinimumHeight(Res.Card.HEADER_HEIGHT);
+	topRow.setPadding(Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING);
+	
+	GradientDrawable shape = new GradientDrawable();
+    shape.setShape(GradientDrawable.RECTANGLE);
+    shape.setColor(Res.Card.Handle.TOP_ROW_BACKGROUND_COLOR);
+    shape.setCornerRadius(Res.Card.Handle.TOP_ROW_RADIUS); 
+    topRow.setBackground(shape);
+
+	showDrawDialog() {
+		if (drawDialog == null) {
+			drawDialog = DrawDialog(TOP);
+		}
+		drawDialog.show();
+	}
+
+	topListener() {
+		onSingleTapConfirmed() {
+			if (gestureListContainer.getVisibility() == View.GONE) {
+				showGestureList();
+			} else {
+				hideGestureList();
+			}
+		}
+
+		onLongPress() {
+			showAddActionDialog();
+		}
+
+		return this;
+	}
+
+	topGesture = SimpleGesture(topRow, topListener());
+	topGesture.listen();
+
+	RelativeLayout titleRow = new RelativeLayout(CONTEXT);
+	titleRow.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+	// Handle name
+	TextView handleTV = new TextView(CONTEXT);
+	handleTV.setText(config.handleName);
+	handleTV.setTextSize(Res.Card.HANDLE_NAME_TEXT_SIZE);
+	handleTV.setTypeface(null, Typeface.BOLD);
+	handleTV.setTextColor(Res.Card.HANDLE_NAME_COLOR);
+	RelativeLayout.LayoutParams handleParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	handleParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+	handleParams.addRule(RelativeLayout.CENTER_VERTICAL);
+	titleRow.addView(handleTV, handleParams);
+
+	// Handle switch
+	handleSwitch = new MaterialSwitch(CONTEXT);
+	handleSwitch.setText("");
+	int switchPadding = 12;
+	handleSwitch.setPadding(switchPadding, switchPadding, switchPadding, switchPadding);
+	handleSwitch.setChecked(handle.isAdded());
+	handleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+		onCheckedChanged(CompoundButton button, boolean checked) {
+			if (checked) {
+				every.showHandle(config.handleName);
+			} else {
+				every.removeHandle(config.handleName);
+			}
+			return true;
+		}
+	});
+
+	RelativeLayout.LayoutParams handleSwitchParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	handleSwitchParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+	handleSwitchParams.addRule(RelativeLayout.CENTER_VERTICAL);
+	titleRow.addView(handleSwitch, handleSwitchParams);
+
+	LinearLayout chipRow = new LinearLayout(CONTEXT);
+	chipRow.setOrientation(LinearLayout.HORIZONTAL);
+	LinearLayout.LayoutParams chipRowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	chipRowParams.topMargin = dp(4);
+	chipRow.setLayoutParams(chipRowParams);
+	chipRow.setPadding(0, dp(4), 0, 0);
+
+	ChipGroup handleActionChips = new ChipGroup(CONTEXT);
+	LinearLayout.LayoutParams chipGroupParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	handleActionChips.setLayoutParams(chipGroupParams);
+	handleActionChips.setSingleLine(true);
+	chipRow.addView(handleActionChips);
+
+	createActionChip(String label, String startIconPath, Runnable action) {
+		Chip chip = new Chip(CONTEXT);
+		chip.setText(label);
+		chip.setChipIconVisible(true);
+		chip.setClickable(true);
+		chip.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				action.run();
+			}
+		});
+
+		// chip.setChipIconTint(chip.getChipIconTint());
+		ColorStateList color = ColorStateList.valueOf(tm.color("colorOnSurface"));
+		chip.setChipIconTint(color);
+
+		if (every.MAIN_DIRECTORY != void) startIconPath = every.MAIN_DIRECTORY + "/res/" + startIconPath;
+		String editIconPath = "main/edit.svg";
+		if (every.MAIN_DIRECTORY != void) editIconPath = every.MAIN_DIRECTORY + "/res/" + editIconPath;
+		startIcon() {
+			onSuccess(Drawable result) {
+				chip.setChipIcon(result);
+			}
+			return this;
+		}
+		loadSvgIcon(CONTEXT, editIconPath, startIcon());
+
+		endIcon() {
+			onSuccess(Drawable result) {
+				chip.setCloseIcon(result);
+				chip.setCloseIconVisible(true);
+			}
+			return this;
+		}
+		loadSvgIcon(CONTEXT, startIconPath, endIcon());
+
+		return chip;
+	}
+
+	Object[][] handleActions = new Object[][] {
+		{
+			"Gestures",
+			"main/gesture.svg",
+			new Runnable() {
+				run() {
+					showDrawDialog();
+				}
+			}
+		},
+		{
+			"Properties",
+			"main/handle.svg",
+			new Runnable() {
+				run() {
+					HandleEdit(TOP);
+				}
+			}
+		}
+	};
+
+	for (int i = 0; i < handleActions.length; i++) {
+		Object[] actionItem = handleActions[i];
+		String actionLabel = (String) actionItem[0];
+		String actionPath = (String) actionItem[1];
+		Runnable actionRunnable = (Runnable) actionItem[2];
+		handleActionChips.addView(createActionChip(actionLabel, actionPath, actionRunnable));
+	}
+
+	topRow.addView(titleRow);
+	topRow.addView(chipRow);
+
+	// Expandable container (initially hidden)
+	final LinearLayout gestureListContainer = new LinearLayout(CONTEXT);
+	gestureListContainer.setOrientation(1);
+	gestureListContainer.setVisibility(View.GONE);
+	LinearLayout.LayoutParams gestureListParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+	// gestureListParams.setMargins(Res.Card.Snapshot.MARGIN, 0, Res.Card.Snapshot.MARGIN, 0);
+	gestureListContainer.setLayoutParams(gestureListParams);
+
+	
+	cardContent.addView(topRow);
+	cardContent.addView(gestureListContainer);
+	cardRoot.addView(cardContent);
+
+	addSpacer(View target) {
+		View spacer = new View(CONTEXT);
+		spacer.setBackgroundColor(Color.TRANSPARENT);
+		spacer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Res.Card.Template.SPACE_HEIGHT));
+		target.addView(spacer);
+		return spacer;
+	}
+
+	refreshSwitch() {
+		if (handle.isAdded()) {
+			handleSwitch.setChecked(true);
+		} else {
+			handleSwitch.setChecked(false);
+		}
+	}
+
+	refreshGestureList() {
+		library.load();
+		List oldGestures = new ArrayList(templateCards.keySet());
+		Set gestureNames = library.getGestureEntries();
+		if (gestureNames == null && config.rules instanceof Map) {
+			gestureNames = ((Map) config.rules).keySet();
+		}
+
+		// for oldGestures that are not found in gestureNames push to missing
+		if (!oldGestures.isEmpty()) {
+			for (int i = 0; i < oldGestures.size(); i++) {
+				String gestureName = (String) oldGestures.get(i);
+				if (!gestureNames.contains(gestureName)) {
+					This card = templateCards.get(gestureName);
+					gestureListContainer.removeView(card.getView());
+					templateCards.remove(gestureName);
+				}
+			}
+		}
+
+
+		if (gestureNames != null) {
+			List missing = new ArrayList();
+			ArrayList sortedGestures = new ArrayList(gestureNames);
+			Collections.sort(sortedGestures, String.CASE_INSENSITIVE_ORDER);
+			Iterator it = sortedGestures.iterator();
+			while (it.hasNext()) {
+				String gestureName = it.next();
+				if (templateCards.get(gestureName) != null) {
+					continue;
+				} else {
+					This gestureCard = TemplateCard(TOP, handle.config, gestureName);
+					LinearLayout.LayoutParams params = gestureCard.getView().getLayoutParams();
+					params.setMargins(0, tm.dp(4), 0, 0);
+					gestureCard.getView().setLayoutParams(params);
+					gestureListContainer.addView(gestureCard.getView());
+					templateCards.put(gestureName, gestureCard);
+				} 
+			}
+		}
+	}
+	showGestureList() {
+		gestureListContainer.setVisibility(View.VISIBLE);
+		refreshGestureList();
+	}
+
+	hideGestureList() {
+		gestureListContainer.setVisibility(View.GONE);
+	}
+
+	getView() {
+		return cardRoot;
+	}
+
+	removeTemplate(String name) {
+		This card = templateCards.get(name);
+		if (card != null) {
+			gestureListContainer.removeView(card.getView());
+			templateCards.remove(name);
+		}
+	}
+
+	getSnapshotDrawable(String templateName) {
+		if (templateCards.get(templateName) != null) {
+			return templateCards.get(templateName).getSnapshotDrawable();
+		}
+		return null;
+	}
+
+	showAddActionForTemplate(String templateName) {
+		if (templateCards.isEmpty()) {
+			refreshGestureList();
+		}
+		if (templateCards.get(templateName) != null) {
+			templateCards.get(templateName).addAction();
+		}
+	}
+
+	showAddActionDialog() {
+		addListener() {
+			onSuccess(Map selected) {
+				showAddActionForTemplate((String) selected.get("title"));
+			}
+			return this;
+		}
+		This addConfig = main.selection.getDialogConfig(config.handleName, "Add Action", addListener());
+		addConfig.multiSelect = false;
+		This addDialog = ListDialog(addConfig);
+		addDialog.show();
+	}
+
+	return this;
+}

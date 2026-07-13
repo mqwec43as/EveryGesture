@@ -1,0 +1,22 @@
+import android.content.Intent;
+import android.os.Bundle;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+
+/*───────────────────────────────────────────────────────────────
+  launchAssistant()
+  **Alternative Assistant Trigger**
+  Attempts to launch the assistant using the Voice Interaction 
+  Service intent, which is a common fallback if the standard 
+  ASSISTANT action is not resolving.
+ ───────────────────────────────────────────────────────────────*/
+public void launchAssistant() {
+
+	Intent intent = new Intent(Intent.ACTION_VOICE_COMMAND);
+	intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+	if (intent.resolveActivity(context.getPackageManager()) != null) {
+		context.startActivity(intent);
+		return;
+	}
+	
+}

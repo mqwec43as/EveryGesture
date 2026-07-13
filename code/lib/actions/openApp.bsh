@@ -1,0 +1,55 @@
+/*─────────────────────────────────────────────────────────────── 
+This content was generated using AI and refined with significant human oversight.
+───────────────────────────────────────────────────────────────*/
+
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.ComponentName;
+import android.content.pm.ApplicationInfo;
+import android.app.ActivityOptions; 
+import android.os.Bundle; 
+import java.util.List;
+import java.util.ArrayList;
+import bsh.This;
+import android.os.Build;
+import android.content.Context;
+
+/*───────────────────────────────────────────────────────────────
+ * openApp(labelOrPackageName)
+ * Opens app by exact package OR precise case-insensitive label,
+ * OR a fully qualified className name (e.g., com.packageName.ActivityName)
+ *──────────────────────────────────────────────────────────────*/
+openApp(String labelOrPackageName) {
+    if (labelOrPackageName == null) return;
+	This main = tasker.getJavaVariable("everyGesture");
+	This pm = main.packageManager;
+    /* Fallback: treat as a package or label and find the main launch intent. */
+    String packageName = pm.resolvePackage(labelOrPackageName);
+
+    if (packageName == null) {
+        log("openApp: App not found → ");
+        return;
+    }
+
+    Intent intent = pm.getLaunchIntent(packageName);
+
+    if (intent == null) {
+        log("openApp: No launchable activity → ");
+        return;
+    }
+
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+    try {
+        if (displayId != 0) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setLaunchDisplayId(displayId);
+            context.startActivity(intent, options.toBundle());
+        } else {
+            context.startActivity(intent);
+        }
+    } catch (Exception e) {
+        log("openApp: Failed to launch main intent for package " + packageName + ": " + e.getMessage());
+    }
+}

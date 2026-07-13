@@ -1,0 +1,112 @@
+import java.io.File;
+import android.view.WindowManager;
+import android.view.WindowManager.LayoutParams;
+import android.view.View;
+import android.graphics.Paint;
+import android.util.DisplayMetrics;
+import android.graphics.Path;
+import android.os.Handler;
+import android.os.Looper;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import android.graphics.Color;
+import android.content.Context;
+import net.dinglisch.android.taskerm.MyAccessibilityService;
+import bsh.This;
+import android.content.Context;
+import android.graphics.Point;
+import android.graphics.drawable.GradientDrawable;
+import android.widget.RelativeLayout;
+import android.view.WindowManager;
+import android.graphics.PixelFormat;
+import android.view.Gravity;
+import android.os.Build;
+import android.view.View.OnTouchListener;
+import bsh.This;
+import android.view.View;
+import android.view.MotionEvent;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.gesture.Gesture;
+import android.gesture.GesturePoint;
+import android.gesture.GestureStroke;
+import android.os.Handler;
+import android.os.Looper;
+
+import android.util.DisplayMetrics;
+
+DemoController(This handle) {
+	This listener;
+	This tm = ThemeManager(context);
+	boolean isShownAlready = handle.isShown();
+	boolean isAddedAlready = handle.isAdded();
+	WindowManager.LayoutParams initialParams;
+	if (isShownAlready) {
+		initialParams = new WindowManager.LayoutParams();
+		initialParams.copyFrom(handle.params);
+	}
+
+	int highlightColor = tm.setAlpha(Color.CYAN, 190);
+
+
+	highlight() {
+		listener() {
+			onAttached() {
+				handle.setColorForAwhile(1500, highlightColor);
+				handle.setInteractable(false);
+				handle.mute();
+				handle.setStateListener(null);
+			}
+
+			onDetached() {}
+			return this;
+		}
+		if (!isShownAlready) {
+			handle.setStateListener(listener());
+			handle.show();
+		} else {
+			handle.setInteractable(false);
+			handle.mute();
+			handle.setColorForAwhile(1500, highlightColor);
+		}
+	}
+
+	move(Point point) {
+		handle.moveTo(point);
+	}
+
+	resize(Point size) {
+		handle.sizeTo(size.x, size.y);
+	}
+
+	color(int color) {
+		handle.setColor(color);
+	}
+
+	reset() {
+		try {
+			handle.setColor(handle.config.handle.color);
+			handle.WINDOW_MANAGER.updateViewLayout(handle.view, initialParams);
+			handle.setInteractable(true);
+			handle.unmute();
+		} catch (e) {
+			log("Error: " + e.getMessage(), "ERROR");
+		}
+	}
+
+	remove() {
+		reset();
+		if (!isAddedAlready) handle.remove();
+		if (listener != null) listener.onRemove();
+	}
+
+	setListener(This newListener) {
+		listener = newListener;
+	}
+
+	return this;
+
+
+
+}

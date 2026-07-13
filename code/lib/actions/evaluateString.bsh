@@ -1,0 +1,6 @@
+import bsh.This;
+
+evaluateString(String text) {
+	This every = tasker.getJavaVariable("everyGesture");
+	this.interpreter.eval(text, this.caller.namespace);
+}

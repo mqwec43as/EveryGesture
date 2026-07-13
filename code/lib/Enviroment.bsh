@@ -1,0 +1,8 @@
+import bsh.This;
+
+Constant(String path) {
+    Res() {
+        
+        return this;
+    }
+}

@@ -1,0 +1,600 @@
+importCommands("lib.ui.card");
+importCommands("lib.ui.helper");
+
+import android.app.Activity;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.CornerPathEffect;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import io.reactivex.functions.Consumer;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import bsh.This;
+import android.widget.CompoundButton;
+import android.gesture.Gesture;
+import android.gesture.GesturePoint;
+import android.gesture.GestureStroke;
+import android.view.ContextThemeWrapper;
+import android.gesture.GestureLibrary;
+
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import android.content.Context;
+import android.content.res.ColorStateList;
+
+import android.os.Handler;
+import android.os.Looper;
+
+/*───────────────────────────────────────────────────────────────
+  DrawDialog()
+  **Gesture Drawing and Recognition UI**
+  Creates a dialog with a drawing canvas to capture multi-stroke gestures.
+  
+  Returns:
+   - This (The BeanShell 'This' reference for the dialog object)
+ ───────────────────────────────────────────────────────────────*/
+DrawDialog(This handleCard) {
+	This every = handleCard.every;
+	This handle = handleCard.handle;
+	This main = handleCard.main;
+	final This TOP = this;
+	Activity activity;
+	/* --- SHARED STATE --- */
+	Map userPath = new HashMap();
+	Map activeGesture = new HashMap();
+	Gesture gesture = new Gesture();
+	View gestureView;
+	int pathCounter = 0;
+	boolean RESET_ON_NEW_TOUCH = true;
+	List ghostGestures = new ArrayList();
+	This gestureNameInput;
+	TextInputLayout nameInput;
+	TextInputEditText nameEdit;
+	ChipGroup utilGroup;
+	ChipGroup infoGroup;
+	ChipGroup toggleGroup;
+
+	Canvas canvas;
+	This config = handle.config;
+	GestureLibrary library = config.library;
+	This engine = config.getEngine();
+	Map rules = config.rules;
+	This tm;
+
+	/* Colors */
+	int[] MULTI_COLORS = new int[] { Color.parseColor("#00bcd4"), Color.parseColor("#ff4081"), Color.parseColor("#7c4dff") };
+	int[] GHOST_COLORS = new int[] { Color.argb(80, 255, 255, 255) };
+
+	This InfoChip = object();
+	InfoChip.TOTAL = 0;
+	InfoChip.SCORE = 1;
+	InfoChip.NAME = 2;
+	InfoChip.LENGTH = 3;
+
+	This UtilChip = object();
+	UtilChip.DELETE = 11;
+	UtilChip.CLEAR = 12;
+	UtilChip.ADD = 13;
+
+	This ToggleChip = object();
+	ToggleChip.AUTO_RESET = 21;
+	ToggleChip.DOLLARQ = 22;
+
+	Object[][] InfoChipConfig = new Object[][] {
+		{
+			InfoChip.TOTAL,
+			"main/template.svg"
+		},
+		{
+			InfoChip.NAME,
+			"main/gesture.svg"
+		},
+		{
+			InfoChip.SCORE,
+			"main/percentage.svg"
+		},
+		{
+			InfoChip.LENGTH,
+			"main/length.svg"
+		}
+	};
+
+	// id, text, icon, runnable
+	Object[][] UtilChipConfig = new Object[][] {
+		{
+			UtilChip.DELETE,
+			"Delete",
+			"main/delete.svg",
+			new Runnable() {
+				run() {
+					showDeleteDialog();
+				}
+			}
+		},
+		{
+			UtilChip.CLEAR,
+			"Clear",
+			"main/clear.svg",
+			new Runnable() {
+				run() {
+					clearCanvas();
+				}
+			}
+		},
+		{
+			UtilChip.ADD,
+			"Add",
+			"main/add.svg",
+			new Runnable() {
+				run() {
+					addGesture();
+				}
+			}
+		}
+	};
+
+	Object[][] ToggleChipConfig = new Object[][] {
+		{
+			ToggleChip.AUTO_RESET,
+			"Auto Reset",
+			RESET_ON_NEW_TOUCH,
+			"main/auto_reset.svg",
+			new CompoundButton.OnCheckedChangeListener() {
+				onCheckedChanged(CompoundButton chip, boolean isChecked) {
+					RESET_ON_NEW_TOUCH = isChecked;
+				}
+			}
+		},
+		{
+			ToggleChip.DOLLARQ,
+			"DollarQ",
+			engine.filterWithDollarQ,
+			"main/dollarq.svg",
+			new CompoundButton.OnCheckedChangeListener() {
+				onCheckedChanged(CompoundButton chip, boolean isChecked) {
+					engine.filterWithDollarQ = isChecked;
+				}
+			}
+		}
+	};
+
+	/*───────────────────────────────────────────────────────────────
+	  setGhost(List gestures)
+	  **Updates Ghost Overlay**
+	  Replaces the current ghost paths with a new list of Gesture objects.
+	 ───────────────────────────────────────────────────────────────*/
+	public void setGhost(List gestures) {
+		if (gestures == null) {
+			ghostGestures = new ArrayList();
+		} else {
+			ghostGestures = gestures;
+		}
+		if (gestureView != null && gestureView != void) {
+			gestureView.invalidate();
+		}
+	}
+
+	clearCanvas() {
+		userPath.clear();
+		activeGesture.clear();
+		gesture = new Gesture();
+		ghostGestures.clear();
+		pathCounter = 0;
+		gestureView.invalidate();
+		resetInfoChips();
+	}
+
+	final Paint paintBase = new Paint();
+	paintBase.setStrokeWidth(dp(5));
+	paintBase.setStyle(Paint.Style.STROKE);
+	paintBase.setStrokeCap(Paint.Cap.ROUND);
+	paintBase.setStrokeJoin(Paint.Join.ROUND);
+	paintBase.setAntiAlias(true);
+	paintBase.setPathEffect(new CornerPathEffect(dp(10)));
+
+	post(Runnable action) {
+		Handler handler = new Handler(Looper.getMainLooper());
+		handler.post(action);
+	}
+
+	recognize() {
+		// ! Make sure library is loaded from the same instances
+		engine.library.load();
+		nameInput.setHelperText(" ");
+		engine.ignoreMinimumScore = false;
+		This recognized = engine.recognize(gesture);
+		engine.ignoreMinimumScore = true;
+		if (!recognized.isRecognized) {
+			nameInput.setHelperText("Gesture not found");
+			return;
+		}
+		double score = Math.round(recognized.score * 100.0) / 100.0;
+		List gestures = library.getGestures(recognized.name);
+		int size = library.getGestureEntries().size();
+		setGhost(gestures);
+		updateInfoChips(recognized);
+	}
+
+	ButtonChip(ChipGroup targetGroup, String text, boolean isFilter) {
+		ContextThemeWrapper chipContext = tm.wrapper("Widget.Material3.Chip.Assist");
+		if (isFilter) chipContext = tm.wrapper("Widget.Material3.Chip.Filter");
+		Chip chip = new Chip(chipContext);
+		chip.setText(text);
+		chip.setCheckable(isFilter);
+		chip.setChipIconVisible(true);
+		ColorStateList color = ColorStateList.valueOf(tm.color("colorOnSurface"));
+		chip.setChipIconTint(color);
+		setIcon(String path) {
+			if (every.MAIN_DIRECTORY != null) {
+				path = every.MAIN_DIRECTORY + "/res/" + path;
+			}
+			action() {
+				onSuccess(Drawable drawable) {
+					chip.setChipIcon(drawable);
+				}
+				return this;
+			}
+			loadSvgIcon(context, path, action());
+		}
+		targetGroup.addView(chip);
+		return this;
+	}
+
+	addUtilChip(int id, String text, String iconPath, Runnable action) {
+		This buttonChip = ButtonChip(utilGroup, text, false);
+		buttonChip.chip.setId(id);
+		buttonChip.setIcon(iconPath);
+		buttonChip.chip.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				post(action);
+			}
+		});
+	}
+
+	addToggleChip(int id, String text, boolean isChecked, String iconPath, CompoundButton.OnCheckedChangeListener listener) {
+		This toggleChip = ButtonChip(toggleGroup, text, true);
+		toggleChip.chip.setId(id);
+		toggleChip.setIcon(iconPath);
+		toggleChip.chip.setOnCheckedChangeListener(listener);
+		toggleChip.chip.setChecked(isChecked);
+	}
+
+	addInfoChip(int id, String iconPath) {
+		This infoChip = ButtonChip(infoGroup, "", false);
+		infoChip.chip.setId(id);
+		infoChip.chip.setChipStrokeWidth((float) 0.0);
+		infoChip.setIcon(iconPath);
+		infoChip.chip.setVisibility(View.GONE);
+	}
+
+	updateChipById(int id, String text) {
+		Chip chip = (Chip) infoGroup.findViewById(id);
+		if (text == null) {
+			chip.setVisibility(View.GONE);
+		} else if (!text.isEmpty()) {
+			chip.setVisibility(View.VISIBLE);
+			chip.setText(text);
+		} else {
+			chip.setVisibility(View.GONE);
+		}
+	}
+
+	updateInfoChips(This result) {
+		library.load();
+		int size = library.getGestureEntries().size();
+		float length;
+		String name;
+		double score;
+
+		if (gesture != null) length = gesture.length;
+		if (result.variables.length != 0) {
+			name = result.name;
+			score = Math.round(result.score * 100.0) / 100.0;
+		}
+
+		updateChipById(InfoChip.TOTAL, String.valueOf(size));
+		updateChipById(InfoChip.LENGTH, length > 0 ? String.valueOf(length) : null);
+		updateChipById(InfoChip.NAME, name);
+		updateChipById(InfoChip.SCORE, score > 0 ? String.valueOf(score) : null);
+
+		return this;
+	}
+
+	resetInfoChips() {
+		updateInfoChips(object());
+	}
+
+
+
+	sheetConfig() {
+		boolean isScrollable = true;
+		long timeout = 0;
+		int spacing = 4;
+
+		/* Internal calculated boundary edge spacing for ghost gesture alignment */
+		int edgeSpacingDp = dp(18);
+		int themeId = every.themeId;
+		String saveButtonName = "Close";
+		getViews(Object activityObj) {
+			activity = (Activity) activityObj;
+			tm = ThemeManager(activity);
+			tm.setTheme(themeId);
+			float density = activity.getResources().getDisplayMetrics().density;
+			dp(val) { return (int)(val * density + 0.5f); }
+
+			List viewList = new ArrayList();
+			final Drawable canvasDrawable = tasker.implementClass(Drawable.class, new ClassImplementation() {
+				run(Callable superCaller, String methodName, Object[] args) {
+					if (methodName.equals("draw")) {
+						canvas = (android.graphics.Canvas) args[0];
+						// Mode solid
+						canvas.drawColor(Color.BLACK, PorterDuff.Mode.SRC);
+						/* Draw Ghost Strokes with calculated centering and scaling math */
+						for (int g = 0; g < ghostGestures.size(); g++) {
+							Gesture gObj = (Gesture) ghostGestures.get(g);
+							ArrayList strokes = gObj.getStrokes();
+							if (strokes != null) {
+								android.graphics.RectF bounds = gObj.getBoundingBox();
+								float gWidth = bounds.width();
+								float gHeight = bounds.height();
+
+								if (gWidth > 0 && gHeight > 0) {
+									canvas.save();
+
+									int viewWidth = canvas.getWidth();
+									int viewHeight = canvas.getHeight();
+									int edgeOffset = dp(edgeSpacingDp);
+
+									float targetWidth = (float) viewWidth - (edgeOffset * 2);
+									float targetHeight = (float) viewHeight - (edgeOffset * 2);
+
+									float scaleX = targetWidth / gWidth;
+									float scaleY = targetHeight / gHeight;
+									float finalScale = Math.min(scaleX, scaleY);
+
+									float transX = ((float) viewWidth - (gWidth * finalScale)) / 2.0f - (bounds.left * finalScale);
+									float transY = ((float) viewHeight - (gHeight * finalScale)) / 2.0f - (bounds.top * finalScale);
+
+									canvas.translate(transX, transY);
+									canvas.scale(finalScale, finalScale);
+
+									/* Scale the stroke thickness proportionally down to match the matrix transformation scale */
+									float baseStrokeWidth = dp(5);
+									paintBase.setStrokeWidth(baseStrokeWidth / finalScale);
+
+									for (int s = 0; s < strokes.size(); s++) {
+										GestureStroke gs = (GestureStroke) strokes.get(s);
+										paintBase.setColor(GHOST_COLORS[s % GHOST_COLORS.length]);
+										int alpha = paintBase.getAlpha();
+										paintBase.setAlpha(80);
+										canvas.drawPath(gs.getPath(), paintBase);
+										paintBase.setAlpha(alpha);
+									}
+									canvas.restore();
+								}
+							}
+						}
+						/* Draw User Paths */
+						paintBase.setStrokeWidth(dp(5));
+						Object[] keys = userPath.keySet().toArray();
+						for (int i = 0; i < keys.length; i++) {
+							Integer id = (Integer) keys[i];
+							paintBase.setColor(MULTI_COLORS[id.intValue() % MULTI_COLORS.length]);
+							canvas.drawPath((Path) userPath.get(id), paintBase);
+						}
+						return null;
+					} else if (methodName.equals("getOpacity")) return PixelFormat.TRANSLUCENT;
+					return superCaller.call();
+				}
+			});
+			gestureView = new ImageView(activity);
+			gestureView.setImageDrawable(canvasDrawable);
+
+			FrameLayout canvasFrame = new FrameLayout(activity);
+			GradientDrawable gd = new GradientDrawable();
+			gd.setColor(Color.BLACK);
+			gd.setCornerRadius(dp(20));
+			canvasFrame.setBackground(gd);
+			LinearLayout.LayoutParams cfParams = new LinearLayout.LayoutParams(-1, dp(400));
+			canvasFrame.setLayoutParams(cfParams);
+			canvasFrame.addView(gestureView);
+
+			utilGroup = new ChipGroup(activity);
+			utilGroup.setSingleLine(true);
+			infoGroup = new ChipGroup(activity);
+			infoGroup.setSingleLine(true);
+			toggleGroup = new ChipGroup(activity);
+			toggleGroup.setSingleLine(true);
+
+
+			/*
+			 * Gesture Name Input
+			 */
+			gestureNameInput = InputLayout(activity);
+			nameInput = gestureNameInput.inputLayout;
+			nameInput.setPadding(0, 0, 0, 0);
+			nameEdit = gestureNameInput.editText;
+			gestureNameInput.setHint("Gesture Name");
+			gestureNameInput.setStartIcon("main/gesture.svg");
+			nameInput.setHelperTextEnabled(true);
+
+			/*
+			 * Util Chips
+			 */
+			for (Object[] config: UtilChipConfig) {
+				addUtilChip(config[0], config[1], config[2], config[3]);
+			}
+
+			/*
+			 * Toggle Chips
+			 */
+			for (Object[] config: ToggleChipConfig) {
+				addToggleChip(config[0], config[1], config[2], config[3], config[4]);
+			}
+
+			/*
+			 * Info Chips
+			 */
+			for (Object[] config: InfoChipConfig) {
+				addInfoChip(config[0], config[1]);
+			}
+
+			resetInfoChips();
+
+			viewList.add(canvasFrame);
+			viewList.add(infoGroup);
+			viewList.add(toggleGroup);
+			viewList.add(utilGroup);
+			viewList.add(nameInput);
+
+			final Map pointerMap = new HashMap();
+			final long[] startTime = new long[1];
+
+			/*───────────────────────────────────────────────────────────────
+			  addToPoints(MotionEvent event, long startT)
+			  **Updates both UI Paths and GesturePoint Data**
+			 ───────────────────────────────────────────────────────────────*/
+			addToPoints(MotionEvent event) {
+				for (int i = 0; i < event.getPointerCount(); i++) {
+					int currentPid = event.getPointerId(i);
+					Integer uId = (Integer) pointerMap.get(new Integer(currentPid));
+					if (uId != null) {
+						float mx = event.getX(i);
+						float my = event.getY(i);
+
+						/* Update UI Path */
+						Path p = (Path) userPath.get(uId);
+						if (p != null) p.lineTo(mx, my);
+
+						/* Update GesturePoints for final recognition */
+						ArrayList gPoints = (ArrayList) activeGesture.get(new Integer(currentPid));
+						if (gPoints != null) {
+							gPoints.add(new GesturePoint(mx, my, event.getEventTime()));
+						}
+					}
+				}
+			}
+
+			gestureView.setOnTouchListener(new View.OnTouchListener() {
+				onTouch(View v, MotionEvent event) {
+					int action = event.getActionMasked();
+					int idx = event.getActionIndex();
+					int pId = event.getPointerId(idx);
+					float x = event.getX(idx);
+					float y = event.getY(idx);
+
+					if (action == MotionEvent.ACTION_DOWN && RESET_ON_NEW_TOUCH) {
+						clearCanvas();
+						nameInput.setHelperText(" ");
+					}
+
+					if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+						Integer uId = new Integer(pathCounter++);
+						Path p = new Path();
+						p.moveTo(x, y);
+						userPath.put(uId, p);
+						pointerMap.put(new Integer(pId), uId);
+
+						/* Initialize point list for this stroke */
+						ArrayList strokePoints = new ArrayList();
+						strokePoints.add(new GesturePoint(x, y, event.getEventTime()));
+						activeGesture.put(new Integer(pId), strokePoints);
+
+					} else if (action == MotionEvent.ACTION_MOVE) {
+						addToPoints(event);
+					} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
+						addToPoints(event);
+						ArrayList gPoints = (ArrayList) activeGesture.remove(new Integer(pId));
+						if (gPoints != null && gPoints.size() > 1) {
+							gesture.addStroke(new GestureStroke(gPoints));
+						}
+						pointerMap.remove(new Integer(pId));
+						recognize();
+					}
+					gestureView.invalidate();
+					return true;
+				}
+			});
+
+			return viewList;
+		}
+
+		onSave() {
+			if (activity != null) activity.finish();
+		}
+
+		return this;
+	}
+
+	This sheetConfig = sheetConfig();
+	This sheetMenu = SheetMenu(sheetConfig);
+
+	show() {
+		sheetMenu.show();
+	}
+
+	remove() {
+		sheetMenu.remove();
+	}
+
+	addGesture() {
+		closeKeyboard(activity);
+		String gestureName = nameEdit.getText().toString();
+		int strokeCount = gesture.getStrokes().size();
+		if (gestureName.length() > 0 && strokeCount > 0) {
+			library.addGesture(gestureName, gesture);
+			library.save();
+			library.load();
+			handleCard.refreshGestureList();
+			nameEdit.setText("");
+			resetInfoChips();
+			clearCanvas();
+			tasker.showToast("Saved");
+		} else {
+			String error = "";
+			if (gestureName.length() == 0) error += "Gesture Name Required. ";
+			if (strokeCount == 0) error += "No Stroke Recorded";
+			nameInput.setError(error);
+		}
+	}
+
+	showDeleteDialog() {
+		listener() {
+			onSuccess(List selecteds) {
+				List deleted = new ArrayList();
+				for (Map item: selecteds) {
+					library.load();
+					String name = item.get("title");
+					deleted.add(name);
+					library.removeEntry(name);
+					library.save();
+					handleCard.removeTemplate(name);
+				}
+				library.load();
+				clearCanvas();
+				handleCard.refreshGestureList();
+				tasker.showToast(String.join("\n", deleted), "Deleted");
+			}
+			return this;
+		}
+		handleCard.main.selection.showDialog(TOP.config.handleName, "Delete Gesture", listener());
+	}
+	return this;
+}

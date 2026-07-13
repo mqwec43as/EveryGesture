@@ -1,0 +1,56 @@
+// https://github.com/parallelcc/MiCTS/blob/2ead158104bdb8605cbb5eae39a30d44db71bab6/app/src/main/java/com/parallelc/micts/ui/activity/MainActivity.kt#L34
+
+import android.content.Context;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.os.SystemClock;
+import android.os.Build;
+import com.android.internal.app.IVoiceInteractionManagerService;
+
+/*───────────────────────────────────────────────────────────────
+  circleToSearch()
+  **Triggers Android's Circle to Search (Omni)**
+  Uses privileged internal APIs to invoke the Voice Interaction 
+  Manager Service (VIMS) via Shizuku. 
+ 
+  Returns:
+   - boolean → True if the session was successfully shown, false otherwise.
+  ───────────────────────────────────────────────────────────────*/
+circleToSearch() {
+	boolean success = false;
+	int entryPoint = 1;
+	
+	try {
+		/* Prepare the invocation bundle with required metadata */
+		Bundle bundle = new Bundle();
+		bundle.putLong("invocation_time_ms", SystemClock.elapsedRealtime());
+		bundle.putInt("omni.entry_point", entryPoint);
+		bundle.putBoolean("micts_trigger", true);
+
+		/* Get the Voice Interaction Manager Service via Shizuku */
+		IBinder vis = tasker.getShizukuService("voiceinteraction");
+		if (vis == null) {
+			throw new RuntimeException("Shizuku voiceinteraction service binder is null.");
+		}
+
+		/* Access the service directly using BeanShell's ability to map interface/stub layouts */
+		IVoiceInteractionManagerService.Stub.Proxy vims = IVoiceInteractionManagerService.Stub.asInterface(vis);
+		if (vims == null) {
+			throw new RuntimeException("Failed to cast binder to IVoiceInteractionManagerService.");
+		}
+
+		/* Handle API differences based on Android version natively without manual method reflection */
+		if (Build.VERSION.SDK_INT >= 34) {
+			/* Android 14+ (UPSIDE_DOWN_CAKE) signature */
+			success = (Boolean) vims.showSessionFromSession(null, bundle, 7, "hyperOS_home");
+		} else {
+			/* Older signature: showSessionFromSession(token, bundle, flags) */
+			success = (Boolean) vims.showSessionFromSession(null, bundle, 7);
+		}
+
+	} catch (Exception e) {
+		throw new RuntimeException("Can't trigger circle to search. " + e.getMessage(), e);
+	}
+
+	return success;
+}

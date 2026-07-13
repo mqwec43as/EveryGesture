@@ -1,0 +1,410 @@
+/*───────────────────────────────────────────────────────────────
+  This code was generated with the asssitance of AI Tools.
+  ─────────────────────────────────────────────────────────────── */
+
+import java.util.Arrays;
+
+import android.view.accessibility.AccessibilityNodeInfo;
+import bsh.This;
+
+import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
+import bsh.BshMethod;
+
+int TYPE_NONE = 0;
+int TYPE_STRING = 1 << 0;
+int TYPE_NUMBER = 1 << 1;
+int TYPE_FLOAT = 1 << 2;
+int TYPE_MULTI = 1 << 3;
+
+int TYPE_PACKAGE = 1 << 20;
+int TYPE_CLASS = 1 << 21;
+int TYPE_GLOBAL = 1 << 22;
+int TYPE_TASK = 1 << 23;
+int TYPE_FILE_PATH = 1 << 24;
+int TYPE_EVERY = 1 << 25;
+int TYPE_SCRIPT = 1 << 26;
+
+Object[][] PARAMETER_OBJECT = new Object[][] {
+	{
+		"labelOrPackageName",
+		"App",
+		String.class,
+		TYPE_PACKAGE | TYPE_STRING
+	},
+	{
+		"packageName",
+		"Package name",
+		String.class,
+		TYPE_PACKAGE | TYPE_STRING
+	},
+	{
+		"packageNames",
+		"List of package names",
+		List.class,
+		TYPE_PACKAGE | TYPE_STRING | TYPE_MULTI
+	},
+
+	{
+		"className",
+		"App class name",
+		String.class,
+		TYPE_CLASS | TYPE_PACKAGE | TYPE_STRING
+	},
+	{
+		"classNames",
+		"List of app class names",
+		List.class,
+		TYPE_CLASS | TYPE_PACKAGE | TYPE_STRING | TYPE_MULTI
+	},
+	{
+		"globalAction",
+		"Global action",
+		String.class,
+		TYPE_GLOBAL | TYPE_STRING
+	},
+	{
+		"taskName",
+		"Tasker task name",
+		String.class,
+		TYPE_TASK | TYPE_STRING
+	},
+	{
+		"filePath",
+		"File path",
+		String.class,
+		TYPE_FILE_PATH | TYPE_STRING
+	},
+	{
+		"text",
+		"Text",
+		String.class,
+		TYPE_STRING
+	},
+	{
+		"mediaAction",
+		"Media action",
+		String.class,
+		TYPE_STRING
+	},
+	{
+		"url",
+		"URL",
+		String.class,
+		TYPE_STRING
+	}, 
+	{
+		"everyCommand",
+		"EveryGesture command",
+		String.class,
+		TYPE_STRING | TYPE_EVERY
+	}, 
+	{
+		"taskerCommand",
+		"Tasker command to execute",
+		String.class,
+		TYPE_STRING
+	}, 
+	{
+		"scriptPath",
+		"Script stored in /scripts",
+		String.class,
+		TYPE_SCRIPT | TYPE_STRING
+	},
+
+	// * Apps Tray
+	{
+		"trayTitle",
+		"Tray title",
+		String.class,
+		TYPE_STRING
+	},
+	{
+		"columnCount",
+		"Number of columns",
+		int.class,
+		TYPE_NUMBER
+	}
+};
+
+
+Object[][] DIRECTORIES_OBJECT = new Object[][] {
+	{
+		"lib/actions",
+		"Actions"
+	}
+};
+
+
+public This MethodInspector(This THIS) {
+	This manager = ThisManager(THIS);
+	Map PARAMETERS_MAP = new HashMap();
+	List PARAMETERS = new ArrayList();
+	List KEYS = new ArrayList();
+	List METHODS = new ArrayList();
+	Map METHODS_MAP = new HashMap();
+	Map DECLARATION = new HashMap();
+	Map allMethods = new HashMap();
+	List AVAILABLE_PARAMETERS = new ArrayList();
+	Map DIRECTORIES_MAP = new HashMap();
+	List DIRECTORIES = new ArrayList();
+	
+	updateAvailable() {
+		AVAILABLE_PARAMETERS.clear();
+		Set keys = DECLARATION.keySet();
+		Iterator iterator = keys.iterator();
+		while (iterator.hasNext()) {
+			String key = iterator.next();
+			List overloads = DECLARATION.get(key);
+			for (Map overload: overloads) {
+				List parameterNames = overload { "parameterNames" };
+				AVAILABLE_PARAMETERS.addAll(parameterNames);
+			}
+		}
+
+		AVAILABLE_PARAMETERS = AVAILABLE_PARAMETERS.stream()
+			.distinct()
+			.collect(Collectors.toList());
+
+		return AVAILABLE_PARAMETERS;
+	}
+
+	updateAvailable();
+
+	contains(List sourceList, List targetList) {
+		boolean found;
+		for (String target: targetList) {
+			if (sourceList.contains(target)) {
+				found = true;
+				break;
+			}
+		}
+		return found;
+	}
+
+	void read(String regexFilter, int level) {
+		METHODS = manager.make(regexFilter, 2, false);
+		DECLARATION = manager.getMethodsMap();
+	}
+
+	void read(List dirList, int level) {
+		String importPattern = "(" + String.join("|", dirList) + ")/.*\\.bsh$";
+		read(importPattern, level);
+		for (String dirName: dirList) {
+			String pattern = dirName + "/.*\\.bsh$";
+			List methodNames = manager.getMethods(pattern, 2);
+			METHODS_MAP { dirName } = methodNames;
+		}
+	}
+
+	read() {
+		Iterator iterator = DIRECTORIES_MAP.keySet().iterator();
+		List dirList = new ArrayList();
+		while (iterator.hasNext()) {
+			String key = iterator.next();
+			Map entry = (Map) DIRECTORIES_MAP.get(key);
+			dirList.add(entry.get("folderName"));
+		}
+		String importPattern = "(" + String.join("|", dirList) + ")/.*\\.bsh$";
+		METHODS = manager.make(importPattern, 2, false);
+		DECLARATION = manager.getMethodsMap();
+		allMethods = manager.getAllMethods();
+		for (String dirName: dirList) {
+			String pattern = dirName + "/.*\\.bsh$";
+			List methodNames = manager.getMethods(pattern, 2);
+			METHODS_MAP { dirName } = methodNames;
+		}
+	}
+
+	// ! @deprecated {@link #getOverloads()}
+	// TODO : Remove
+	List getMethodOverloads(String methodName, List methodParams) {
+		List methods = new ArrayList();
+		List overloads = DECLARATION.get(methodName);
+		if (overloads == null) return methods;
+		for (Map overload: overloads) {
+			List parameterNames = overload { "parameterNames" };
+			boolean foundParams;
+			if (methodParams == null) {
+				foundParams = true;
+			} else if (methodParams.isEmpty()) {
+				if (parameterName.isEmpty()) foundParams;
+			} else {
+				foundParams = parameterNames.containsAll(methodParams);
+			}
+			if (foundParams) {
+				methods.add(overload);
+			}
+		}
+		return methods;
+	}
+
+	// ! @deprecated {@link #getOverloads()}
+	// TODO : Remove
+	List getMethodOverloads(String methodName) {
+		List methods = getMethodOverloads(methodName, null);
+		return methods;
+	}
+
+	
+	// * New
+	// TODO : replace getMethodOverloads
+	List getOverloads(String methodName, List methodParams) {
+		List methods = new ArrayList();
+		List overloads = allMethods.get(methodName);
+		if (overloads == null) return methods;
+		for (BshMethod overload: overloads) {
+			List parameterNames = Arrays.asList(overload.parameterNames);
+			boolean foundParams;
+			if (methodParams == null) {
+				foundParams = true;
+			} else if (methodParams.isEmpty()) {
+				if (parameterName.isEmpty()) foundParams;
+			} else {
+				foundParams = parameterNames.containsAll(methodParams);
+			}
+			if (foundParams) {
+				methods.add(overload);
+			}
+		}
+		return methods;
+	}
+
+	// * New
+	// TODO : replace getMethodOverloads
+	List getOverloads(String methodName) {
+		List methods = getOverloads(methodName, null);
+		return methods;
+	}
+
+	// ! @deprecated 
+	// TODO : Remove
+	List getMethodOverloadParams(List overloads) {
+		List allParams = new ArrayList();
+		if (overloads.isEmpty()) return allParams;
+		for (Map overload: overloads) {
+			List parameterNames = overload { "parameterNames" };
+			allParams.addAll(parameterNames);
+		}
+
+		allParams = allParams.stream()
+			.distinct()
+			.collect(Collectors.toList());
+
+		List allParamsMap = new ArrayList();
+		for (String param: allParams) {
+			Map paramMap = getParameter(param);
+			allParamsMap.add(paramMap);
+		}
+		return allParamsMap;
+	}
+
+	// ! @deprecated 
+	// TODO : Remove
+	List getMethods(String directoryKey) {
+		return METHODS_MAP.get(directoryKey);
+	}
+
+	List getMethodParams(Map overload) {
+		List allParams = new ArrayList();
+		if (overload == null || overload.isEmpty()) return allParams;
+
+		List parameterNames = overload { "parameterNames" };
+		List parameterTypes = overload { "parameterTypes" };
+		if (parameterNames == null || parameterTypes == null) return allParams;
+		if (parameterNames.isEmpty() || parameterTypes.isEmpty()) return allParams;
+		for (int i = 0; i < parameterNames.size(); i++) {
+			String name = parameterNames.get(i);
+			String type = parameterTypes.get(i);
+			Map paramMap = getParameter(name);
+			paramMap.put("name", name);
+			paramMap.put("type", type);
+			allParams.add(paramMap);
+		}
+
+		return allParams;
+	}
+
+
+	Map toMap(Object[][] objects, Map targetMap, String[] keys, String keyString) {
+		if (objects == null || targetMap == null || keys == null) {
+			return targetMap;
+		}
+
+		for (int i = 0; i < objects.length; i++) {
+			Map entry = new HashMap();
+			Object[] row = objects[i];
+
+			/* Iterate through the keys to dictate the assignment */
+			for (int j = 0; j < keys.length; j++) {
+				String currentKey = keys[j];
+				Object currentValue = null;
+
+				/* Assign value from row if index exists, otherwise remains null */
+				if (row != null && j < row.length) {
+					currentValue = row[j];
+				}
+
+				entry.put(currentKey, currentValue);
+			}
+
+			targetMap.put(entry.get(keyString), entry);
+		}
+		return targetMap;
+	}
+
+	List toList(Map sourceMap, List targetList, String keyString) {
+		Iterator iterator = sourceMap.keySet().iterator();
+
+		while (iterator.hasNext()) {
+			String key = iterator.next();
+			Map entry = (Map) sourceMap.get(key);
+			targetList.add(entry.get(keyString));
+		}
+
+		Collections.sort(targetList, String.CASE_INSENSITIVE_ORDER);
+		return targetList;
+	};
+
+	toMap(PARAMETER_OBJECT, PARAMETERS_MAP, new String[] { "key", "description", "type", "flags" }, "key");
+	toMap(DIRECTORIES_OBJECT, DIRECTORIES_MAP, new String[] { "folderName", "name" }, "folderName");
+	toList(PARAMETERS_MAP, PARAMETERS, "key");
+	toList(DIRECTORIES_MAP, DIRECTORIES, "folderName");
+
+
+	List getParameterList() {
+		return PARAMETERS;
+	};
+
+	Map getParameterMap() {
+		return PARAMETERS_MAP;
+	};
+
+	Map getParameter(String key) {
+		return PARAMETERS_MAP.get(key);
+	};
+
+	List getParameters(List parameterList) {
+		List result = new ArrayList();
+		for (int i = 0; i < parameterList.size(); i++) {
+			String key = parameterList.get(i);
+			result.add(getParameter(key));
+		}
+		return result;
+	}
+
+	getMethod(String methodName, List methodParams) {
+		Class[] classes = new Class[methodParams.size()];
+		if (classes.length > 0)  {
+			for (int i = 0; i < methodParams.size(); i++) {
+				Object argValue = methodParams.get(i);
+				classes[i] = argValue.getClass();
+			}
+		}
+		return manager.getMethod(methodName, classes);
+	}
+
+	return this;
+}

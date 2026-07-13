@@ -1,0 +1,353 @@
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+import android.gesture.GestureOverlayView;
+import android.gesture.Gesture;
+import android.gesture.GestureLibraries;
+import android.gesture.GestureLibrary;
+import android.gesture.GestureStore;
+import android.gesture.Prediction;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+Engine()
+**Gesture Recognizer Factory**
+Initializes and returns the gesture recognition engine.
+───────────────────────────────────────────────────────────────*/
+Engine(int RESAMPLE_POINTS, float MINIMUM_SCORE) {
+	GestureLibrary library;
+	boolean filterWithDollarQ = true;
+	boolean ignoreMinimumScore;
+	List TEMPLATES = new ArrayList();
+
+	Map getFiles() {
+		return new HashMap(GESTURE_FILES);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  createPoint(float x, float y, int id)
+	───────────────────────────────────────────────────────────────*/
+	List createPoint(float x, float y, int id) {
+		List pt = new ArrayList();
+		pt.add(x);
+		pt.add(y);
+		pt.add(id);
+		return pt;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  pathLength(List points)
+	───────────────────────────────────────────────────────────────*/
+	float pathLength(List points) {
+		float d = 0.0f;
+		for (int i = 1; i < points.size(); i++) {
+			List p1 = (List) points.get(i - 1);
+			List p2 = (List) points.get(i);
+			if (p1.get(2).equals(p2.get(2))) {
+				float dx = ((Float) p2.get(0)).floatValue() - ((Float) p1.get(0)).floatValue();
+				float dy = ((Float) p2.get(1)).floatValue() - ((Float) p1.get(1)).floatValue();
+				d += (float) Math.sqrt(dx * dx + dy * dy);
+			}
+		}
+		return d;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  resample(List points, int n)
+	───────────────────────────────────────────────────────────────*/
+	List resample(List points, int n) {
+		float pathLen = pathLength(points);
+		float interval = pathLen / (n - 1);
+		float D = 0.0f;
+		List newpts = new ArrayList();
+		newpts.add(points.get(0));
+		for (int i = 1; i < points.size(); i++) {
+			List p = (List) points.get(i);
+			List prev = (List) points.get(i - 1);
+			if (p.get(2).equals(prev.get(2))) {
+				float dx = ((Float) p.get(0)).floatValue() - ((Float) prev.get(0)).floatValue();
+				float dy = ((Float) p.get(1)).floatValue() - ((Float) prev.get(1)).floatValue();
+				float dist = (float) Math.sqrt(dx * dx + dy * dy);
+				if (D + dist >= interval) {
+					float qx = ((Float) prev.get(0)).floatValue() + ((interval - D) / dist) * dx;
+					float qy = ((Float) prev.get(1)).floatValue() + ((interval - D) / dist) * dy;
+					List q = createPoint(qx, qy, p.get(2));
+					newpts.add(q);
+					points.add(i, q);
+					D = 0.0f;
+				} else {
+					D += dist;
+				}
+			}
+		}
+		if (newpts.size() == n - 1) {
+			newpts.add(points.get(points.size() - 1));
+		}
+		return newpts;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  scalePoints(List points)
+	───────────────────────────────────────────────────────────────*/
+	List scalePoints(List points) {
+		float minX = (float) 1e20;
+		float maxX = (float) - 1e20;
+		float minY = (float) 1e20;
+		float maxY = (float) - 1e20;
+		for (int i = 0; i < points.size(); i++) {
+			List p = (List) points.get(i);
+			float x = ((Float) p.get(0)).floatValue();
+			float y = ((Float) p.get(1)).floatValue();
+			if (x < minX) minX = x;
+			if (x > maxX) maxX = x;
+			if (y < minY) minY = y;
+			if (y > maxY) maxY = y;
+		}
+		float size = Math.max(maxX - minX, maxY - minY);
+		List out = new ArrayList();
+		for (int i = 0; i < points.size(); i++) {
+			List p = (List) points.get(i);
+			out.add(createPoint((((Float) p.get(0)).floatValue() - minX) / size, (((Float) p.get(1)).floatValue() - minY) / size, p.get(2)));
+		}
+		return out;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  translateToOrigin(List points)
+	───────────────────────────────────────────────────────────────*/
+	List translateToOrigin(List points) {
+		float sx = 0.0f;
+		float sy = 0.0f;
+		for (int i = 0; i < points.size(); i++) {
+			List p = (List) points.get(i);
+			sx += ((Float) p.get(0)).floatValue();
+			sy += ((Float) p.get(1)).floatValue();
+		}
+		float cx = sx / points.size();
+		float cy = sy / points.size();
+		List out = new ArrayList();
+		for (int i = 0; i < points.size(); i++) {
+			List p = (List) points.get(i);
+			out.add(createPoint(((Float) p.get(0)).floatValue() - cx, ((Float) p.get(1)).floatValue() - cy, p.get(2)));
+		}
+		return out;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	toPoints(gesture)
+	**Converts Gesture to Flat Point List**
+	Iterates through all strokes and coordinate pairs to create a 
+	single list of [x, y, strokeId].
+
+	Arguments:
+	* gesture → The android.gesture.Gesture object
+
+	Returns:
+	* List (ArrayList) containing sub-lists of point data.
+	───────────────────────────────────────────────────────────────*/
+	public List toPoints(Gesture gesture) {
+		List allPoints = new ArrayList();
+
+		if (gesture == null) {
+			return allPoints;
+		}
+
+		// Get all strokes in the gesture
+		ArrayList strokes = gesture.getStrokes();
+		if (strokes == null) {
+			return allPoints;
+		}
+
+		// Iterate through each stroke using standard for-loop (BeanShell compatible)
+		for (int i = 0; i < strokes.size(); i++) {
+			GestureStroke stroke = (GestureStroke) strokes.get(i);
+			float[] pts = stroke.points; // Format: [x1, y1, x2, y2...]
+
+			// Step by 2 because points are pairs of X and Y
+			for (int j = 0; j < pts.length; j += 2) {
+				float x = pts[j];
+				float y = pts[j + 1];
+				// Use your helper function to create the [x, y, id] list
+				allPoints.add(createPoint(x, y, i));
+			}
+		}
+
+		return allPoints;
+	}
+
+
+	/*───────────────────────────────────────────────────────────────
+	  scoreMatch(List a, List b)
+	───────────────────────────────────────────────────────────────*/
+	double scoreMatch(List a, List b) {
+		if (a == null || b == null || a.isEmpty() || b.isEmpty()) return 0.0;
+
+		int n = Math.min(a.size(), b.size());
+		double sum = 0.0;
+
+		for (int i = 0; i < n; i++) {
+			List ptA = (List) a.get(i);
+			List ptB = (List) b.get(i);
+
+			if (ptA == null || ptB == null) continue;
+
+			// Cast to Float (matching your createPoint function)
+			double ax = ((Float) ptA.get(0)).doubleValue();
+			double ay = ((Float) ptA.get(1)).doubleValue();
+			double bx = ((Float) ptB.get(0)).doubleValue();
+			double by = ((Float) ptB.get(1)).doubleValue();
+
+			double dx = ax - bx;
+			double dy = ay - by;
+
+			sum += Math.sqrt(dx * dx + dy * dy);
+		}
+
+		// Use average distance so long gestures aren't penalized
+		double averageDistance = sum / n;
+
+		// Return similarity: 1.0 is perfect match, 0.0 is very different
+		return 1.0 / (1.0 + averageDistance);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  addTemplate(String name, List pts)
+	───────────────────────────────────────────────────────────────*/
+	void addTemplate(String name, List pts) {
+		List norm = translateToOrigin(scalePoints(resample(pts, RESAMPLE_POINTS)));
+		Map map = new HashMap();
+		map.put("name", name);
+		map.put("points", norm);
+		TEMPLATES.add(map);
+	}
+
+	getStrokesCount(String name) {
+		List gestures = library.getGestures(name);
+		if (gestures == null) return 0;
+		return gestures.get(0).strokesCount;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  recognize(Gesture gesture)
+	───────────────────────────────────────────────────────────────*/
+	recognize(Gesture gesture) {
+		This recognized = object();
+		recognized.isRecognized = false;
+		recognized.namespace.name = "Recognized";
+		if (gesture.strokesCount == 0) return recognized;
+		long start = System.currentTimeMillis();
+		List predictions = library.recognize(gesture);
+		List candidates = new ArrayList();
+		List candidateNames = new ArrayList();
+
+		if (!predictions.isEmpty() && !ignoreMinimumScore) {
+			for (Prediction prediction: predictions) {
+				if (prediction.score >= MINIMUM_SCORE) {
+					candidates.add(prediction);
+					candidateNames.add(prediction.name);
+				} else break;
+			}
+		} else if (!predictions.isEmpty() && ignoreMinimumScore) {
+			for (Prediction prediction: predictions) {
+				candidates.add(prediction);
+				candidateNames.add(prediction.name);
+			}
+		}
+
+		if (candidates.isEmpty()) return recognized;
+		Prediction prediction = candidates.get(0);
+		double score = prediction.score;
+		String name = prediction.name;
+		List fallback = new ArrayList();
+		int predictionStrokesCount = getStrokesCount(name);
+		
+		if (predictionStrokesCount != gesture.strokesCount) return recognized;
+
+		if (candidates.size() > 1 && gesture.strokesCount < 2 && filterWithDollarQ) {
+			List cand = translateToOrigin(scalePoints(resample(toPoints(gesture), RESAMPLE_POINTS)));
+			Double innerScore = 0;
+			for (int i = 0; i < TEMPLATES.size(); i++) {
+				Map template = (Map) TEMPLATES.get(i);
+				String templateName = template.get("name");
+				int index = candidateNames.indexOf(templateName);
+				if (index < 0) continue;
+
+				double templateScore = scoreMatch(cand, (List) template.get("points"));
+				Map alt = new HashMap();
+				alt.put("name", templateName);
+				alt.put("score", templateScore);
+				fallback.add(alt);
+				if (templateScore > innerScore) {
+					innerScore = templateScore;
+					score = candidates.get(index).score;
+					name = templateName;
+				}
+			}
+		}
+
+
+		long end = System.currentTimeMillis();
+		long time = end - start;
+		recognized.name = name;
+		recognized.score = score;
+		recognized.time = time;
+		recognized.predictions = candidates;
+		recognized.fallback = fallback;
+		recognized.length = gesture.getLength();
+		recognized.gesture = gesture;
+		recognized.isRecognized = true;
+		return recognized;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  loadLibrary(GestureLibrary folder)
+	───────────────────────────────────────────────────────────────*/
+	loadLibrary(GestureLibrary targetLib) {
+		library = targetLib;
+		if (library.load()) {
+			library.setSequenceType(GestureStore.SEQUENCE_SENSITIVE);
+			library.setOrientationStyle(GestureStore.ORIENTATION_SENSITIVE);
+			Set entryNames = library.getGestureEntries();
+			for (String name: entryNames) {
+				ArrayList gestures = library.getGestures(name);
+				for (Gesture gesture: gestures) {
+					List points = toPoints(gesture);
+					addTemplate(name, points);
+				}
+			}
+		}
+	}
+
+	loadLibrary(String libraryPath) {
+		GestureLibrary targetLib = GestureLibraries.fromFile(new File(libraryPath));
+		loadLibrary(targetLib);
+	}
+
+	setSequenceSenstive(boolean isSequenceSensitive) {
+		if (isSequenceSensitive) library.setSequenceType(GestureStore.SEQUENCE_SENSITIVE);
+		else library.setSequenceType(GestureStore.SEQUENCE_INVARIANT);
+		library.load();
+	}
+
+	setOrientationSenstive(boolean isOrientationSensitive) {
+		if (isOrientationSensitive) library.setSequenceType(GestureStore.ORIENTATION_SENSITIVE);
+		else library.setSequenceType(GestureStore.ORIENTATION_INVARIANT);
+		library.load();
+	}
+
+	return this;
+
+}
+
+Engine(int RESAMPLE_POINT) {
+	return Engine(RESAMPLE_POINT, (float) 2.75);
+}
+
+Engine() {
+	return Engine(32, (float) 2.75);
+}

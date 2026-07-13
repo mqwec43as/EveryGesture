@@ -1,0 +1,99 @@
+/*───────────────────────────────────────────────────────────────
+This code was generated using AI and refined with minimum editing.
+───────────────────────────────────────────────────────────────*/
+
+import android.media.AudioManager;
+import android.view.KeyEvent;
+import android.content.Context;
+
+/*───────────────────────────────────────────────────────────────
+  sendMediaKey(String mediaAction)
+  Sends ANY media key by mediaAction name.
+  
+  Supported actions (case-insensitive):
+    "play", "pause", "playpause", "toggle",
+    "next", "previous", "prev",
+    "stop",
+    "ff", "rew",
+    "skipforward", "skipbackward",
+    "eject", "record"
+
+  Also supports long-press:
+    "next_long", "prev_long", "ff_long", "rew_long"
+
+  ───────────────────────────────────────────────────────────────*/
+sendMediaKey(String mediaAction) {
+	if (mediaAction == null || mediaAction == void) return;
+
+	AudioManager am = context.getSystemService(Context.AUDIO_SERVICE);
+	if (am == null) return;
+
+	int key = -1;
+	boolean isLong = false;
+
+	String act = mediaAction.toLowerCase().replace(" ", "");
+
+	/* Long press check */
+	if (act.endsWith("_long")) {
+		isLong = true;
+		act = act.substring(0, act.length() - 5);
+	}
+
+	switch (mediaAction) {
+		case "play":
+			key = KeyEvent.KEYCODE_MEDIA_PLAY;
+			break;
+		case "pause":
+			key = KeyEvent.KEYCODE_MEDIA_PAUSE;
+			break;
+		case "playpause":
+		case "toggle":
+			key = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+			break;
+		case "next":
+			key = KeyEvent.KEYCODE_MEDIA_NEXT;
+			break;
+		case "previous":
+		case "prev":
+			key = KeyEvent.KEYCODE_MEDIA_PREVIOUS;
+			break;
+		case "stop":
+			key = KeyEvent.KEYCODE_MEDIA_STOP;
+			break;
+		case "fastforwad":
+			key = KeyEvent.KEYCODE_MEDIA_FAST_FORWARD;
+			break;
+		case "rewind":
+			key = KeyEvent.KEYCODE_MEDIA_REWIND;
+			break;
+		case "skipforward":
+			key = KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD;
+			break;
+		case "skipbackward":
+			key = KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD;
+			break;
+		case "eject":
+			key = KeyEvent.KEYCODE_MEDIA_EJECT;
+			break;
+		case "record":
+			key = KeyEvent.KEYCODE_MEDIA_RECORD;
+			break;
+	}
+
+	if (key < 0) return; /* unknown mediaAction */
+
+	/* Send DOWN */
+	KeyEvent down = new KeyEvent(KeyEvent.ACTION_DOWN, key);
+	am.dispatchMediaKeyEvent(down);
+
+	/* Long press if requested */
+	if (isLong) {
+		Thread.sleep(500);
+	}
+
+	/* Send UP */
+	KeyEvent up = new KeyEvent(KeyEvent.ACTION_UP, key);
+	am.dispatchMediaKeyEvent(up);
+}
+
+

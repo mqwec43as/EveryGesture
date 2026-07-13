@@ -1,0 +1,11 @@
+import bsh.This;
+import org.json.JSONObject;
+
+toJson(This THIS) {
+	String[] varNames = THIS.namespace.getVariableNames();
+	JSONObject json = new JSONObject();
+	for (String varName: varNames) {
+		json.put(varName, THIS.namespace.getVariable(varName));
+	}
+	return json;
+}

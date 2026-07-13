@@ -1,0 +1,420 @@
+import java.util.function.Consumer;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.view.animation.TranslateAnimation;
+import android.view.animation.DecelerateInterpolator;
+import io.reactivex.functions.Consumer;
+import android.view.Window;
+import bsh.This;
+import android.text.TextWatcher;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
+import android.graphics.Color;
+import android.graphics.PointF;
+import android.graphics.Point;
+import org.json.JSONArray;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
+
+InputLayout(Context inputContext) {
+	This TOP = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	This actions = every.Actions;
+	Object initialText;
+	This presetDialog;
+	String keyString;
+	Map map = new HashMap();
+	This inputListener;
+	boolean test = true;
+	Drawable startIcon;
+	Drawable endIcon;
+	Class inputClass = String.class;
+	String parameterName;
+
+	TextInputLayout inputLayout = new TextInputLayout(inputContext);
+	TextInputEditText editText = new TextInputEditText(inputLayout.getContext());
+	inputLayout.setBoxBackgroundMode(2);
+	inputLayout.addView(editText);
+	
+	Drawable errorDrawable = inputLayout.errorIconDrawable;
+
+	public int dp(int value) {
+		return (int) TypedValue.applyDimension(
+			TypedValue.COMPLEX_UNIT_DIP,
+			value,
+			inputContext.getResources().getDisplayMetrics()
+		);
+	}
+	
+	int p = dp(12);
+	int d = dp(4);
+	inputLayout.setPadding(p-d, p, p-d, p);
+
+	setInputType(Class clazz) {
+		inputClass = clazz;
+		String currentText = editText.text.toString();
+		editText.setText("");
+		switch(clazz) {
+			case Integer.class:
+			case Long.class:
+			case int.class:
+			case long.class:
+				editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+				break;
+			case Float.class:
+			case Double.class:
+			case float.class:
+			case double.class:
+				editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+				break;
+			default:
+				editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+				break;
+		}
+		editText.setText(currentText);
+	}
+
+	setInitialText(Map map, String keyString) {
+		TOP.initialText = map.get(keyString);
+		TOP.keyString = keyString;
+		TOP.map = map;
+		String initialTextString;
+		if (initialText instanceof String) {
+			initialTextString = new String(initialText).toString();
+		} else if (initialText instanceof Integer) {
+			editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+			initialTextString = new Integer(initialText).toString();
+		} else if (initialText instanceof Float || initialText instanceof Double) {
+			editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+			initialTextString = initialText.toString();
+		} else if (initialText instanceof List) {
+			try {				
+				initialTextString = String.join("\n", initialText);
+				// log("array detected" + initialText);
+			} catch(e) {
+				log(initialText.toString(), "ERROR");
+			}
+		}
+
+		String newInitial;
+		if (keyString.startsWith("arg")) {
+			if (parameterName != null) {
+					newInitial = actions.getParameterText(parameterName, initialText);
+			}
+		} else if (keyString.equals("command")) {
+			newInitial = actions.getCommandTextVersion(map);
+		}
+
+		if (newInitial != null) initialTextString = newInitial;
+		editText.setText(initialTextString);
+	}
+
+	setStartIcon(String startIconPath) {
+		if (every.MAIN_DIRECTORY != void) startIconPath = every.MAIN_DIRECTORY + "/res/" + startIconPath;
+		listener() {
+			onSuccess(Drawable result) {
+				TOP.startIcon = result;
+				inputLayout.setStartIconDrawable(result);
+			}
+			return this;
+		}
+		loadSvgIcon(inputContext, startIconPath, listener());
+	}
+
+	setEndIcon(String endIconPath) {
+		if (every.MAIN_DIRECTORY != void) endIconPath = every.MAIN_DIRECTORY + "/res/" + endIconPath;
+		listener() {
+			onSuccess(Drawable result) {
+				endIcon = result;
+				inputLayout.setEndIconDrawable(result);
+			}
+			onFileNotExist() {
+				tasker.showToast(endIconPath + "not exist");
+			}
+			return this;
+		}
+		inputLayout.setEndIconMode(-1);
+		loadSvgIcon(inputContext, endIconPath, listener());
+	}
+
+	setEditable(boolean editAble) {
+		if (!editAble) {
+			inputLayout.setClickable(false);
+			inputLayout.setFocusable(false);
+			editText.setFocusable(false);
+			editText.setClickable(false);
+			editText.setFocusableInTouchMode(false);
+		} else {
+			inputLayout.setClickable(true);
+			inputLayout.setFocusable(true);
+			editText.setFocusable(true);
+			editText.setClickable(true);
+			editText.setFocusableInTouchMode(true);
+		}
+	}
+
+	setEndIconListener() {
+		View.OnClickListener endIconListener = new View.OnClickListener() {
+			public void onClick(View v) {
+				if (presetDialog != null) openPresetDialog();
+			}
+		};
+		inputLayout.setEndIconOnClickListener(endIconListener);
+	}
+
+	setPresetDialog(This newPresetDialog) {
+		presetDialog = newPresetDialog;
+		updateIcon();
+		if (presetDialog == null) {
+			inputLayout.setEndIconOnClickListener(null);
+			// make it editable again
+			setEditable(true);
+			editText.setOnClickListener(null);
+		} else {
+			setEndIconListener();
+			setEditable(false);
+			editText.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					openPresetDialog();
+				}
+			});
+		}
+	}
+
+	updateIcon() {
+		if (presetDialog == null) {
+			inputLayout.setEndIconDrawable(null);
+			inputLayout.setErrorIconDrawable(errorDrawable);
+			inputLayout.setEndIconMode(0);
+		} else {
+			inputLayout.setErrorIconDrawable(null);
+			inputLayout.setEndIconDrawable(endIcon);
+			inputLayout.setEndIconMode(-1);
+		}
+	}
+
+	clearPresetDialog() {
+		presetDialog = null;
+		updateIcon();
+	}
+
+	setHint(String hint) {
+		inputLayout.setHint(hint);
+	}
+
+	setText(String text) {
+		editText.setText(text);
+	}
+
+	
+	setTextWithClass(Object targetText) {
+		String text;
+		switch(inputClass) {
+			case PointF.class:
+			case Point.class:
+				text = targetText.x + "," + targetText.y;
+				break;
+			case Color.class:
+				text = String.format("#%08X", new Object[] {targetText});
+				break;
+			case List.class:
+				JSONArray array = new JSONArray();
+				for (int i = 0; i < targetText.size(); i++) {
+					array.put(targetText.get(i));
+				}
+				text = array.toString(1);
+				break;
+			default:
+				text = targetText.toString();
+				break;
+		}
+		editText.setText(text);
+		setHelperDialogWithClass();
+	}
+
+	openPresetDialog() {
+		if (hasSelected()) {
+			if (selected instanceof List) {
+				presetDialog.setPreSelectedItems(selected);
+			}
+		}
+		if (presetDialog != null) presetDialog.show();
+	}
+
+	getView() {
+		return inputLayout;
+	}
+
+
+	reset() {
+		selected = null;
+		editText.setText("");
+	}
+
+	hide() {
+		inputLayout.setVisibility(View.GONE);
+	}
+
+	unhide() {
+		inputLayout.setVisibility(View.VISIBLE);
+	}
+
+	isVisible() {
+		return inputLayout.getVisibility() == View.VISIBLE;
+	}
+
+	getText() {
+		return editText.getText().toString().trim();
+	}
+
+	hasSelected() {
+		return selected != void && selected != null;
+	}
+
+	isValidPointFormat() {
+		String regex = """^[\d\.-]+\s*,\s*[\d\.-]+$""";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(getText());
+		return matcher.matches();
+	}
+
+	getSelected() {
+		if (inputLayout.getVisibility() == View.GONE) return null;
+		if (hasSelected()) {
+			if (selected instanceof List) {
+				return actions.getListConfigVersion(selected);
+			} else {
+				return actions.getConfigVersion(selected);
+			}
+		} else {
+			// log("Selected void for " + keyString);
+			String text = getText();
+			switch(inputClass) {
+				case Integer.class:
+				case Long.class:
+				case int.class:
+				case long.class:
+					return Integer.parseInt(text);
+				case Float.class:
+				case float.class:
+					return Float.parseFloat(text);
+				case Double.class:
+				case double.class:
+					return Double.parseDouble(text);
+				case Color.class:
+					return Color.parseColor(text);
+				case Point.class:
+					if (!isValidPointFormat()) throw new Exception("Invalid format (#.#, #.#");
+					String[] point = text.split(",");
+					return new Point(Integer.parseInt(point[0]), Integer.parseInt(point[1]));
+				case PointF.class:
+					if (!isValidPointFormat()) throw new Exception("Invalid format (#.#, #.#");
+					String[] pointF = text.split(",");
+					return new PointF(Float.parseFloat(pointF[0]), Float.parseFloat(pointF[1]));
+				case List.class:
+					JSONArray array = new JSONArray(text);
+					List list = new ArrayList();
+					for (int i = 0; i < array.length(); i++) {
+						list.add(array.get(i));
+					}
+					return list;
+				default:
+					if (text.isEmpty()) return null;
+					else return text;
+			}
+		}
+	}
+
+	// * TYPE PRESET
+	setHelperDialogWithClass(Class classType) {
+		setClassIcon() {
+			String name = classType.getSimpleName().toLowerCase();
+			setEndIcon("main/class/" + name + ".svg");
+		}
+		if (classType == null) return;
+		switch(classType) {
+			case Color.class:
+				listener() {
+					onSave(String name) {
+						editText.setText(name);
+					}
+					return this;
+				}
+				This presetDialog = PickColorDialog(listener());
+				setPresetDialog(presetDialog);
+				setClassIcon();
+				setEndIconListener();
+				break;
+			default:
+				setPresetDialog(null);
+				break;
+
+		}
+	}
+
+	setHelperDialogWithClass() {
+		if (inputClass == null) return;
+		setHelperDialogWithClass(inputClass);
+	}
+
+	isInputValid() {
+		boolean hasError;
+		String errorText;
+		try {
+			getSelected();
+			hasError = false;
+			inputLayout.setErrorEnabled(false);
+			inputLayout.setError(null);
+		} catch (Exception e) {
+			hasError = true;
+			errorText = e.getMessage();
+			inputLayout.setErrorEnabled(true);
+			inputLayout.setError(errorText);
+		}
+		return !hasError;
+	}
+
+	editText.addTextChangedListener(new android.text.TextWatcher() {
+		beforeTextChanged(CharSequence textChar, int start, int count, int after) {}
+		onTextChanged(CharSequence textChar, int start, int before, int count) {
+			String inputText = textChar.toString().trim();
+			if (inputText.isEmpty()) {
+				inputLayout.setErrorEnabled(true);
+				inputLayout.setError("Field can't be empty");
+			} else {
+				inputLayout.setErrorEnabled(false);
+				inputLayout.setError(null);
+				if (!hasSelected()) {
+					isInputValid();
+				}
+				updateIcon();
+			}
+		}
+		afterTextChanged(android.text.Editable edit) {
+			
+		}
+	});
+	
+
+	return this;
+}

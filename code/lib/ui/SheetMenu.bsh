@@ -1,0 +1,362 @@
+import java.util.function.Consumer;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.widget.Button;
+import android.view.animation.TranslateAnimation;
+import android.view.animation.DecelerateInterpolator;
+import io.reactivex.functions.Consumer;
+import android.view.Window;
+import android.app.Activity;
+import android.view.WindowInsetsController;
+import io.reactivex.functions.Action;
+import android.view.MotionEvent;
+import android.content.res.ColorStateList;
+import bsh.This;
+import android.view.ContextThemeWrapper;
+import java.util.concurrent.TimeUnit;
+import io.reactivex.subjects.CompletableSubject;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingtoolbar.FloatingToolbarLayout;
+
+/*───────────────────────────────────────────────────────────────
+SheetMenu Component
+**Displays a Material 3 Bottom Sheet**
+Uses the same state management logic as ListDialog for show, remove, etc.
+───────────────────────────────────────────────────────────────*/
+SheetMenu(This config) {
+
+	Activity activity;
+	LinearLayout container;
+	boolean isRemoved = true;
+	boolean hasShown = false;
+	FloatingToolbarLayout root;
+	CompletableSubject waitTimeout = CompletableSubject.create();
+
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (classes == null) classes = new Class[] {};
+		return config.namespace.getMethod(methodName, classes) != null;
+	}
+
+	boolean hasSave = hasMethod("onSave", null);
+	boolean hasCancel = hasMethod("onCancel", null);
+	boolean hasTimeout = hasMethod("onTimeout", null);
+	boolean hasAttach = hasMethod("onAttach", null);
+	boolean hasDetach = hasMethod("onDetach", null);
+	boolean hasGetViews = hasMethod("getViews", new Class[] { Context.class });
+
+	List viewList = null;
+	boolean isScrollable = config.isScrollable == void ? false : config.isScrollable;
+	long timeout = config.timeout == void ? 0 : config.timeout;
+	int spacing = config.spacing == void ? 0 : config.spacing;
+	int themeId = config.themeId == void ? 0 : config.themeId;
+	String saveButtonName = config.saveButtonName == void ? "Save" : config.saveButtonName;
+	String cancelButtonName = config.cancelButtonName == void ? "Cancel" : config.cancelButtonName;
+
+	public void addSpacer() {
+		int spacerHeight = dp(spacing);
+		View spacer = new View(activity);
+		LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, spacerHeight);
+		spacer.setLayoutParams(params);
+		container.addView(spacer);
+	}
+
+	layout(Activity act) {
+		activity = act;
+
+		int SNACKBAR_RADIUS = dp(32);
+		int SNACKBAR_HEADER_PADDING = dp(8);
+		int SNACKBAR_PADDING = dp(4);
+
+		int PILL_WIDTH = dp(48);
+		int PILL_HEIGHT = dp(8);
+		int PILL_COLOR = 0x4DFFFFFF;
+		int DRAG_HANDLE_HEIGHT = dp(24);
+
+		final Window window = activity.getWindow();
+		window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+		WindowManager.LayoutParams winParams = window.getAttributes();
+		winParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+		winParams.gravity = Gravity.BOTTOM;
+
+		window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS |
+			WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+
+		winParams.dimAmount = 0.5f;
+		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+		window.setAttributes(winParams);
+		final int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
+
+		This tm = ThemeManager(activity);
+		if (themeId == 0) tm.setThemeDark();
+		else tm.setTheme(themeId);
+
+		final LinearLayout sheetMenu = new LinearLayout(activity);
+		sheetMenu.setLayoutParams(new LinearLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			isScrollable ? ViewGroup.LayoutParams.MATCH_PARENT : ViewGroup.LayoutParams.WRAP_CONTENT
+		));
+		sheetMenu.setOrientation(LinearLayout.VERTICAL);
+		sheetMenu.setPadding(SNACKBAR_PADDING, SNACKBAR_PADDING, SNACKBAR_PADDING, 0);
+
+		GradientDrawable sheetBg = new GradientDrawable();
+		sheetBg.setColor(tm.color("colorSurfaceContainer"));
+		sheetBg.setCornerRadii(new float[] { SNACKBAR_RADIUS, SNACKBAR_RADIUS, SNACKBAR_RADIUS, SNACKBAR_RADIUS, 0, 0, 0, 0 });
+		sheetMenu.setBackground(sheetBg);
+
+		/* Drag Handle */
+		final RelativeLayout dragHandle = new RelativeLayout(activity);
+		dragHandle.setLayoutParams(new LinearLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			DRAG_HANDLE_HEIGHT
+		));
+
+		View visualPill = new View(activity);
+		RelativeLayout.LayoutParams pillParams = new RelativeLayout.LayoutParams(PILL_WIDTH, PILL_HEIGHT);
+		pillParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+		visualPill.setLayoutParams(pillParams);
+
+		GradientDrawable pillBg = new GradientDrawable();
+		pillBg.setColor(PILL_COLOR);
+		pillBg.setCornerRadius(PILL_HEIGHT / 2);
+		visualPill.setBackground(pillBg);
+		dragHandle.addView(visualPill);
+
+		dragHandle.setOnTouchListener(new View.OnTouchListener() {
+			float initialY;
+			int initialWinHeight;
+
+			onTouch(View v, MotionEvent event) {
+				int action = event.getAction();
+
+				if (action == MotionEvent.ACTION_DOWN) {
+					initialY = event.getRawY();
+					WindowManager.LayoutParams params = window.getAttributes();
+					initialWinHeight = params.height;
+					if (initialWinHeight <= 0) {
+						initialWinHeight = sheetMenu.getHeight();
+					}
+					return true;
+				}
+
+				if (action == MotionEvent.ACTION_MOVE) {
+					float deltaY = event.getRawY() - initialY;
+					int newHeight = (int)(initialWinHeight - deltaY);
+
+					if (newHeight > (screenHeight * 0.2) && newHeight < (screenHeight * 0.99)) {
+						WindowManager.LayoutParams params = window.getAttributes();
+						params.height = newHeight;
+						window.setAttributes(params);
+					}
+					return true;
+				}
+				return true;
+			}
+		});
+
+		sheetMenu.addView(dragHandle);
+
+		/* Header */
+		final RelativeLayout headerLayout = new RelativeLayout(activity);
+		headerLayout.setPadding(SNACKBAR_HEADER_PADDING, SNACKBAR_HEADER_PADDING, SNACKBAR_HEADER_PADDING, SNACKBAR_HEADER_PADDING);
+
+		ContextThemeWrapper cancelButtonContext = tm.wrapper("Widget.Material3.Button.OutlinedButton");
+		TextView cancelButton = new MaterialButton(cancelButtonContext);
+		cancelButton.setText(cancelButtonName);
+		cancelButton.setTextColor(tm.color("colorPrimary"));
+		cancelButton.setBackgroundColor(Color.TRANSPARENT);
+
+		RelativeLayout.LayoutParams cancelParams = new RelativeLayout.LayoutParams(
+			ViewGroup.LayoutParams.WRAP_CONTENT,
+			ViewGroup.LayoutParams.WRAP_CONTENT
+		);
+		cancelParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+		cancelButton.setLayoutParams(cancelParams);
+
+		cancelButton.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				if (hasCancel) config.onCancel();
+				remove();
+			}
+		});
+
+		ContextThemeWrapper saveButtonContext = tm.wrapper("Widget.Material3.Button");
+		MaterialButton saveButton = new MaterialButton(saveButtonContext);
+		saveButton.setText(saveButtonName);
+
+		RelativeLayout.LayoutParams saveParams = new RelativeLayout.LayoutParams(
+			ViewGroup.LayoutParams.WRAP_CONTENT,
+			ViewGroup.LayoutParams.WRAP_CONTENT
+		);
+		saveParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+		saveButton.setLayoutParams(saveParams);
+
+		saveButton.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				if (hasSave) config.onSave();
+				remove();
+			}
+		});
+
+		if (hasCancel) headerLayout.addView(cancelButton);
+		if (hasSave) headerLayout.addView(saveButton);
+		sheetMenu.addView(headerLayout);
+
+		/* Root container */
+		root = new FloatingToolbarLayout(activity);
+		root.setLayoutParams(new LinearLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			isScrollable ? 0 : ViewGroup.LayoutParams.WRAP_CONTENT,
+			isScrollable ? 1.0f : 0.0f
+		));
+		sheetMenu.addView(root);
+
+		container = new LinearLayout(activity);
+		container.setOrientation(LinearLayout.VERTICAL);
+		container.setLayoutParams(new ViewGroup.LayoutParams(-1, -2));
+
+		/* SAFE add views */
+		if (hasGetViews) {
+			viewList = config.getViews(activity);
+		};
+
+		if (viewList != null) {
+			for (int i = 0; i < viewList.size(); i++) {
+				Object item = viewList.get(i);
+
+				if (item == null || item == void) continue;
+				if (!(item instanceof View)) continue;
+
+				if (item.getLayoutParams() == null) {
+					item.setLayoutParams(new LinearLayout.LayoutParams(
+						ViewGroup.LayoutParams.MATCH_PARENT,
+						ViewGroup.LayoutParams.WRAP_CONTENT
+					));
+				}
+
+				// Add only it doesn't have a parent
+				if (item.getParent() == null) {
+					container.addView(item);
+					if (spacing > 0 && i < viewList.size() - 1) addSpacer();
+				}
+			}
+		}
+
+		if (isScrollable) {
+			ScrollView contentScroll = new ScrollView(activity);
+			contentScroll.setLayoutParams(new LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				ViewGroup.LayoutParams.MATCH_PARENT
+			));
+			contentScroll.setContentDescription("ScrollContainer");
+			contentScroll.setFillViewport(true);
+			contentScroll.setVerticalScrollBarEnabled(false);
+			contentScroll.addView(container);
+			root.addView(contentScroll);
+		} else {
+			root.addView(container);
+		}
+
+		/* Animation */
+		TranslateAnimation slideUp = new TranslateAnimation(0, 0, screenHeight, 0);
+		slideUp.setDuration(220);
+		slideUp.setInterpolator(new DecelerateInterpolator());
+		sheetMenu.startAnimation(slideUp);
+		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+			onViewAttachedToWindow(View v) {
+				// ! It won't trigger at the first time
+				hasShown = true;
+				isRemoved = false;
+			}
+			onViewDetachedFromWindow(View v) {
+				remove();
+				if (hasDetach) config.onDetach();
+			}
+		});
+
+		activity.setContentView(sheetMenu);
+	}
+
+
+	remove() {
+		if (activity != null) {
+			activity.finish();
+		}
+		isRemoved = true;
+		if (timeout != 0 && !waitTimeout.hasComplete()) {
+			waitTimeout.onComplete();
+		}
+	}
+
+	int dp(int value) {
+		if (activity == null) return value;
+		return (int)(value * activity.getResources().getDisplayMetrics().density);
+	}
+
+
+	show() {
+		if (!isAdded()) {
+			isRemoved = false;
+			hasShown = true;
+			tasker.doWithActivity(new java.util.function.Consumer() {
+				accept(Object act) { 
+					layout((Activity) act);
+					hasShown = true;
+					isRemoved = false;
+					if (hasAttach) config.onAttach();
+				}
+			});
+			if (timeout != 0) {
+				boolean isSuccess = waitTimeout.blockingAwait(timeout, TimeUnit.MILLISECONDS);
+				if (hasTimeout && !isSuccess) config.onTimeout();
+				remove();
+				return isSuccess;
+			}
+		}
+	}
+
+	toggle() {
+		if (isRemoved()) show();
+		else remove();
+	}
+
+	isAdded() {
+		if (root == null) return false;
+		return root.getParent() != null && root.isAttachedToWindow();
+	}
+
+	isHidden() {
+		if (root == null) return false;
+		return root.getVisibility() == View.GONE && isAdded();
+	}
+
+	isShown() {
+		if (root == null) return false;
+		return root.getVisibility() == View.VISIBLE && isAdded();
+	}
+
+	isRemoved() {
+		if (root == null) return false;
+		return !isAdded();
+	}
+
+	return this;
+}

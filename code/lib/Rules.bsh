@@ -1,0 +1,31 @@
+import bsh.This;
+
+
+Rules(This config) {
+    Map map = config.rules;
+
+    get(String templateName) {
+        return map.get(templateName);
+    }
+
+    get(String templateName, String actionType) {
+        Map actionMap = (Map) map.get(templateName);
+        return actionMap.get(actionType);
+    }
+
+    put(String templateName, Map value) {
+        map.put(templateName, value);
+    }
+
+    put(String templateName, String actionType, Map value) {
+        Map actionMap = (Map) map.get(templateName);
+        actionMap.put(actionType, value);
+    }
+    
+    getTemplateNames() {
+        return Arrays.asList(map.keySet())
+    }
+
+
+    return this;
+}

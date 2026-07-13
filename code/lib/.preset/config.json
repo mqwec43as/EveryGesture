@@ -1,0 +1,43 @@
+{
+  "handle": {
+    "useAccessibility": false,
+    "autoEnable": false,
+    "color": "#FFFFFFFF",
+    "dashInterval": [],
+    "cornerRadius": 200,
+    "size": [
+      30,
+      500
+    ],
+    "stayDuration": 300,
+    "minConfidence": 2.8,
+    "effect": [
+      "CornerDash"
+    ],
+    "width": 20,
+    "initialPosition": [
+      -1,
+      -1
+    ],
+    "stayRadius": 150,
+    "filterWithDollarQ": false,
+    "render": true,
+    "initialPositionPercent": [
+      0,
+      0
+    ]
+  },
+  "livePath": {
+    "stayDuration": 300,
+    "color": "#FFFFFFFF",
+    "dashInterval": [],
+    "effect": [
+      "CornerDash"
+    ],
+    "width": 20,
+    "stayRadius": 150,
+    "render": true,
+    "cornerRadius": 200
+  },
+  "rules": {}
+}

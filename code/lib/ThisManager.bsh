@@ -1,0 +1,353 @@
+import bsh.This;
+import bsh.BshMethod;
+import bsh.NameSpace;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+import bsh.BshMethod;
+import bsh.Modifiers;
+import java.io.File;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import bsh.BshMethod;
+
+
+ThisManager(This THIS) {
+	NameSpace NAMESPACE = THIS.namespace;
+
+	// Helper to convert arrays to ArrayList for Tasker/BeanShell usability
+	toArray(Object[] objs) {
+		List list = new ArrayList();
+		if (objs != null) {
+			for (int i = 0; i < objs.length; i++) {
+				list.add(objs[i]);
+			}
+		}
+		return list;
+	}
+
+	public List getHierarchy() {
+		List hierarchyList = new ArrayList();
+		NameSpace current = NAMESPACE;
+		while (current != null) {
+			int invocationLine = current.getInvocationLine();
+
+			// Stop if we hit a system/invalid namespace
+			if (invocationLine < 0) {
+				break;
+			}
+
+			Map namespaceData = new HashMap();
+			namespaceData.put("name", current.getName());
+			namespaceData.put("variableNames", toArray(current.getVariableNames()));
+			namespaceData.put("methodNames", toArray(current.getMethodNames()));
+			namespaceData.put("invocationLine", Integer.valueOf(invocationLine));
+			namespaceData.put("invocationText", current.getInvocationText());
+			namespaceData.put("declaredVariables", toArray(current.getDeclaredVariables()));
+			namespaceData.put("methods", toArray(current.getMethods()));
+			namespaceData.put("parent", current.getParent());
+
+			hierarchyList.add(namespaceData);
+			current = current.getParent();
+		}
+		return hierarchyList;
+	}
+
+	public NameSpace getTopNameSpace() {
+		NameSpace current = NAMESPACE;
+		NameSpace lastValid = NAMESPACE;
+
+		while (current != null) {
+			int line = current.getInvocationLine();
+			if (line < 0) {
+				break;
+			}
+			lastValid = current; // Keep track of the last one that wasn't -1
+			current = current.getParent();
+		}
+		return lastValid;
+	}
+
+	public int getTopInvocationLine() {
+		NameSpace top = getTopNameSpace();
+		return (top != null) ? top.getInvocationLine() : -1;
+	}
+
+	public String getTopInvocationText() {
+		NameSpace top = getTopNameSpace();
+		return (top != null) ? top.getInvocationText() : "";
+	}
+
+
+	public Map getMethodsMap() {
+		BshMethod[] methods = NAMESPACE.getMethods();
+		Map groupedMethods = new HashMap();
+
+		if (methods == null) {
+			return groupedMethods;
+		}
+
+		for (int i = 0; i < methods.length; i++) {
+			bsh.BshMethod methodObj = (bsh.BshMethod) methods[i];
+			if (methodObj == null) {
+				continue;
+			}
+
+			Map methodData = new HashMap();
+
+			/* Basic Info */
+			String methodName = methodObj.getName();
+			methodData.put("name", methodName == null ? "null" : String.valueOf(methodName));
+
+			/* Return Type */
+			Class retType = methodObj.getReturnType();
+			String retTypeName = (retType == null) ? null : retType.getName();
+			methodData.put("returnType", retTypeName);
+
+			/* Simple Return Type */
+			String simpleRetName = retTypeName;
+			if (retTypeName != null && retTypeName.contains(".")) {
+				simpleRetName = retTypeName.substring(retTypeName.lastIndexOf(".") + 1);
+			}
+
+			/* Readable Modifiers */
+			bsh.Modifiers mods = methodObj.getModifiers();
+			String modsStr = "";
+			if (mods != null) {
+				if (mods.hasModifier("public")) modsStr += "public ";
+				if (mods.hasModifier("protected")) modsStr += "protected ";
+				if (mods.hasModifier("private")) modsStr += "private ";
+				if (mods.hasModifier("static")) modsStr += "static ";
+				if (mods.hasModifier("final")) modsStr += "final ";
+				if (mods.hasModifier("synchronized")) modsStr += "synchronized ";
+				if (mods.hasModifier("abstract")) modsStr += "abstract ";
+			}
+			modsStr = modsStr.trim();
+			methodData.put("modifiers", modsStr);
+
+			/* Parameters Preparation */
+			Class[] paramTypesArr = methodObj.getParameterTypes();
+			String[] paramNamesArr = methodObj.getParameterNames();
+
+			/* Initialize ArrayLists as requested */
+			List parameterTypes = new ArrayList();
+			List parameterNames = new ArrayList();
+
+			String prefixFull = (modsStr.length() > 0 ? modsStr + " " : "") + (retTypeName != null ? retTypeName + " " : "");
+			String prefixSimple = (modsStr.length() > 0 ? modsStr + " " : "") + (simpleRetName != null ? simpleRetName + " " : "");
+
+			String declFull = prefixFull + methodName + "(";
+			String declSimple = prefixSimple + methodName + "(";
+
+			if (paramTypesArr != null) {
+				for (int j = 0; j < paramTypesArr.length; j++) {
+					Class currentType = paramTypesArr[j];
+					String currentName = (paramNamesArr != null && paramNamesArr.length > j) ? paramNamesArr[j] : "arg" + j;
+
+					String fullTypeName = (currentType == null) ? "Object" : currentType.getName();
+
+					/* Clean up array notation for readability */
+					if (fullTypeName.startsWith("[L") && fullTypeName.endsWith(";")) {
+						fullTypeName = fullTypeName.substring(2, fullTypeName.length() - 1) + "[]";
+					} else if (fullTypeName.equals("[I")) {
+						fullTypeName = "int[]";
+					}
+
+					String simpleTypeName = fullTypeName;
+					if (fullTypeName.contains(".")) {
+						simpleTypeName = fullTypeName.substring(fullTypeName.lastIndexOf(".") + 1);
+					}
+
+					/* Add to ArrayLists instead of concatenating strings */
+					parameterTypes.add(fullTypeName);
+					parameterNames.add(currentName);
+
+					declFull += fullTypeName + " " + currentName;
+					declSimple += simpleTypeName + " " + currentName;
+
+					if (j < paramTypesArr.length - 1) {
+						declFull += ", ";
+						declSimple += ", ";
+					}
+				}
+			}
+
+			declFull += ")";
+			declSimple += ")";
+
+			/* Store the ArrayLists in the map */
+			methodData.put("parameterTypes", parameterTypes);
+			methodData.put("parameterNames", parameterNames);
+			methodData.put("declaration", declFull);
+			methodData.put("declarationSimple", declSimple);
+			methodData.put("parameterClass", paramTypesArr);
+
+			/* Grouping Logic */
+			List overloads = (List) groupedMethods.get(methodName);
+			if (overloads == null) {
+				overloads = new ArrayList();
+				groupedMethods.put(methodName, overloads);
+			}
+			overloads.add(methodData);
+		}
+
+		return groupedMethods;
+	}
+
+	getAllMethods() {
+		BshMethod[] methods = NAMESPACE.getMethods();
+		Map allMethods = new HashMap();
+
+		if (methods == null) {
+			return groupedMethods;
+		}
+
+		for (BshMethod method: methods) {
+			String methodName = method.getName();
+
+			List overloads = (List) allMethods.get(methodName);
+			if (overloads == null) {
+				overloads = new ArrayList();
+				allMethods.put(methodName, overloads);
+			}
+			overloads.add(method);
+		}
+
+		return allMethods;
+	}
+
+	String classPath = pathToFile(".").getAbsolutePath();
+	getClassPath() {
+		return pathToFile(".").getAbsolutePath();
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  getFiles(String folderPath, String regexFilter, boolean againstPath, boolean returnfileName, int recursiveLevel)
+	  **Lists Regex-Filtered File Paths Recursively (Self-Contained)**
+	  Scans a directory and its subdirectories up to a specific depth 
+	  to return filenames or absolute paths matching a regex.
+
+	  Arguments:
+	   - folderPath     → The direct path to the directory to scan.
+	   - regexFilter    → Regex pattern to match filenames (null/"" for all).
+	   - againstPath    → Regex pattern againt file path or file name.
+	   - returnfileName → If true, returns only names; if false, absolute paths.
+	   - recursiveLevel → Depth of recursion (0 = current folder, -1 = infinite).
+
+	  Example:
+	  files = getFiles("/sdcard/DCIM", ".*\\.jpg$", false, -1);
+	  ───────────────────────────────────────────────────────────────*/
+	public List getFiles(String folderPath, String regexFilter, boolean againstPath, int recursiveLevel, boolean returnfileName) {
+		List pathList = new ArrayList();
+		if (folderPath == null) { return pathList; }
+
+		File directory = new File(folderPath);
+		if (!directory.exists() || !directory.isDirectory()) { return pathList; }
+
+		File[] files = directory.listFiles();
+		if (files == null) { return pathList; }
+
+		/* Compile pattern once for efficiency if filter exists. */
+		Pattern pattern = null;
+		if (regexFilter != null && regexFilter.length() > 0) {
+			pattern = Pattern.compile(regexFilter, Pattern.CASE_INSENSITIVE);
+		}
+		if (againstPath) {
+			String escapedClassPath = classPath.replaceAll("([\\[\\]\\{\\}\\(\\)\\<\\>\\*\\+\\-\\=\\!\\?\\^\\$\\|])", "\\\\$1");
+			pattern = Pattern.compile("^" + escapedClassPath + "/" + regexFilter, Pattern.CASE_INSENSITIVE);
+		}
+
+		for (int i = 0; i < files.length; i++) {
+			File file = files[i];
+
+			/* If it's a directory, handle recursion logic. */
+			if (file.isDirectory()) {
+				if (recursiveLevel != 0) {
+					int nextDepth = (recursiveLevel == -1) ? -1 : recursiveLevel - 1;
+					/* Recursively call the same function and merge results. */
+					pathList.addAll(getFiles(file.getAbsolutePath(), regexFilter, againstPath, nextDepth, returnfileName));
+				}
+				continue;
+			}
+
+			/* Match filename against regex if provided. */
+			if (pattern != null) {
+				Matcher matcher;
+				if (againstPath) {
+
+					matcher = pattern.matcher(file.getAbsolutePath());
+				} else {
+					matcher = pattern.matcher(file.getName());
+				}
+				if (!matcher.find()) { continue; }
+			}
+
+			/* Add requested format to the list. */
+			if (returnfileName) {
+				pathList.add(file.getName());
+			} else {
+				pathList.add(file.getAbsolutePath());
+			}
+		}
+
+		return pathList;
+	}
+
+	getFiles(String regexFilter, boolean againstPath, int recursiveLevel, boolean returnfileName) {
+		return getFiles(classPath, regexFilter, againstPath, recursiveLevel, returnfileName);
+	}
+
+	make(String regexFilter, int recursiveLevel, boolean returnfileName) {
+		List files = getFiles(classPath, regexFilter, true, recursiveLevel, returnfileName);
+		for (String file: files) {
+			this.interpreter.source(file);
+		}
+
+		Collections.sort(files, String.CASE_INSENSITIVE_ORDER);
+		return files;
+	}
+
+	getMethods(String regexFilter, int recursiveLevel) {
+		List fileNames = getFiles(classPath, regexFilter, true, recursiveLevel, true);
+		List methodNames = new ArrayList();
+		for (String fileName: fileNames) {
+			String toRemove = ".bsh";
+			if (fileName.endsWith(toRemove)) {
+				String result = fileName.substring(0, fileName.length() - toRemove.length());
+				methodNames.add(result);
+			}
+		}
+		Collections.sort(methodNames, String.CASE_INSENSITIVE_ORDER);
+		return methodNames;
+	}
+
+	getMethod(String methodName, Class[] classes) {
+		BshMethod method = NAMESPACE.getMethod(methodName, classes);
+		return method;
+	}
+
+	return this;
+}
+
+// a11Y.set();
+// tm = ThisManager(a11Y);
+// tm.make(""".bsh""", 3, false);
+// Testing logic
+// test() {
+// 	aa() {
+// 		return this;
+// 	}
+// 	return this;
+// }
+
+// This test = test();
+// mm = ThisManager(this);
+
+// // mm.getTopInvocationLine();
+// mm.getTopInvocationText();

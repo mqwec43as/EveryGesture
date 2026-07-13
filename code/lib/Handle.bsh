@@ -1,0 +1,401 @@
+import java.io.File;
+import android.view.WindowManager;
+import android.view.View;
+import android.graphics.Paint;
+import android.util.DisplayMetrics;
+import android.graphics.Path;
+import android.os.Handler;
+import android.os.Looper;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import android.graphics.Color;
+import android.content.Context;
+import net.dinglisch.android.taskerm.MyAccessibilityService;
+import bsh.This;
+import android.content.Context;
+import android.graphics.Point;
+import android.graphics.drawable.GradientDrawable;
+import android.widget.RelativeLayout;
+import android.view.WindowManager;
+import android.graphics.PixelFormat;
+import android.view.Gravity;
+import android.os.Build;
+import android.view.View.OnTouchListener;
+import bsh.This;
+import android.view.View;
+import android.view.MotionEvent;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.gesture.Gesture;
+import android.gesture.GesturePoint;
+import android.gesture.GestureStroke;
+import android.os.Handler;
+import android.os.Looper;
+
+import android.util.DisplayMetrics;
+import java.util.concurrent.ScheduledThreadPoolExecutor.ScheduledFutureTask;
+
+importCommands("lib.misc");
+importCommands("lib");
+importCommands("lib.actions");
+importCommands("lib.misc");
+importCommands("lib.activity");
+
+Handle(This config) {
+	final This TOP = this;
+	final This every = tasker.getJavaVariable("everyGesture");
+	Context CONTEXT;
+	WindowManager WINDOW_MANAGER;
+	int overlayType;
+	Point initialPosition;
+	This livePath;
+	This livePathListener;
+	WindowManager baseWm;
+	DisplayMetrics metrics;
+	int screenWidth;
+	int screenHeight;
+	int longestSide;
+	RelativeLayout view;
+	GradientDrawable visualShape;
+	int flags;
+	WindowManager.LayoutParams params;
+	View.OnTouchListener listener;
+	This stateListener;
+
+	getLivePathListener() {
+		This recognized;
+		This action;
+		ScheduledFutureTask futureTask;
+		long maximumDuration = 20000;
+		ScheduledFutureTask saveGuardFutureTask;
+		Runnable saveGuard = new Runnable() {
+			run() {
+				log("Stopping because gesture is too long!");
+				if (futureTask != null) futureTask.cancel(true);
+			}
+		};
+		
+		recognize(Gesture gesture, boolean isLongPress) {
+			if (gesture.getStrokesCount() > 0) {
+				recognized = config.engine.recognize(gesture);
+				if (!recognized.isRecognized) {
+					tasker.showToast("No match!");
+				} else {
+					recognized.longPress = isLongPress;
+					recognized.handle = config.handleName;
+					every.namespace.setVariable("lastGesture", recognized.gesture, false);
+					action = config.actionRules.getAction(recognized);
+					if (action.isLongPress && action.hasInterval) {
+						futureTask = every.schedule(action.task, 0, action.interval);
+						saveGuardFutureTask = every.schedule(saveGuard, maximumDuration);
+					} else {
+						action.run();
+					}
+					
+				}
+			}
+		}
+		long start;
+		onDown(This live, Gesture gesture) {
+			recognized = null;
+			action = null;
+			futureTask = null;
+			saveGuardFutureTask = null;
+		}
+
+		onRelease(This live, Gesture gesture, boolean isLongPress) {
+			recognize(gesture, isLongPress);
+		}
+
+		onLongPress(This live, Gesture gesture, boolean isLongPress) {
+			recognize(gesture, isLongPress);
+		}
+
+		onUp(This live, Gesture gesture) {
+			if (futureTask != null) futureTask.cancel(true);
+			if (saveGuardFutureTask != null) saveGuardFutureTask.cancel(true);
+		}
+
+		return this;
+	}
+
+	create() {
+		CONTEXT = context;
+		WINDOW_MANAGER = (WindowManager) CONTEXT.getSystemService(Context.WINDOW_SERVICE);
+		overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+
+		if (config.handle.useAccessibility) {
+			MyAccessibilityService accessibilityService = tasker.getAccessibilityService();
+			if (accessibilityService == null) break;
+			WINDOW_MANAGER = (WindowManager) accessibilityService.getSystemService(Context.WINDOW_SERVICE);
+			CONTEXT = accessibilityService;
+			overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+		}
+
+		initialPosition = new Point();
+		livePath = LivePath(config);
+		livePathListener = getLivePathListener();
+		livePath.setLivePathListener(livePathListener);
+		baseWm = CONTEXT.getSystemService(Context.WINDOW_SERVICE);
+		metrics = new DisplayMetrics();
+		baseWm.getDefaultDisplay().getRealMetrics(metrics);
+		if (isPotrait()) {
+			screenWidth = metrics.widthPixels;
+			screenHeight = metrics.heightPixels;
+		} else {
+			screenWidth = metrics.heightPixels;
+			screenHeight = metrics.widthPixels;
+		}
+		longestSide = Math.max(screenWidth, screenHeight);
+		if (config.handle.initialPosition.x < 0) {
+			initialPosition = getPosition(config.handle.initialPositionPercent, config.handle.size);
+		} else {
+			initialPosition.x = config.handle.initialPosition.x;
+			initialPosition.y = config.handle.initialPosition.y;
+			initialPositionPercent = new PointF((float) initialPosition.x / screenWidth, (float) initialPosition.y / screenHeight);
+		}
+
+		view = new RelativeLayout(CONTEXT);
+		visualShape = new GradientDrawable();
+		visualShape.setColor(config.handle.color);
+		visualShape.setCornerRadius(config.handle.cornerRadius);
+		view.setBackgroundDrawable(visualShape);
+
+
+		flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+
+		/* Only allow fullscreen behavior for accessibility overlay */
+		if (overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
+			flags |= WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
+		}
+
+		/* Create params */
+		Point initialSize = getSize();
+		params = new WindowManager.LayoutParams(
+			initialSize.x,
+			initialSize.y,
+			overlayType,
+			flags,
+			PixelFormat.TRANSPARENT
+		);
+		params.gravity = Gravity.TOP | Gravity.LEFT;
+		params.x = initialPosition.x;
+		params.y = initialPosition.y;
+
+		/* Cutout only for accessibility overlay */
+		if (Build.VERSION.SDK_INT >= 28 && overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
+			params.layoutInDisplayCutoutMode =
+				WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+		}
+
+		view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+			onViewAttachedToWindow(View view) {
+				if (stateListener != null) stateListener.onAttached();
+				every.register();
+			}
+			onViewDetachedFromWindow(View view) {
+				if (stateListener != null) stateListener.onDetached();
+				every.register();
+			}
+		}); 
+	}
+
+	getPosition(int totalLength, double percentage, int handleSize) {
+		int coor = (int)(totalLength * percentage) - (handleSize / 2);
+		int finalC = Math.max(0, Math.min(coor, totalLength - handleSize));
+		return finalC;
+	}
+
+	getPosition(PointF percentage, Point size) {
+		Point point = new Point();
+		if (isPotrait()) {
+			point.x = getPosition(screenWidth, percentage.x, size.x);
+			point.y = getPosition(screenHeight, percentage.y, size.y);
+		} else {
+			point.x = getPosition(screenHeight, percentage.x, size.x);
+			point.y = getPosition(screenWidth, percentage.y, size.y);
+		}
+		if (percentage.x >= 1) {
+			point.x = longestSide;
+		}
+		if (percentage.y >= 1) {
+			point.y = longestSide;
+		}
+		return point;
+	}
+	
+	setListener() {
+		listener = new View.OnTouchListener() {
+			boolean onTouch(View view, MotionEvent motionEvent) {
+				return livePath.onTouchEvent(view, motionEvent);
+			}
+		};
+		view.setOnTouchListener(listener);
+	}
+	
+
+	post(Runnable postRun) {
+		Handler mainHandler = new Handler(Looper.getMainLooper());
+		mainHandler.post(postRun);
+	}
+
+	show() {
+		Runnable show = new Runnable() {
+			run() {
+				WINDOW_MANAGER.addView(livePath.view, livePath.params);
+				WINDOW_MANAGER.addView(view, params);
+			}
+		};
+		if (!isAdded()) {
+			create();
+			setListener();
+			post(show);
+		}
+	}
+
+	remove() {
+		if (isAdded()) {
+			WINDOW_MANAGER.removeView(livePath.view);
+			WINDOW_MANAGER.removeView(view);
+		}
+	}
+
+	mute() {
+		view.setOnTouchListener(null);
+	}
+
+	unmute() {
+		view.setOnTouchListener(listener);
+	}
+
+	setColor(int color) {
+		if (isShown()) visualShape.setColor(color);
+	}
+
+	setInteractable(boolean interactable) {
+		if (interactable) {
+			view.setClickable(true);
+			view.setFocusable(true);
+		} else {
+			view.setClickable(false);
+			view.setFocusable(false);
+		}
+	}
+
+	isAdded() {
+		if (view == null) return false;
+		return view.getParent() != null;
+	}
+
+	isRemoved() {
+		if (view == null) return true;
+		return view.getParent() == null;
+	}
+
+	isVisible() {
+		if (view == null) return false;
+		return view.getVisibility() == View.VISIBLE;
+	}
+
+	isShown() {
+		if (view == null) return false;
+		return isAdded() && isVisible();
+	}
+
+	public void moveTo(Point point) {
+		if (!isAdded()) return;
+		int targetX = point.x - (params.width / 2);
+		int targetY = point.y - (params.height / 2);
+		params.x = Math.max(0, Math.min(targetX, screenWidth - params.width));
+		params.y = Math.max(0, Math.min(targetY, screenHeight - params.height));
+		post(new Runnable() {
+			run() {
+				WINDOW_MANAGER.updateViewLayout(view, params);
+			}
+		});
+	}
+
+	public void moveTo(float x, float y) {
+		int posX = (int)(x * screenWidth);
+		int posY = (int)(y * screenHeight);
+		Point point = new Point(posX, posY);
+		moveTo(point);
+	}
+
+	public void moveTo(int x, int y) {
+		Point point = new Point(x, y);
+		moveTo(point);
+	}
+
+	public void sizeTo(int width, int height) {
+		if (!isAdded()) return;
+		/* Update the layout parameters with new dimensions. */
+		params.width = width;
+		params.height = height;
+		moveTo(new Point(params.x + (width / 2), params.y + (height / 2)));
+	}
+
+	
+	import android.content.res.Configuration;
+
+	isPotrait() {
+		return CONTEXT.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+	}
+
+	getSize() {
+		Point size = new Point();
+		PointF scale = new PointF((float) 1.0, (float) 1.0);
+		if (!isPotrait()) {
+			scale.x = (float) screenHeight / screenWidth;
+			scale.y = (float) screenWidth / screenHeight;
+		}
+
+		float scaleX = scale.x;
+		float scaleY = scale.y;
+
+		/* Get original base dimensions from the local config */
+		int baseWidth = config.handle.size.x;
+		int baseHeight = config.handle.size.y;
+		float percentX = (float) config.handle.initialPositionPercent.x;
+		float percentY = (float) config.handle.initialPositionPercent.y;
+		size.x = (baseHeight > baseWidth) ? baseWidth : (int)(baseWidth * scaleX);
+		size.y = (baseHeight > baseWidth) ? (int)(baseHeight * scaleY) : baseHeight;
+		return size;
+	}
+
+	public void adjust() {
+		if (!isAdded()) return;
+		Point newSize = getSize();
+		Point newPoint = getPosition(config.handle.initialPositionPercent, newSize);
+		params.width = newSize.x;
+		params.height = newSize.y;
+		params.x = newPoint.x;
+		params.y = newPoint.y;
+		post(new Runnable() {
+			run() {
+				try {
+					WINDOW_MANAGER.updateViewLayout(view, params);
+				} catch (Exception ignored) {
+				}
+			}
+		});
+	}
+
+	setStateListener(This listener) {
+		TOP.stateListener = listener;
+	}
+
+	setColorForAwhile(long duration, int highlightColor) {
+		if (!isAdded()) return;
+		visualShape.setColor(highlightColor);
+		new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+			run() {
+				visualShape.setColor(config.handle.color);
+				visualShape.setCornerRadius(config.handle.cornerRadius);
+			}
+		}, duration);
+	}
+
+	return this;
+}

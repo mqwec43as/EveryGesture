@@ -1,0 +1,118 @@
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.ComponentName;
+import android.content.pm.ApplicationInfo;
+import android.os.Bundle;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+PackageManager()
+**Core Package Resolver**
+Initializes a helper object to resolve package names and
+launch intents based on labels or package strings.
+
+Returns:
+
+* This → The BeanShell object containing resolver methods.
+───────────────────────────────────────────────────────────────*/
+public This PackageManager() {
+	Map cache = new HashMap();
+	PackageManager manager = context.getPackageManager();
+
+
+	/*───────────────────────────────────────────────────────────────
+	  buildCache()
+	  **Internal Cache Builder**
+	  Populates a local Map with label-to-package mappings for all 
+	  enabled and launchable applications to avoid repeated loops.
+	 ───────────────────────────────────────────────────────────────*/
+	public void buildCache() {
+		List installedApps = manager.getInstalledApplications(0);
+		for (int i = 0; i < installedApps.size(); i++) {
+			ApplicationInfo app = (ApplicationInfo) installedApps.get(i);
+
+			/* Filter out disabled, stopped, or suspended apps */
+			if (!app.enabled) continue;
+			if ((app.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) continue;
+
+			/* Ensure the app has a valid launch intent */
+			if (manager.getLaunchIntentForPackage(app.packageName) == null) continue;
+
+			Object labelObj = manager.getApplicationLabel(app);
+			if (labelObj == null) continue;
+
+			/* Cache lower-case label as key for case-insensitive lookup */
+			String label = labelObj.toString().toLowerCase();
+			if (!cache.containsKey(label)) {
+				cache.put(label, app.packageName);
+			}
+		}
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  getLaunchIntent(String packageName)
+	  **Validates and Returns Launch Intent**
+	  Returns a launch intent only if the package is enabled, 
+	  not stopped, not suspended, and has a launchable activity.
+	 ───────────────────────────────────────────────────────────────*/
+	public Intent getLaunchIntent(String packageName) {
+		if (packageName == null) return null;
+		try {
+			ApplicationInfo appInfo = manager.getApplicationInfo(packageName, 0);
+
+			if (!appInfo.enabled) return null;
+			if ((appInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) return null;
+
+			return manager.getLaunchIntentForPackage(packageName);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  findFirstPackageByPreciseLabel(String label)
+	  **Finds Package via Cache**
+	  Retrieves the package name from the pre-built cache using 
+	  the provided display label.
+	 ───────────────────────────────────────────────────────────────*/
+	public String findFirstPackageByPreciseLabel(String label) {
+		if (label == null) return null;
+		if (cache.isEmpty()) buildCache();
+
+		return (String) cache.get(label.toLowerCase());
+	}
+
+	public String getLabel(String packageName) {
+		try {
+			ApplicationInfo appInfo = manager.getApplicationInfo(packageName, 0);
+			return manager.getApplicationLabel(appInfo).toString();
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  resolvePackage(String labelOrPackageName)
+	  **Primary Resolution Logic**
+	  Attempts to resolve an input as either a direct package name 
+	  or a display label via cached mapping.
+	 ───────────────────────────────────────────────────────────────*/
+	public String resolvePackage(String labelOrPackageName) {
+		if (labelOrPackageName == null) return null;
+
+		/* Step 1: Check if input is already a valid package name */
+		Intent intent = getLaunchIntent(labelOrPackageName);
+		if (intent != null) return labelOrPackageName;
+
+		/* Step 2: Search by cached display label */
+		return findFirstPackageByPreciseLabel(labelOrPackageName);
+	}
+
+	return this;
+
+}

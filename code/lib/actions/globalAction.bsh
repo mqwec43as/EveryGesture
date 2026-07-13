@@ -1,0 +1,103 @@
+/*───────────────────────────────────────────────────────────────
+This code was generated using AI and refined with minimal human editing.
+─────────────────────────────────────────────────────────────── */
+
+import android.accessibilityservice.AccessibilityService;
+import java.util.concurrent.TimeUnit;
+import io.reactivex.Completable;
+
+
+/*───────────────────────────────────────────────────────────────
+globalAction(String globalActionName)
+**Runs Android global accessibility actions**
+
+Arguments:
+
+* globalActionName → lowercase string such as "back", "home", "qs", "ss"
+
+Example:
+globalAction("back");
+globalAction("screenshot");
+globalAction("notifications");
+───────────────────────────────────────────────────────────────*/
+globalAction(String globalActionName) {
+
+	wait(ms) {
+		Completable.timer(ms, TimeUnit.MILLISECONDS).blockingAwait();
+	}
+	
+	/* Get A11y service instance */
+	AccessibilityService svc = tasker.getAccessibilityService();
+	if (svc == null) {
+		tasker.showToast("Accessibility Service not running");
+		return;
+	}
+
+	if (globalActionName == null || globalActionName == void) return;
+
+	/* Normalize: remove spaces and lowercase for robust matching */
+	String name = globalActionName.toString().replace(" ", "").toLowerCase();
+
+	/* Map string → global action using switch case */
+	switch (name) {
+		case "back":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+			break;
+		case "home":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME);
+			break;
+		case "recents":
+		case "tasks":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+			break;
+		case "notifications":
+		case "notif":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
+			break;
+		case "qs":
+		case "quicksettings":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS);
+			break;
+		case "power":
+		case "powerdialog":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG);
+			break;
+		case "splitscreen":
+		case "split":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN);
+			break;
+		case "lock":
+		case "lockscreen":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
+			break;
+		case "screenshot":
+		case "ss":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT);
+			break;
+		case "dismiss":
+		case "closepanel":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE);
+			break;
+		case "a11ybutton":
+		case "accessibilitybutton":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_BUTTON);
+			break;
+		case "shortcut":
+		case "a11yshortcut":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT);
+			break;
+		case "allapps":
+		case "drawer":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS);
+			break;
+		case "lastapp":
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+			/* BeanShell sleep/wait helper */
+			wait(50); 
+			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+			break;
+		default:
+			/* Unknown action */
+			break;
+	}
+}

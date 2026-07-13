@@ -1,0 +1,179 @@
+import bsh.This;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.graphics.PixelFormat;
+import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.gesture.Gesture;
+import android.gesture.GestureStroke;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import java.util.List;
+import java.util.ArrayList;
+import android.gesture.GestureLibrary;
+import android.content.Context;
+import java.util.Map;
+import java.util.Set;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+
+SnapshotManager(This handleCard) {
+	This tm = handleCard.tm;
+	This config = handleCard.config;
+	GestureLibrary library = config.library;
+
+	/* Use ConcurrentHashMap to ensure thread safety when modified asynchronously */
+	Map cache = new ConcurrentHashMap();
+	final int snapshotSize = 254;
+	final int snapshotPadding = tm.dp(12);
+
+	final Paint paint = new Paint();
+	paint.setColor(tm.color("colorPrimary"));
+	paint.setStyle(Paint.Style.STROKE);
+	paint.setStrokeWidth(12);
+	paint.setAntiAlias(true);
+
+	Paint circlePaint = new Paint();
+	circlePaint.setColor(tm.color("colorPrimary"));
+	circlePaint.setStyle(Paint.Style.FILL);
+	circlePaint.setAntiAlias(true);
+
+	/* Replaced enhanced for-loop with Iterator to support old BeanShell versions and prevent modification errors */
+	load() {
+		Set entryNames = library.getGestureEntries();
+		if (entryNames != null) {
+			Iterator it = entryNames.iterator();
+			while (it.hasNext()) {
+				String name = (String) it.next();
+				Gesture firstGesture = getFirstGesture(name);
+				if (firstGesture != null && !cache.containsKey(name)) {
+					refresh(name);
+				}
+			}
+		}
+	}
+
+	get(String gestureName) {
+		library.load();
+		if (!cache.containsKey(gestureName)) {
+			refresh(gestureName);
+		}
+		return cache.get(gestureName);
+	}
+
+	refresh(String gestureName) {
+		Gesture gesture = getFirstGesture(gestureName);
+		if (gesture == null) {
+			return null;
+		}
+		Drawable snapDrawable = getGestureDrawable(gesture);
+		cache.put(gestureName, snapDrawable);
+		return snapDrawable;
+	}
+
+	getFirstGesture(String entryName) {
+		library.load();
+		List gestures = library.getGestures(entryName);
+		if (gestures != null && gestures.size() > 0) {
+			return (Gesture) gestures.get(0);
+		}
+		return null;
+	}
+
+	Drawable getGestureDrawable(Gesture gesture) {
+		if (gesture == null) {
+			return null;
+		}
+		List strokes = gesture.getStrokes();
+		if (strokes == null || strokes.isEmpty()) {
+			return null;
+		}
+
+		/* Collect all individual stroke paths and combine them to calculate collective bounds */
+		final List strokePaths = new ArrayList();
+		final Path combinedPath = new Path();
+
+		for (int i = 0; i < strokes.size(); i++) {
+			GestureStroke stroke = (GestureStroke) strokes.get(i);
+			if (stroke != null) {
+				Path path = stroke.getPath();
+				if (path != null) {
+					strokePaths.add(path);
+					combinedPath.addPath(path);
+				}
+			}
+		}
+
+		if (strokePaths.isEmpty()) {
+			return null;
+		}
+
+		Drawable snapDrawable = tasker.implementClass(Drawable.class, new ClassImplementation() {
+			run(Callable superCaller, String methodName, Object[] args) {
+				if (methodName.equals("draw")) {
+					Canvas canvas = (Canvas) args[0];
+					RectF bounds = new RectF();
+
+					/* Compute bounds based on all strokes combined */
+					combinedPath.computeBounds(bounds, true);
+
+					float availableSize = snapshotSize - snapshotPadding * 2;
+					float scaleX = availableSize / bounds.width();
+					float scaleY = availableSize / bounds.height();
+					float scale = Math.min(scaleX, scaleY);
+					if (scale <= 0 || Float.isInfinite(scale) || Float.isNaN(scale)) {
+						scale = 1.0f;
+					}
+
+					float translateX = snapshotPadding + (availableSize - bounds.width() * scale) / 2.0f - bounds.left * scale;
+					float translateY = snapshotPadding + (availableSize - bounds.height() * scale) / 2.0f - bounds.top * scale;
+
+					canvas.save();
+					canvas.translate(translateX, translateY);
+					canvas.scale(scale, scale);
+
+					/* Iterate and draw each stroke path along with its terminal marker */
+					for (int i = 0; i < strokePaths.size(); i++) {
+						Path p = (Path) strokePaths.get(i);
+						canvas.drawPath(p, paint);
+
+						PathMeasure pathMeasure = new PathMeasure(p, false);
+						float length = pathMeasure.getLength();
+						float[] pos = new float[2];
+						pathMeasure.getPosTan(length, pos, null);
+						canvas.drawCircle(pos[0], pos[1], 40, circlePaint);
+					}
+
+					canvas.restore();
+					return null;
+				}
+				if (methodName.equals("getOpacity")) {
+					return PixelFormat.TRANSLUCENT;
+				}
+				if (methodName.equals("setAlpha") || methodName.equals("setColorFilter")) {
+					return null;
+				}
+				if (methodName.equals("getIntrinsicWidth")) {
+					return snapshotSize;
+				}
+				if (methodName.equals("getIntrinsicHeight")) {
+					return snapshotSize;
+				}
+				return superCaller.call();
+			}
+		});
+
+		try {
+			snapDrawable.setBounds(0, 0, snapshotSize, snapshotSize);
+		} catch (Exception e) {}
+
+		return snapDrawable;
+	}
+
+	return this;
+
+
+
+}

@@ -1,0 +1,76 @@
+name: Release EveryGesture Zip
+run-name: "Build Release: ${{ github.ref_name }} by @${{ github.actor }}"
+
+on:
+  push:
+    tags:
+      - "v*.*"
+      - "v*.*-beta*"
+      - "v*.*-rc*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Create Zip Archive
+        run: |
+          # 1. Enter the code folder
+          cd code
+          
+          # 2. Create the zip
+          zip -r EveryGesture.zip . \
+          -x "**/*.sync-conflict*" \
+          "**/~syncthing~*" \
+          "**/log.txt" \
+          "*.db" \
+          "*.mp4" \
+          "*.java.cache" \
+          "*.disk" \
+          "**/.demo/*" \
+          "**/handles/*" \
+          "**/scripts/*" \
+          "**/.dev/*" \
+          "**/cache/*" \
+          "**/.git/*" \
+          "**/.github/*" \
+          "**/.*" 
+
+          if [ -d "lib/.preset" ]; then
+            zip -r EveryGesture.zip lib/.preset
+          fi
+
+          # 3. MOVE the zip to the root workspace
+          mv EveryGesture.zip ../EveryGesture.zip
+
+      - name: Create Release and Upload Asset
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: |
+            EveryGesture.zip
+          body_path: releases/${{ github.ref_name }}/release_notes.md
+          append_body: true
+          generate_release_notes: true
+          # Marks as pre-release if the tag contains 'beta' or 'rc'
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+
+      - name: Upload Artifacts (Manual Run)
+        uses: actions/upload-artifact@v6
+        with:
+          name: EveryGesture-Manual
+          path: |
+            EveryGesture.zip
+          if-no-files-found: error

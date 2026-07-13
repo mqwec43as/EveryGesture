@@ -1,0 +1,9 @@
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
+public int dp(int value) {
+	return (int) TypedValue.applyDimension(
+		TypedValue.COMPLEX_UNIT_DIP,
+		value,
+		context.getResources().getDisplayMetrics()
+	);
+}

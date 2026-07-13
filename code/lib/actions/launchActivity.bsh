@@ -1,0 +1,22 @@
+
+import android.content.Intent;
+import android.content.ComponentName;
+/*───────────────────────────────────────────────────────────────
+ * launchActivity(ComponentName targetComponent)
+ * Launch a specific activity.
+ *──────────────────────────────────────────────────────────────*/
+launchActivity(String component) {
+	if (packageName == null || activity == null) return;
+	
+	ComponentName targetComponent = ComponentName.unflattenFromString(component);
+	Intent intent = new Intent();
+	intent.setComponent(targetComponent);
+	intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+	try {
+		context.startActivity(intent);
+	} catch (Exception e) {
+		/* Failed to launch component (e.g., activity not found) */
+		log("Failed to launch component " + component + ": " + e.getMessage(), "ERROR");
+	}
+}

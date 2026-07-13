@@ -1,0 +1,302 @@
+importCommands("lib.file");
+	
+import org.json.JSONObject;
+import org.json.JSONArray;
+import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Map;
+import bsh.This;
+import android.graphics.Color;
+import android.graphics.PointF;
+import android.graphics.Point;
+import java.io.File;
+import android.gesture.GestureLibrary;
+import android.gesture.GestureLibraries;
+import bsh.NameSpace;
+
+/*───────────────────────────────────────────────────────────────
+  Config(String handleName)
+  **Injects JSON Keys as Variables**
+  Reads config.json and dynamically sets the internal keys of 
+  "handle" and "livePath" as variables in the local namespace.
+ 
+  Arguments:
+   - handleName → The subfolder name for the handle.
+ 
+  Example:
+  Config("my_gesture");
+───────────────────────────────────────────────────────────────*/
+Config(String handleName) {
+	This every = tasker.getJavaVariable("everyGesture");
+	This TOP = this;
+	This helper = ConfigHelper();
+	String MAIN_DIRECTORY = every.MAIN_DIRECTORY;
+	String LOG_FILE = every.MAIN_DIRECTORY + "/log.txt";
+	String path = every.MAIN_DIRECTORY + "/handles/" + handleName + "/config.json";
+	File file = new File(path);
+	String libraryPath = every.MAIN_DIRECTORY + "/handles/" + handleName + "/template.lib";
+	File libraryFile = new File(libraryPath);
+	GestureLibrary library = GestureLibraries.fromFile(libraryFile);
+	library.load();
+	Map listeners = new HashMap();
+
+	This handle = helper.config("Handle");
+	NameSpace handleSpace = handle.namespace;
+	helper.toNameSpace(handleSpace, helper.Handle.namespace, true);
+
+	This livePath = helper.config("LivePath");
+	NameSpace livePathSpace = livePath.namespace;
+	helper.toNameSpace(livePathSpace, helper.LivePath.namespace, true);
+
+	This engine;
+	String jsonStr;
+	JSONObject json;
+	Map rules;
+	This actionRules;
+	List doOnLoad = new ArrayList();
+	List doOnSave = new ArrayList();
+
+	load() {
+		jsonStr = readFile(path);
+		json = new JSONObject(jsonStr);
+		rules = toMap(json.get("rules"));
+		JSONObject handleJSON = json.getJSONObject("handle");
+		helper.toNameSpace(handleSpace, handleJSON);
+		JSONObject livePathJSON = json.getJSONObject("livePath");
+		helper.toNameSpace(livePathSpace, livePathJSON);
+		getEngine();
+		onLoad();
+		actionRules = ActionRules(TOP);
+	}
+
+	setHandleSpace(NameSpace space) {
+		helper.toNameSpace(handleSpace, space);
+	}
+
+	setLivePathSpace(NameSpace space) {
+		helper.toNameSpace(livePathSpace, space);
+	}
+
+	toJson() {
+		import bsh.This;
+		import org.json.JSONObject;
+		import org.json.JSONArray;
+		import android.graphics.Color;
+		import android.graphics.PointF;
+		import android.graphics.Point;
+
+		JSONObject rulesJSON = new JSONObject(rules);
+
+		JSONObject handleJSON = new JSONObject();
+		helper.toJson(handleJSON, handleSpace);
+		
+		JSONObject livePathJSON = new JSONObject();
+		helper.toJson(livePathJSON, livePathSpace);
+
+		JSONObject root = new JSONObject();
+		root.put("handle", handleJSON);
+		root.put("livePath", livePathJSON);
+		root.put("rules", rulesJSON);
+		json = root;
+		return root;
+	}
+
+	save() {
+		JSONObject toSave = toJson();
+		writeFile(toSave.toString(2), path);
+		onSave();
+	}
+
+	saveAndLoad() {
+		save();
+		load();
+	}
+
+	getEngine() {
+		if (engine == null){
+			engine = Engine(32);
+			engine.loadLibrary(library);
+		} 
+		if (handle.filterWithDollarQ != void) engine.filterWithDollarQ = handle.filterWithDollarQ;
+		return engine;
+	}
+
+	editRule(String gestureName, String typeKey, int index, Map rule) {
+		Map ruleMap = rules.get(gestureName);
+		if (ruleMap == null) {
+			return false;
+		}
+
+		List actionList = ruleMap.get(typeKey);
+		if (actionList != null) {
+			if (index >= actionList.size()) {
+				return false;
+			}
+			actionList.set(index, rule);
+			save();
+			load();
+			return true;
+		}
+
+		return false;
+	}
+
+	removeRule(String gestureName, String typeKey, Map rule) {
+		if (rule.containsKey("type")) rule.remove("type");
+		Map ruleMap = rules.get(gestureName);
+		if (ruleMap == null) {
+			log("Rule not found for" + gestureName);
+			return false;
+		}
+
+		List actionList = ruleMap.get(typeKey);
+		if (actionList != null) {
+			log("\n"+tasker.toJson(actionList, true));
+			boolean removed = actionList.remove(rule);
+			log("\nRule result : " + removed + " for" + gestureName + " " + typeKey + " " + rule);
+			save();
+			load();
+			return removed;
+		}
+		log("Rule not found for" + gestureName + " " + typeKey + " " + rule + " " + ruleMap);
+		return false;
+	}
+
+	
+	addRule(String gestureName, String typeKey, Map rule) {
+		if (rule.containsKey("type")) rule.remove("type");
+		log("Saving " + tasker.toJson(rule, true));
+		Map ruleMap = rules.get(gestureName);
+		if (ruleMap == null) {
+			ruleMap = new HashMap();
+			rules.put(gestureName, ruleMap);
+		}
+		List actionList = ruleMap.get(typeKey);
+		if (actionList == null) {
+			actionList = new ArrayList();
+			ruleMap.put(typeKey, actionList);
+		}
+		actionList.add(rule);
+		save();
+		load();
+		return true;
+	}
+
+	deleteGesture(String gestureName) {
+		rules.remove(gestureName);
+		engine.library.removeEntry(gestureName);
+		engine.library.save();
+		engine.library.load();
+		save();
+		load();
+		return true;
+	}
+
+
+	hasRule(String gestureName, String typeKey) {
+		Map ruleMap = rules.get(gestureName);
+		if (ruleMap == null) {
+			return false;
+		}
+		List actionList = ruleMap.get(typeKey);
+		if (actionList == null) {
+			return false;
+		}
+		return false;
+	}
+
+	hasAtleastOneRule(String gestureName, String typeKey) {
+		Map ruleMap = rules.get(gestureName);
+		if (ruleMap == null) {
+			return false;
+		}
+		List actionList = ruleMap.get(typeKey);
+		if (actionList == null) {
+			return false;
+		}
+		return actionList.size() > 1;
+	}
+
+	sortActionList(List actionList) {
+		Collections.sort((List) actionList, new Comparator() {
+			compare(Object o1, Object o2) {
+				double length1 = ((Map) o1).getOrDefault("length", Double.POSITIVE_INFINITY);
+				double length2 = ((Map) o2).getOrDefault("length", Double.POSITIVE_INFINITY);
+				return Double.compare(length1, length2);
+			}
+		});
+		return actionList;
+	}
+
+	getActionList(String gestureName) {
+		List flatList = new ArrayList();
+		Map gestureRules = rules.get(gestureName);
+		if (gestureRules == null || gestureRules.isEmpty()) {
+			return flatList;
+		}
+		Set keys = gestureRules.keySet();
+		for (String key : keys) {
+			List actionList = gestureRules.get(key);
+			if (actionList != null) {
+				if (actionList.isEmpty()) {
+					continue;
+				}
+				actionList = sortActionList(actionList);
+				for (Map action : actionList) {
+					action.put("type", key);
+				}
+				flatList.addAll(actionList);
+			}
+		}
+		return flatList;
+	}
+
+	/*
+	 * LISTENER METHODS
+	 */
+	setListener(String name, This newListener) {
+		listeners.put(name, newListener);
+	}
+
+	removeListener(String name) {
+		listeners.remove(name);
+	}
+
+	boolean hasMethod(This listener, String methodName, Class[] classes) {
+		if (listener == null) return false;
+		if (classes == null) classes = new Class[] {};
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+
+	onSave() {
+		Set names = listeners.keySet();
+		if (names.isEmpty()) return;
+		for (String name : names) {
+			This listener = listeners.get(name);
+			if (listener == null) continue;
+			boolean hasOnSave = hasMethod(listener, "onSave", new Class[] { This.class });
+			if (hasOnSave) listener.onSave(TOP);
+		}
+	}
+
+	onLoad() {
+		Set names = listeners.keySet();
+		if (names.isEmpty()) return;
+		for (String name : names) {
+			This listener = listeners.get(name);
+			if (listener == null) continue;
+			boolean hasOnLoad = hasMethod(listener, "onLoad", new Class[] { This.class });
+			if (hasOnLoad) listener.onLoad(TOP);
+		}
+	}
+
+	getHandleDefaultValue(String key) {
+		return helper.getHandleDefaultValue(key);
+	}
+
+	getLivePathDefaultValue(String key) {
+		return helper.getLivePathDefaultValue(key);
+	}
+
+	return this;
+}

@@ -1,0 +1,312 @@
+/*───────────────────────────────────────────────────────────────
+This code was generated using AI and refined with significant human oversight.
+───────────────────────────────────────────────────────────────*/
+
+import android.content.Context;
+import android.graphics.PixelFormat;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.Point;
+import android.graphics.PointF;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.Display;
+import android.widget.GridLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.FrameLayout;
+import android.widget.ScrollView;
+import android.content.pm.PackageManager;
+import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Arrays;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.gesture.GestureStroke;
+import bsh.This;
+
+// Global helper configuration variables (Scoped properly)
+int dp(int value) {
+	float density = context.getResources().getDisplayMetrics().density;
+	return (int)(value * density);
+}
+
+int ROOT_PADDING = dp(8);
+int ICON_PADDING = dp(8);
+int ICON_SIZE = dp(70);
+int GRID_WIDTH = ICON_SIZE + ROOT_PADDING;
+float ICON_LABEL_SIZE = 12.0f;
+float TRAY_TITLE_SIZE = 16.0f;
+
+View createAppIcon(Context context, WindowManager windowManager, FrameLayout rootLayout, String packageName) {
+	PackageManager packageManager = context.getPackageManager();
+	LinearLayout appItem = new LinearLayout(context);
+	appItem.setOrientation(LinearLayout.VERTICAL);
+	appItem.setGravity(Gravity.CENTER);
+
+	GridLayout.LayoutParams gridParams = new GridLayout.LayoutParams();
+	gridParams.width = GRID_WIDTH;
+	appItem.setLayoutParams(gridParams);
+
+	ImageView iconView = new ImageView(context);
+	iconView.setLayoutParams(new LinearLayout.LayoutParams(ICON_SIZE, ICON_SIZE));
+	iconView.setPadding(ICON_PADDING, ICON_PADDING, ICON_PADDING, ICON_PADDING);
+
+	try {
+		iconView.setImageDrawable(packageManager.getApplicationIcon(packageName));
+	} catch (Exception e) {
+		// Fallback placeholder if icon cannot be loaded
+	}
+
+	TextView labelView = new TextView(context);
+	String appName = packageName;
+	try {
+		appName = packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString();
+	} catch (Exception e) {
+		// Fallback to package name if query fails
+	}
+
+	String labelStr = appName.length() > 9 ? appName.substring(0, 8) + ".." : appName;
+	labelView.setText(labelStr);
+	labelView.setTextColor(0xFFBDC3C7);
+	labelView.setTextSize(ICON_LABEL_SIZE);
+	labelView.setGravity(Gravity.CENTER);
+	labelView.setPadding(0, 0, 0, 0);
+
+	appItem.addView(iconView);
+	appItem.addView(labelView);
+
+	appItem.setOnClickListener(new View.OnClickListener() {
+		public void onClick(View view) {
+			Map resultMap = new HashMap();
+			resultMap.put("package", packageName);
+			openApp(packageName);
+			windowManager.removeView(rootLayout);
+		}
+	});
+
+	return appItem;
+}
+
+/*───────────────────────────────────────────────────────────────
+showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPosition)
+**Displays a draggable app launcher overlay.**
+───────────────────────────────────────────────────────────────*/
+void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPosition) {
+
+	// --- OFF MAIN THREAD OPERATIONS ---
+	// Heavy calculations (filtering duplicates, resolving app names, sorting alphabetically) are completed first.
+	LinkedHashSet uniquePackages = new LinkedHashSet(packageNames);
+	List clearPackageNames = new ArrayList(uniquePackages);
+	List sortedAppList = new ArrayList();
+	PackageManager packageManager = context.getPackageManager();
+
+	for (String packageName: clearPackageNames) {
+		try {
+			String label = packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString();
+			Map itemMap = new HashMap();
+			itemMap.put("label", label);
+			itemMap.put("packageName", packageName);
+			sortedAppList.add(itemMap);
+		} catch (Exception e) {
+			// Exclude invalid packages safely
+		}
+	}
+
+	Collections.sort(sortedAppList, new Comparator() {
+		public int compare(Object a, Object b) {
+			String label1 = (String)((Map) a).get("label");
+			String label2 = (String)((Map) b).get("label");
+			return label1.compareToIgnoreCase(label2);
+		}
+	});
+
+	WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+	FrameLayout rootLayout = new FrameLayout(context);
+	rootLayout.setBackgroundColor(0x00000000);
+
+	Display display = windowManager.getDefaultDisplay();
+	Point displaySize = new Point();
+	display.getRealSize(displaySize);
+	int screenWidth = displaySize.x;
+	int screenHeight = displaySize.y;
+
+	// Process initial position percentage calculation safely on the Main Thread where display dimensions are ready
+	float targetX = 0.0f;
+	float targetY = 0.0f;
+	if (initialPosition != null) {
+		targetX = initialPosition.x;
+		targetY = initialPosition.y;
+
+		// If coordinate is between 0 (exclusive) and 1 (inclusive), interpret it as a percentage of the screen dimension
+		if (targetX > 0.0f && targetX <= 1.0f) {
+			targetX = targetX * screenWidth;
+		}
+		if (targetY > 0.0f && targetY <= 1.0f) {
+			targetY = targetY * screenHeight;
+		}
+	}
+
+	LinearLayout cardView = new LinearLayout(context);
+	cardView.setOrientation(LinearLayout.VERTICAL);
+	cardView.setPadding(ROOT_PADDING, ROOT_PADDING, ROOT_PADDING, ROOT_PADDING);
+	cardView.setGravity(Gravity.CENTER_HORIZONTAL);
+
+	GradientDrawable backgroundDrawable = new GradientDrawable();
+	backgroundDrawable.setColor(0xFF2C3135);
+	backgroundDrawable.setCornerRadius(60.0f);
+	cardView.setBackgroundDrawable(backgroundDrawable);
+
+	if (trayTitle != null && trayTitle.length() > 0) {
+		TextView titleView = new TextView(context);
+		titleView.setText(trayTitle);
+		titleView.setTextColor(Color.WHITE);
+		titleView.setTextSize(TRAY_TITLE_SIZE);
+		titleView.setPadding(ICON_PADDING, ICON_PADDING, ICON_PADDING, 0);
+		cardView.addView(titleView);
+	}
+
+	ScrollView scrollView = new ScrollView(context);
+	scrollView.setLayoutParams(new LinearLayout.LayoutParams(-2, -2));
+
+	GridLayout gridLayout = new GridLayout(context);
+	gridLayout.setColumnCount(columnCount);
+	gridLayout.setUseDefaultMargins(true);
+
+	for (int i = 0; i < sortedAppList.size(); i++) {
+		Map itemMap = (Map) sortedAppList.get(i);
+		String packageName = (String) itemMap.get("packageName");
+		try {
+			View appItem = createAppIcon(context, windowManager, rootLayout, packageName);
+			gridLayout.addView(appItem);
+		} catch (Exception e) {
+			// Skip rendering on individual failure
+		}
+	}
+
+	scrollView.addView(gridLayout);
+	cardView.addView(scrollView);
+
+	FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(-2, -2);
+	if (initialPosition != null) {
+		cardParams.gravity = Gravity.TOP | Gravity.LEFT;
+		cardView.setX(targetX);
+		cardView.setY(targetY);
+	} else {
+		cardParams.gravity = Gravity.CENTER;
+	}
+	rootLayout.addView(cardView, cardParams);
+
+	cardView.setVisibility(View.GONE);
+	cardView.measure(
+		View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
+		View.MeasureSpec.makeMeasureSpec(screenHeight, View.MeasureSpec.AT_MOST)
+	);
+
+	int cardWidth = cardView.getMeasuredWidth();
+	int cardHeight = cardView.getMeasuredHeight();
+	targetX = targetX - (cardWidth * 0.5f);
+	if (initialPosition != null) {
+		if (targetX < 0) targetX = 0;
+		if (targetX > screenWidth - cardWidth) targetX = screenWidth - cardWidth;
+		if (targetY < 0) targetY = 0;
+		if (targetY > screenHeight - cardHeight) targetY = screenHeight - cardHeight;
+		cardView.setX(targetX);
+		cardView.setY(targetY);
+	}
+
+	cardView.setVisibility(View.VISIBLE);
+
+	WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
+		WindowManager.LayoutParams.MATCH_PARENT,
+		WindowManager.LayoutParams.MATCH_PARENT,
+		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+		PixelFormat.TRANSLUCENT
+	);
+
+	rootLayout.setOnTouchListener(new View.OnTouchListener() {
+		float deltaX;
+		float deltaY;
+		public boolean onTouch(View view, MotionEvent event) {
+			switch (event.getAction()) {
+				case MotionEvent.ACTION_DOWN:
+					float touchX = event.getX();
+					float touchY = event.getY();
+					if (touchX < cardView.getX() || touchX > (cardView.getX() + cardView.getWidth()) ||
+						touchY < cardView.getY() || touchY > (cardView.getY() + cardView.getHeight())) {
+
+						windowManager.removeView(rootLayout);
+						return true;
+					}
+					deltaX = cardView.getX() - event.getRawX();
+					deltaY = cardView.getY() - event.getRawY();
+					return true;
+
+				case MotionEvent.ACTION_MOVE:
+					float newX = event.getRawX() + deltaX;
+					float newY = event.getRawY() + deltaY;
+					if (newX < 0) newX = 0;
+					if (newX > screenWidth - cardView.getWidth()) newX = screenWidth - cardView.getWidth();
+					if (newY < 0) newY = 0;
+					if (newY > screenHeight - cardView.getHeight()) newY = screenHeight - cardView.getHeight();
+					cardView.setX(newX);
+					cardView.setY(newY);
+					return true;
+			}
+			return false;
+		}
+	});
+
+	// --- MAIN THREAD OPERATIONS ---
+	// Only elements dealing with UI initialization and drawing are pushed to the UI Loop.
+	Handler mainHandler = new Handler(Looper.getMainLooper());
+	mainHandler.post(new Runnable() {
+		public void run() {
+			try {
+				windowManager.addView(rootLayout, layoutParams);
+			} catch (Exception e) {
+				// Outer UI catch protection
+			}
+		}
+	});
+}
+
+getInitialFromCache() {
+	PointF initialPosition = new PointF(0.5f, 0.5f);
+	This every = tasker.getJavaVariable("everyGesture");
+	if (every.lastGesture != void) {
+		GestureStroke firstStroke = every.lastGesture.getStrokes().get(0);
+		Path path = firstStroke.getPath();
+		PathMeasure pm = new PathMeasure(path, false);
+		float[] coords = new float[] {0f,0f };
+		pm.getPosTan(pm.getLength(), coords, null);
+		initialPosition = new PointF(coords[0], coords[1]);
+	}
+	return initialPosition;
+}
+
+/*───────────────────────────────────────────────────────────────
+Wrapper simulation logic for overloads using Explicit Types
+───────────────────────────────────────────────────────────────*/
+void showAppsTray(String trayTitle, List packageNames, int columnCount) {
+	PointF initialPosition = getInitialFromCache();
+	showAppsTray(trayTitle, packageNames, columnCount, initialPosition);
+}
+
+void showAppsTray(List packageNames) {
+	PointF initialPosition = getInitialFromCache();
+	showAppsTray("", packageNames, 3, initialPosition);
+}

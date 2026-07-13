@@ -1,0 +1,63 @@
+import bsh.This;
+
+
+deleteActionDialog(This templateCard) {
+    String gestureName = templateCard.gestureName;
+    List items = new ArrayList();
+    This every = templateCard.every;
+    This Actions = every.Actions;
+    List actionList  = templateCard.config.getActionList(gestureName);
+    if (actionList.isEmpty()) {
+        tasker.showToast("No actions to delete for " + gestureName, "Error");
+        return;
+    }
+
+    List itemList = new ArrayList();
+    for (Map action : actionList) {
+        String title = Actions.getDisplayText(action);
+        String type = action.get("type");
+        action.remove("type");
+        String length = action.containsKey("length") ? action.get("length") + " px" : null;
+        String details = type;
+        if (length != null) {
+            details += " - " + length;
+        }
+        
+        if (action.containsKey("interval")) {
+            details += " - " + action.get("interval") + " ms";
+        }
+        
+        Map item = new HashMap();
+        item.put("type", type);
+        item.put("title", title);
+        item.put("subtitle", details);
+        item.put("action", action);
+        itemList.add(item);
+    }
+
+    deleteConfig() {
+        String title = "Delete Actions";
+        List itemList = itemList;
+        boolean showFilter = false;
+        float dimAmount = 0.5f;
+        boolean multiSelect = itemList.size() > 1;
+        int themeId = every.themeId;
+        onSuccess(List selection) {
+            for (Map item : selection) {
+                boolean deleted = templateCard.config.removeRule(gestureName, item{"type"}, item{"action"} );
+            }
+            templateCard.refreshDetails();
+        }
+
+        onSuccess(Map selected) {
+            boolean deleted = templateCard.config.removeRule(gestureName, selected{"type"}, selected{"action"});
+            templateCard.refreshDetails();
+        }
+
+        return this;
+    }
+
+    This deleteConfig = deleteConfig();
+    This dialog = ListDialog(deleteConfig);
+    dialog.show();
+}

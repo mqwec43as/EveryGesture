@@ -1,0 +1,109 @@
+import android.app.Activity;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import java.io.File;
+import coil.ImageLoader;
+import coil.decode.SvgDecoder;
+import coil.request.ImageRequest;
+import coil.target.Target;
+import coil.ImageLoader.Builder;
+import coil.RealImageLoader;
+import android.content.v;
+import android.graphics.drawable.Drawable;
+import com.caverock.androidsvg.SVGImageView;
+import java.io.File;
+import android.net.Uri;
+
+/*───────────────────────────────────────────────────────────────
+  loadSvgIcon(String svgPath)
+  **Loads an SVG using Tasker's built-in SVGImageView**
+  Since the raw SVG class is unavailable, we use the ImageView
+  component to decode the file and then extract the Drawable.
+ 
+  Arguments:
+   - svgPath → Absolute path to the .svg file.
+ 
+  Returns:
+   - Drawable if successful, null if failed.
+  ───────────────────────────────────────────────────────────────*/
+public Drawable loadSvgIcon(Context ctx, String svgPath) {
+	File file = new File(svgPath);
+	if (!file.exists()) {
+		tasker.showToast("SVG Error: File not found -> " + svgPath);
+		return null;
+	}
+	try {
+		SVGImageView svgView = new SVGImageView(ctx);
+		svgView.setImageURI(Uri.fromFile(file));
+		drawable = svgView.getDrawable();
+		if (drawable == null) {
+			tasker.showToast("SVG Error: SVGImageView failed to decode content.");
+			return null;
+		}
+		return drawable.mutate();
+	} catch (Exception e) {
+		tasker.showToast("SVG Load Exception: " + e.getMessage());
+		return null;
+	}
+}
+
+/* Coil & SVG Imports */
+import java.io.File;
+import coil.ImageLoader;
+import coil.decode.SvgDecoder;
+import coil.request.ImageRequest;
+import coil.target.Target;
+import com.google.android.material.drawable.ScaledDrawableWrapper;
+import com.google.android.material.divider.MaterialDivider;
+import io.reactivex.functions.Consumer;
+/*───────────────────────────────────────────────────────────────
+loadSvgIcon(Activity myContext, Object targetObject, String svgPath)
+**Simplified Coil SVG Loader**
+Compatible with BeanShell (No Generics).
+───────────────────────────────────────────────────────────────*/
+public void loadSvgIcon(Context myContext, String svgPath, This listener) {
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (classes == null) classes = new Class[] {};
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+	
+	boolean hasSuccess = hasMethod("onSuccess", new Class[] { Drawable.class });
+	boolean hasStart = hasMethod("onStart", new Class[] { Drawable.class });
+	boolean hasError = hasMethod("onError", new Class[] { Drawable.class });
+	boolean hasNotExist = hasMethod("onFileNotExist", null);
+
+	RealImageLoader svgImageLoader = new ImageLoader.Builder(myContext)
+		.components(new coil.ComponentRegistry.Builder()
+			.add(new SvgDecoder.Factory())
+			.build())
+		.build();
+
+	float density = myContext.getResources().getDisplayMetrics().density;
+	int iconSize = (int)(24 * density);
+	File fileSource = new File(svgPath);
+	if (fileSource.exists()) {
+		ImageRequest request = new ImageRequest.Builder(myContext)
+			.data(fileSource)
+			.size(iconSize, iconSize)
+			.target(new Target() {
+				public void onSuccess(Drawable result) {
+					if (hasSuccess) listener.onSuccess(result);
+				}
+				public void onStart(Drawable placeholder) {
+					if (hasStart) listener.onStart(result);
+				}
+				public void onError(Drawable error) {
+					if (hasError) listener.onError(result);
+				}
+			})
+			.build();
+
+		svgImageLoader.enqueue(request);
+	} else {
+		if (hasNotExist) listener.onFileNotExist();
+	}
+}

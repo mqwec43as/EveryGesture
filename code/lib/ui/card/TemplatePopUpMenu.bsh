@@ -1,0 +1,63 @@
+importCommands("lib.ui.actions");
+
+import android.app.Activity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.Gravity;
+import android.graphics.drawable.Drawable;
+import android.content.res.ColorStateList;
+import com.google.android.material.appbar.MaterialToolbar;
+import bsh.This;
+import android.widget.PopupMenu;
+
+TemplatePopUpMenu(This template, Activity activity, View anchorView) {
+	PopupMenu popup = new PopupMenu(activity, anchorView, Gravity.END);
+	Menu popupMenu = popup.getMenu();
+	/* Add options to the dropdown list */
+    This TemplatePopUp = object();
+    TemplatePopUp.EDIT = (int) 301;
+    TemplatePopUp.DELETE_GESTURE = (int) 302;
+    TemplatePopUp.DELETE_ENTRIES = (int) 303;
+
+    Object[][] menus = new Object[][] {
+        {
+            TemplatePopUp.DELETE_GESTURE
+            , "Delete Gesture"
+            , new Runnable() {
+                run() {
+                    notSupported("Delete Gesture", "lib/ui/card/TemplatePopUpMenu.bsh");
+                }
+            }
+        },
+        {
+            TemplatePopUp.DELETE_ENTRIES
+            , "Delete Gesture Entry(s)"
+            , new Runnable() {
+                run() {
+                    notSupported("Delete Gesture Entry(s)", "lib/ui/card/TemplatePopUpMenu.bsh");
+                }
+            }
+        }
+    };
+
+    item(Object[] menuFormat) {
+        int id = menuFormat[0];
+        String title = menuFormat[1];
+        Runnable onClick = menuFormat[2];
+        return this;
+    }
+
+	for (int i = 0; i < menus.length; i++) {
+        This menu = item(menus[i]);
+        MenuItem menuItem = popupMenu.add(0, menu.id, i, menu.title);
+        menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            public boolean onMenuItemClick(MenuItem item) {
+                menu.onClick.run();
+                return true;
+            }
+        });
+    }
+
+	return popup;
+}

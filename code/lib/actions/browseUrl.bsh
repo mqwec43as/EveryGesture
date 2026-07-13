@@ -1,0 +1,59 @@
+/*───────────────────────────────────────────────────────────────
+This code was generated using AI.
+─────────────────────────────────────────────────────────────── */
+
+import android.content.Intent;
+import android.net.Uri;
+
+/*───────────────────────────────────────────────────────────────
+browseUrl(String url)
+**Opens a URL with Default Handler**
+Calls the primary function without a specific package target.
+
+Arguments:
+
+* url → The web address or deep link to open.
+───────────────────────────────────────────────────────────────*/
+public void browseUrl(String url) {
+	browseUrl(url, null);
+}
+
+/*───────────────────────────────────────────────────────────────
+browseUrl(String url, String packageName)
+**Opens a URL with Optional Package Targeting**
+Constructs a VIEW intent. If a package name is provided, it
+forces the intent to open in that specific app.
+
+Arguments:
+
+* url → The web address or deep link to open.
+* packageName → The Android package ID or null for default.
+16
+Example:
+browseUrl("[https://google.com](https://google.com)", "com.android.chrome");
+───────────────────────────────────────────────────────────────*/
+public void browseUrl(String url, String packageName) {
+	/* Basic scheme check for standard web addresses. */
+	if (url.startsWith("www.")) {
+		url = "http://" + url;
+	}
+
+
+	Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+
+	/* Only target a specific package if the argument is not null/void. */
+	if (packageName != null && packageName != void) {
+		intent.setPackage(packageName);
+	}
+
+	/* Service context requires NEW_TASK flag to launch activities. */
+	intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+	/* Use the global context to start the activity. */
+	context.startActivity(intent);
+}
+
+public void browseUrl(String url) {
+	browseUrl(url, null);
+}
+

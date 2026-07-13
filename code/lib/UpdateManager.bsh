@@ -1,0 +1,506 @@
+/*─────────────────────────────────────────────────────────────── 
+This code was primarily generated using AI with minimal human editing.
+───────────────────────────────────────────────────────────────*/
+
+import android.app.DownloadManager;
+import android.database.Cursor;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import android.content.Context;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.DocumentsContract;
+import java.util.function.Consumer;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import io.reactivex.subjects.SingleSubject;
+import android.view.KeyEvent;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import android.app.Activity;
+
+UpdateManager() {
+	String repo = "EveryGesture";
+	String owner = "mqwec43as";
+	String targetFile = "EveryGesture.zip";
+	String[] urls = { "https://github.com/" + owner + "/" + repo + "/releases/latest/download/" + targetFile };
+	String directoryPath;
+
+	/*───────────────────────────────────────────────────────────────
+	  browseUrl(String url)
+	  Opens a URL in the system browser.
+	───────────────────────────────────────────────────────────────*/
+	public void browseUrl(String url) {
+		Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		context.startActivity(intent);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  httpGet(String urlString)
+	  Replaces OkHttp for simple JSON API GET requests.
+	───────────────────────────────────────────────────────────────*/
+	public String httpGet(String urlString) {
+		StringBuilder result = new StringBuilder();
+		try {
+			URL url = new URL(urlString);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+			conn.setRequestProperty("Accept", "application/vnd.github+json");
+			conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+			conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+
+			BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			String line;
+			while ((line = rd.readLine()) != null) {
+				result.append(line);
+			}
+			rd.close();
+		} catch (Exception e) {
+			throw new RuntimeException("HTTP GET Failed: " + e.getMessage());
+		}
+		return result.toString();
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  clearDirectory(File dir)
+	  Recursively clears and deletes a directory.
+	───────────────────────────────────────────────────────────────*/
+	public void clearDirectory(File dir) {
+		if (dir != null && dir.isDirectory()) {
+			File[] children = dir.listFiles();
+			if (children != null) {
+				for (int i = 0; i < children.length; i++) {
+					File child = children[i];
+					if (child.isDirectory()) {
+						clearDirectory(child);
+					} else {
+						child.delete();
+					}
+				}
+			}
+			dir.delete();
+		}
+	}
+
+
+	/*───────────────────────────────────────────────────────────────
+	  unzipFile(File zipFile, String targetFolderPath)
+	  Extracts a ZIP file to a target directory. Reads the ZIP first to 
+	  identify top-level folders and clears them in the target directory 
+	  if they exist, leaving non-matching folders intact.
+	───────────────────────────────────────────────────────────────*/
+	public String unzipFile(File zipFile, String targetFolderPath) {
+		File baseDest = new File(targetFolderPath);
+		if (!baseDest.exists()) {
+			baseDest.mkdirs();
+		}
+
+		/* First Pass: Identify top-level folders in the ZIP */
+		List topFolders = new ArrayList();
+		ZipInputStream zisScan = new ZipInputStream(new FileInputStream(zipFile));
+		ZipEntry entryScan = zisScan.getNextEntry();
+
+		while (entryScan != null) {
+			String name = entryScan.getName();
+			int slashIndex = name.indexOf("/");
+			if (slashIndex != -1) {
+				String topFolder = name.substring(0, slashIndex);
+				if (!topFolders.contains(topFolder)) {
+					topFolders.add(topFolder);
+				}
+			} else if (entryScan.isDirectory()) {
+				if (!topFolders.contains(name)) {
+					topFolders.add(name);
+				}
+			}
+			zisScan.closeEntry();
+			entryScan = zisScan.getNextEntry();
+		}
+		zisScan.close();
+
+		/* Clear matching top-level folders in the destination directory */
+		for (int i = 0; i < topFolders.size(); i++) {
+			String folderName = (String) topFolders.get(i);
+			File targetFolder = new File(baseDest, folderName);
+			if (targetFolder.exists() && targetFolder.isDirectory()) {
+				clearDirectory(targetFolder);
+			}
+		}
+
+		/* Second Pass: Extract files */
+		ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
+		ZipEntry entry = zis.getNextEntry();
+
+		String firstDir = null;
+		byte[] buffer = new byte[1024];
+		while (entry != null) {
+			File newFile = new File(baseDest, entry.getName());
+
+			if (entry.isDirectory()) {
+				newFile.mkdirs();
+				if (firstDir == null) {
+					firstDir = newFile.getAbsolutePath();
+				}
+			} else {
+				File parent = newFile.getParentFile();
+				if (parent != null && !parent.exists()) {
+					parent.mkdirs();
+				}
+
+				FileOutputStream fos = new FileOutputStream(newFile);
+				int len;
+				while ((len = zis.read(buffer)) > 0) {
+					fos.write(buffer, 0, len);
+				}
+				fos.close();
+			}
+			zis.closeEntry();
+			entry = zis.getNextEntry();
+		}
+		zis.close();
+
+		return (firstDir != null) ? firstDir : baseDest.getAbsolutePath();
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  downloadFile(String url, String destinationPath)
+	  Downloads a file natively using Android's DownloadManager.
+	───────────────────────────────────────────────────────────────*/
+	public String downloadFile(String url, String destinationPath) {
+		File dest = new File(destinationPath);
+		File finalFile = null;
+
+		if (destinationPath.endsWith("/") || (dest.exists() && dest.isDirectory())) {
+			if (!dest.exists()) {
+				dest.mkdirs();
+			}
+
+			String fileName = null;
+			try {
+				String uriPath = new java.net.URI(url).getPath();
+				fileName = uriPath.substring(uriPath.lastIndexOf('/') + 1);
+			} catch (Exception e) {}
+
+			if (fileName == null || fileName.length() == 0 || fileName.equals("raw")) {
+				fileName = "downloaded.zip";
+			}
+
+			finalFile = new File(dest, fileName);
+		} else {
+			File parent = dest.getParentFile();
+			if (parent != null && !parent.exists()) {
+				parent.mkdirs();
+			}
+			finalFile = dest;
+		}
+
+		/* Enforce downloading to /storage/emulated/0/Download first */
+		File downloadDir = new File("/storage/emulated/0/Download");
+		if (!downloadDir.exists()) {
+			downloadDir.mkdirs();
+		}
+		File dlFile = new File(downloadDir, finalFile.getName());
+
+		/* Prevent DownloadManager from appending "-1" to the filename if it exists */
+		if (dlFile.exists()) {
+			dlFile.delete();
+		}
+
+		DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+		Uri downloadUri = Uri.parse(url);
+		DownloadManager.Request request = new DownloadManager.Request(downloadUri);
+
+		request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+		request.setTitle("Downloading " + finalFile.getName());
+		request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+		request.setDestinationUri(Uri.fromFile(dlFile));
+
+		long downloadId = dm.enqueue(request);
+		boolean downloading = true;
+
+		while (downloading) {
+			DownloadManager.Query query = new DownloadManager.Query();
+			query.setFilterById(new long[] { downloadId });
+
+			Cursor cursor = dm.query(query);
+			if (cursor != null && cursor.moveToFirst()) {
+				int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+				int status = cursor.getInt(statusIndex);
+
+				if (status == DownloadManager.STATUS_SUCCESSFUL) {
+					downloading = false;
+				} else if (status == DownloadManager.STATUS_FAILED) {
+					downloading = false;
+					int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+					int reason = cursor.getInt(reasonIndex);
+					cursor.close();
+					if (dlFile.exists()) {
+						dlFile.delete();
+					}
+					throw new RuntimeException("Native Download Failed. Reason Code: " + reason);
+				}
+				cursor.close();
+			}
+
+			if (downloading) {
+				try {
+					java.lang.Thread.sleep(1000);
+				} catch (Exception e) {}
+			}
+		}
+
+		/* Move downloaded file from Download directory to the final requested path */
+		if (!dlFile.renameTo(finalFile)) {
+			FileInputStream inStream = null;
+			FileOutputStream outStream = null;
+			try {
+				inStream = new FileInputStream(dlFile);
+				outStream = new FileOutputStream(finalFile);
+				byte[] buffer = new byte[1024];
+				int length;
+				while ((length = inStream.read(buffer)) > 0) {
+					outStream.write(buffer, 0, length);
+				}
+			} catch (Exception e) {
+				throw new RuntimeException("Failed to move downloaded file to destination: " + e.getMessage());
+			} finally {
+				if (inStream != null) {
+					try { inStream.close(); } catch (Exception e) {}
+				}
+				if (outStream != null) {
+					try { outStream.close(); } catch (Exception e) {}
+				}
+			}
+			dlFile.delete();
+		}
+
+		if (finalFile.getName().endsWith(".txt")) {
+			try {
+				FileInputStream fis = new FileInputStream(finalFile);
+				byte[] headerSniff = new byte[4];
+				fis.read(headerSniff);
+				fis.close();
+				if (headerSniff[0] == 0x50 && headerSniff[1] == 0x4B) {
+					String newPath = finalFile.getAbsolutePath().replaceAll("(?i)\\.txt$", ".zip");
+					File renamed = new File(newPath);
+					finalFile.renameTo(renamed);
+					return renamed.getAbsolutePath();
+				}
+			} catch (Exception e) {}
+		}
+
+		return finalFile.getAbsolutePath();
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  downloadAndUnzip(String url, String destinationPath)
+	  Downloads a file and extracts it if it's a ZIP or Base64 ZIP.
+	───────────────────────────────────────────────────────────────*/
+	public String downloadAndUnzip(String url, String destinationPath) {
+		String finalDownloadedPath = downloadFile(url, destinationPath);
+		File downloadedFile = new File(finalDownloadedPath);
+
+		FileInputStream fis = new FileInputStream(downloadedFile);
+		byte[] header = new byte[4];
+		fis.read(header);
+		fis.close();
+
+		boolean isRealZip = (header[0] == 0x50 && header[1] == 0x4B);
+
+		if (!isRealZip) {
+			FileInputStream fis2 = new FileInputStream(downloadedFile);
+			byte[] data = new byte[(int) downloadedFile.length()];
+			fis2.read(data);
+			fis2.close();
+
+			String base64String = new String(data).trim();
+			try {
+				byte[] decodedBytes = android.util.Base64.decode(base64String, android.util.Base64.DEFAULT);
+				if (decodedBytes.length > 2 && decodedBytes[0] == 0x50 && decodedBytes[1] == 0x4B) {
+					FileOutputStream fos = new FileOutputStream(downloadedFile);
+					fos.write(decodedBytes);
+					fos.close();
+					isRealZip = true;
+				}
+			} catch (Exception e) {
+				return finalDownloadedPath;
+			}
+		}
+
+		if (finalDownloadedPath.toLowerCase().endsWith(".zip") || isRealZip) {
+			String extractedPath = unzipFile(downloadedFile, downloadedFile.getParent());
+			downloadedFile.delete();
+			return extractedPath;
+		}
+
+		return finalDownloadedPath;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  pickDirectory(String initialUriString)
+	  Requests user to pick a directory via Document Tree intent.
+	───────────────────────────────────────────────────────────────*/
+	public String pickDirectory(String initialUriString) {
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+
+		if (initialUriString != null && initialUriString != void) {
+			Uri pickerInitialUri = Uri.parse(initialUriString);
+			intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+		}
+
+		io.reactivex.Single resultSingle = tasker.getWithActivityForResult(intent);
+		Intent resultIntent = (Intent) resultSingle.blockingGet();
+
+		if (resultIntent == null) {
+			return null;
+		}
+
+		Uri treeUri = resultIntent.getData();
+		return tasker.convertToRealFilePath(treeUri);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText)
+	  Shows a blocking Confirmation Dialog.
+	───────────────────────────────────────────────────────────────*/
+	public String confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText) {
+		SingleSubject resultSignal = SingleSubject.create();
+		java.util.function.Consumer myActivityConsumer = new java.util.function.Consumer() {
+			accept(Object activity) {
+				final Activity currentActivity = (Activity) activity;
+				DialogInterface.OnClickListener onClickListener = new DialogInterface.OnClickListener() {
+					onClick(DialogInterface dialog, int which) {
+						String result = "canceled";
+						if (which == DialogInterface.BUTTON_POSITIVE) {
+							result = positiveText;
+						} else if (which == DialogInterface.BUTTON_NEGATIVE) {
+							result = negativeText;
+						} else if (which == DialogInterface.BUTTON_NEUTRAL) {
+							result = neutralText;
+						}
+						resultSignal.onSuccess(result);
+						currentActivity.finish();
+					}
+				};
+
+				DialogInterface.OnCancelListener onCancelListener = new DialogInterface.OnCancelListener() {
+					onCancel(DialogInterface dialog) {
+						resultSignal.onSuccess("canceled");
+						currentActivity.finish();
+					}
+				};
+
+				AlertDialog.Builder builder = new AlertDialog.Builder(currentActivity, AlertDialog.THEME_DEVICE_DEFAULT_DARK);
+				builder.setTitle(title);
+				builder.setMessage(message);
+				builder.setPositiveButton(positiveText, onClickListener);
+				builder.setNegativeButton(negativeText, onClickListener);
+				if (neutralText != null) {
+					builder.setNeutralButton(neutralText, onClickListener);
+				}
+
+				builder.setCancelable(true);
+				builder.setOnCancelListener(onCancelListener);
+				builder.create().show();
+			}
+		};
+
+		tasker.doWithActivity(myActivityConsumer);
+		String userChoice = (String) resultSignal.blockingGet();
+		return userChoice;
+	}
+
+	public String update() {
+		if (directoryPath == null) {
+			tasker.showToast("No folder selected");
+			return null;
+		}
+		for (int j = 0; j < urls.length; j++) {
+			downloadAndUnzip(urls[j], directoryPath);
+		}
+		return directoryPath;
+	}
+
+	getLatestUrls() {
+		String preReleaseUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases";
+		String bodyJson = httpGet(preReleaseUrl);
+		JSONArray jsonArray = new JSONArray(bodyJson);
+		JSONArray assetsArray = jsonArray.getJSONObject(0).getJSONArray("assets");
+		List latestUrls = new ArrayList();
+		for (int i = 0; i < assetsArray.length(); i++) {
+			String url = assetsArray.getJSONObject(i).getString("browser_download_url");
+			String fileName = assetsArray.getJSONObject(i).getString("name");
+			if (fileName.equals(targetFile)) {
+				latestUrls.add(url);
+			}
+		}
+		return latestUrls;
+	}
+
+	public String updatePreRelease() {
+		if (directoryPath == null) {
+			tasker.showToast("No folder selected");
+			return null;
+		}
+		List preReleaseUrl = getLatestUrls();
+		for (String url: preReleaseUrl) {
+			downloadAndUnzip(url, directoryPath);
+		}
+		return directoryPath;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  importFirst()
+	  High-level logic for importing resources from GitHub.
+	───────────────────────────────────────────────────────────────*/
+	importDialog() {
+		String message = "Select a folder to save all the necessary files.\n\nMake sure to create a folder first unless you want to save them there";
+		String title = "Download";
+		String positiveText = "Next";
+		String negativeText = "Cancel";
+		String neutralText = "Check URLs";
+		String warningText = "\n\nMake sure to always check the links first by inspecting the code and you're confident that they are safe before importing.";
+		String fullMessage = message + warningText;
+		String input = confirmDialog(title, fullMessage, positiveText, negativeText, neutralText);
+		if (input.toLowerCase().equals("cancel") || input.equals("canceled")) {
+			tasker.showToast("Resources are not imported!");
+			return null;
+		} else if (input.toLowerCase().equals("check urls")) {
+			for (int i = 0; i < urls.length; i++) {
+				browseUrl(urls[i]);
+				java.lang.Thread.sleep(200);
+			}
+			return null;
+		}
+		String pickPath = "/storage/emulated/0";
+		if (directoryPath != null) pickPath = directoryPath;
+
+		directoryPath = pickDirectory(pickPath);
+		String updatePath = update();
+		if (updatePath != null) {
+			tasker.showToast("Download is finished");
+			return updatePath;
+		}
+		return null;
+	}
+
+	return this;
+}

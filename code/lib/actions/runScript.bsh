@@ -1,0 +1,6 @@
+import bsh.This;
+
+runScript(String scriptPath) {
+	This every = tasker.getJavaVariable("everyGesture");
+	this.interpreter.source(every.MAIN_DIRECTORY + "/scripts/" + scriptPath, this.caller.namespace);
+}

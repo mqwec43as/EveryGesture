@@ -1,0 +1,43 @@
+/*───────────────────────────────────────────────────────────────
+This code was generated using AI and refined with significant human oversight.
+───────────────────────────────────────────────────────────────*/
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import java.util.Map;
+import java.util.Iterator;
+import java.util.concurrent.Callable;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import bsh.This;
+
+BroadcastReceiver createOrientationReceiver(Map mainMap) {
+	BroadcastReceiver orientationReceiver = tasker.implementClass(BroadcastReceiver.class, new ClassImplementation() {
+		run(Callable superCaller, String methodName, Object[] args) {
+			if (!methodName.equals("onReceive")) {
+				return superCaller.call();
+			}
+
+			/* Extract intent and validate the action */
+			Intent intent = (Intent) args[1];
+			if (!Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
+				return superCaller.call();
+			}
+
+			Iterator iterator = mainMap.keySet().iterator();
+			// log("Orientation change detected");
+			while (iterator.hasNext()) {
+				This handle = mainMap.get(iterator.next());
+				handle.adjust();
+			}
+			return;
+		}
+
+	});
+
+	return orientationReceiver;
+}
+
+
+/* Would you like me to add logic to automatically unregister this receiver when the main overlay is closed? */

@@ -1,0 +1,267 @@
+importCommands("lib.demo");
+
+import java.util.function.Consumer;
+import android.app.Activity;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.widget.Button;
+import android.view.animation.TranslateAnimation;
+import android.view.animation.DecelerateInterpolator;
+import io.reactivex.functions.Consumer;
+import android.view.Window;
+import android.graphics.PorterDuff;
+import android.content.res.ColorStateList;
+import bsh.This;
+import android.text.TextWatcher;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import java.lang.Runnable;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.navigationrail.NavigationRailView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import android.view.Menu;
+import android.view.MenuItem;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import android.widget.FrameLayout;
+import com.google.android.material.appbar.MaterialToolbar;
+import android.widget.PopupMenu;
+import android.content.res.Configuration;
+import android.graphics.drawable.Drawable;
+import com.google.android.material.slider.Slider;
+import android.graphics.Color;
+import android.graphics.PointF;
+import android.graphics.Point;
+import bsh.This;
+import bsh.NameSpace;
+import com.google.android.material.textview.MaterialTextView;
+
+HandleEdit(This handleCard) {
+	This handle = handleCard.handle;
+	This every = handleCard.every;
+	This tm = handleCard.tm;
+	This TOP = this;
+	This config = handle.config;
+	This demo;
+	final This TOP = this;
+	Activity activity;
+	List handleInputs = new ArrayList();
+	List livePathInputs = new ArrayList();
+	List inputList = new ArrayList();
+	boolean isShownAlready = handle.isShown();
+
+	createInput(Context activity, Object initialtext, String hint, String iconType, This argPresetDialog, Class type) {
+		This input = InputLayout(activity);
+		input.setHint(hint);
+		String startIcon = "main/" + iconType + ".svg";
+		input.setStartIcon(startIcon);
+
+		if (argPresetDialog != null) {
+			input.setEndIcon("main/dots-vertical.svg");
+			input.setPresetDialog(argPresetDialog);
+		}
+
+		input.setInputType(type);
+		log("initialtext: " + initialtext + " type: " + type + " actual class: " + initialtext.getClass());
+		input.setTextWithClass(initialtext);
+		return input;
+	}
+
+	createSwitch(Context activity, boolean initialState, String hint, String iconType) {
+		This input = SwitchLayout(activity);
+		input.setState(initialState);
+		input.setText(hint);
+		return input;
+	}
+
+	createHeader(Context activity, String text) {
+		MaterialTextView header = new MaterialTextView(activity);
+		header.setText(text);
+		header.setTextColor(tm.color("colorPrimary"));
+		header.setTextSize(tm.dp(14));
+		header.setTypeface(null, 1);
+		List inputs = new ArrayList();
+		getView() {
+			return header;
+		}
+
+		setInputs(List newInputs) {
+			inputs = newInputs;
+		}
+
+		header.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				for (This input: inputs) {
+					View view = input.getView();
+					if (view.getVisibility() == View.VISIBLE) {
+						view.setVisibility(View.GONE);
+					} else {
+						view.setVisibility(View.VISIBLE);
+					}
+				}
+			}
+		});
+		return this;
+	}
+
+	getFields() {
+
+	}
+
+	getHandleVar(String key) {
+		if (config.handleSpace.getVariable(key) == void) return null;
+		return config.handleSpace.getVariable(key);
+	}
+
+	getLivePathVar(String key) {
+		if (config.livePathSpace.getVariable(key) == void) return null;
+		return config.livePathSpace.getVariable(key);
+	}
+
+
+	createForm(This keyConfiguration) {
+		String configName = keyConfiguration.name.toLowerCase();
+		This header = createHeader(activity, keyConfiguration.name);
+		inputList.add(header.getView());
+		if (configName.equals("handle")) {
+			header.setInputs(handleInputs);
+		} else if (configName.equals("livepath")) {
+			header.setInputs(livePathInputs);
+		}
+		for (This keyConfig: keyConfiguration.getKeys()) {
+			String key = keyConfig.key;
+			Class type = keyConfig.inputType;
+			String hint = keyConfig.displayName;
+			Object value = keyConfiguration.getValue(keyConfig.key);
+			String[] icons = new String[] { "main/prompt.svg" };
+			This input;
+			if (type == Boolean.class) {
+				input = createSwitch(activity, value, hint, configName + "/" + key);
+			} else {
+				input = createInput(activity, value, hint, configName + "/" + key, null, type);
+			}
+			input.keyString = key;
+			if (configName.equals("handle")) {
+				handleInputs.add(input);
+			} else if (configName.equals("livepath")) {
+				livePathInputs.add(input);
+			}
+			inputList.add(input.getView());
+		}
+	}
+
+	import android.content.Context;
+
+	sheetConfig() {
+		boolean isScrollable = true;
+		long timeout = 0;
+		int themeId = every.themeId;
+
+		getViews(Context activityContext) {
+			activity = activityContext;
+			activity.setTheme(themeId);
+			createForm(config.handle);
+			createForm(config.livePath);
+
+			return inputList;
+
+		}
+
+		onSave() {
+			This handle = object();
+			This livePath = object();
+
+			getValue(This input) {
+				if (input.inputLayout != void) {
+					return input.getSelected();
+				} else {
+					return input.getState();
+				}
+			}
+			try {
+				for (This input: handleInputs) {
+					String key = input.keyString;
+					Object value = getValue(input);
+					handle.namespace.setVariable(key, value, false);
+				}
+				for (This input: livePathInputs) {
+					String key = input.keyString;
+					Object value = getValue(input);
+					livePath.namespace.setVariable(key, value, false);
+				}
+
+				config.setHandleSpace(handle.namespace);
+				config.setLivePathSpace(livePath.namespace);
+				config.save();
+				config.load();
+
+				// TODO: Show again after config is load and handle & livePath is removed
+				// * Need to be disabled first to prevent different window type
+				if (isShownAlready) {
+					TOP.handle.remove();
+				}
+
+			} catch (e) {
+				if (demo != null) demo.remove();
+				log(e.getMessage(), "ERROR");
+				tasker.showToast(e.getMessage(), "Error");
+			}
+		}
+
+		onCancel() {
+			if (demo != null) demo.remove();
+			demo = null;
+		}
+
+		onDetach() {
+			if (demo != null) demo.remove();
+			demo = null;
+		}
+
+		onAttach() {
+			demoListener() {
+				onRemove() {
+					if (isShownAlready) {
+						handle.show();
+					}
+				}
+				return this;
+			}
+			demo = DemoController(handle);
+			demo.setListener(demoListener());
+			demo.highlight();
+		}
+
+		return this;
+	}
+	
+	This sheetConfig = sheetConfig();
+	This sheetMenu = SheetMenu(sheetConfig);
+			
+	sheetMenu.show();
+}
+
+// This config = everyGesture.get("RightMiddle").config;
+// HandleEdit(config);

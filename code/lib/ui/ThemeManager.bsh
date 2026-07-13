@@ -1,0 +1,257 @@
+/*──────────────────────────────────────────────────────────────
+	This code was primarily generated using AI with minimal human editing.
+  ────────────────────────────────────────────────────────────── */
+
+import android.content.Context;
+import android.content.res.Resources;
+import android.view.ContextThemeWrapper;
+import android.util.TypedValue;
+import android.graphics.drawable.Drawable;
+
+/*───────────────────────────────────────────────────────────────
+	ThemeManager(Context ctx)
+	**Utility object for handling themes and styled attributes**
+
+	Parameters:
+		ctx: Context
+
+	Methods:
+		setWrapperContext(String identifier) wrap context
+		setTheme(String identifier) apply theme like from material design 3
+		setThemeDark() set dark theme to inheret from material design 3
+		setThemeLight() set light theme to inheret from material design 3
+		setThemeDayNight() set day night theme to inheret from material design 3
+		getThemeId(String identifier)
+		getAttr(int attr)
+		wrapper(String identifier) wrap context with a theme
+		attr(String attrName)
+		attr(int attr) resolve attribute and fallback to tasker
+
+  ───────────────────────────────────────────────────────────────*/
+ThemeManager(Context ctx) {
+	ContextThemeWrapper THEME;
+	int lastThemeId = 0;
+	/* Wrap context with a theme */
+
+	getWrapperContext() {
+		Context useCtx;
+		if (THEME != null) {
+			useCtx = THEME;
+		} else {
+			useCtx = ctx;
+		}
+
+		return useCtx;
+	}
+
+	ContextThemeWrapper wrapper(String identifier) {
+		Context useCtx = getWrapperContext();
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		int themeId = res.getIdentifier(identifier, "style", pkg);
+		return new ContextThemeWrapper(ctx, themeId);
+	}
+
+	setWrapperContext(String identifier) {
+		ContextThemeWrapper newWrapper = wrapper(identifier);
+		THEME = newWrapper;
+		return newWrapper;
+	}
+
+	/* Apply theme to current context */
+	setTheme(String identifier) {
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		int themeId = res.getIdentifier(identifier, "style", pkg);
+		if (themeId != 0) {
+			lastThemeId = themeId;
+			ctx.setTheme(themeId);
+		}
+	}
+
+	setThemeWithLast(Context ctx) {
+		ctx.setTheme(lastThemeId);
+	}
+
+	setTheme(int themeId) {
+		ctx.setTheme(themeId);
+	}
+
+	setThemeDark() {
+		setTheme("Theme.Material3.DynamicColors.Dark");
+	}
+
+	setThemeLight() {
+		setTheme("Theme.Material3.DynamicColors.Light");
+	}
+
+	setThemeDayNight() {
+		setTheme("Theme.Material3.DynamicColors.DayNight");
+	}
+
+	/* Get theme resource id */
+	int getThemeId(String identifier) {
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		return res.getIdentifier(identifier, "style", pkg);
+	}
+
+	/* Check if theme exists */
+	boolean themeExists(String identifier) {
+		return getThemeId(identifier) != 0;
+	}
+
+	/* Resolve color attribute */
+	int getColorAttr(int attr) {
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return tv.data;
+	}
+
+	/* Resolve dimension attribute (px) */
+	float getDimenAttr(int attr) {
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return TypedValue.complexToDimension(tv.data, ctx.getResources().getDisplayMetrics());
+	}
+
+	/* Resolve drawable attribute */
+	Drawable getDrawableAttr(int attr) {
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return ctx.getResources().getDrawable(tv.resourceId);
+	}
+
+	/* Resolve resource id from attribute */
+	int getAttr(int attr) {
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return tv.resourceId;
+	}
+
+	/* Check if attribute exists */
+	boolean hasAttr(int attr) {
+		TypedValue tv = new TypedValue();
+		return ctx.getTheme().resolveAttribute(attr, tv, true);
+	}
+
+	/* Apply style on top of current theme */
+	applyStyle(String identifier, boolean force) {
+		int themeId = getThemeId(identifier);
+		if (themeId != 0) {
+			ctx.getTheme().applyStyle(themeId, force);
+		}
+	}
+
+	/* Clone context with applied style */
+	ContextThemeWrapper cloneWithStyle(String identifier) {
+		ContextThemeWrapper w = wrapper(identifier);
+		return w;
+	}
+
+	int getColor(String id) {
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int resId = res.getIdentifier(id, "color", "android");
+		int colorInt = res.getColor(resId);
+		return colorInt;
+	}
+
+
+	/* Check if theme exists */
+	boolean themeExists(String identifier) {
+		return getThemeId(identifier) != 0;
+	}
+
+	attr(String attrName) {
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
+		if (attrId == 0) {
+			attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
+		}
+
+		if (attrId == 0) {
+			String pkg = useCtx.getPackageName();
+			Context taskerContext = useCtx.createPackageContext(pkg, Context.CONTEXT_IGNORE_SECURITY);
+			int resId = taskerContext.getResources().getIdentifier(attrName, "drawable", pkg);
+			if (resId == 0) {
+				tasker.log("Resource not found: " + attrName);
+				return null;
+			}
+			return taskerContext.getResources().getDrawable(resId);
+		}
+
+		TypedValue tv = new TypedValue();
+		boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
+		if (!found) return null;
+
+		if (tv.isColorType()) {
+			return tv.data;
+		}
+
+		if (tv.resourceId != 0) {
+			try {
+				Drawable d = useCtx.getDrawable(tv.resourceId);
+				if (d != null) return d;
+			} catch (Exception e) {}
+			return tv.resourceId;
+		}
+
+		switch (tv.type) {
+			case TypedValue.TYPE_INT_BOOLEAN:
+				return tv.data != 0;
+			case TypedValue.TYPE_DIMENSION:
+				return TypedValue.complexToDimension(tv.data, res.getDisplayMetrics());
+			case TypedValue.TYPE_FLOAT:
+				return Float.intBitsToFloat(tv.data);
+			case TypedValue.TYPE_INT_DEC:
+			case TypedValue.TYPE_INT_HEX:
+				return tv.data;
+		}
+		return tv;
+	}
+
+	int color(String id) {
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int resId = res.getIdentifier(id, "color", "android");
+		int colorInt = res.getColor(resId);
+		return colorInt;
+	}
+
+	int color(String attrName, boolean useFallback) {		
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
+		if (attrId == 0) {
+			attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
+		}
+		TypedValue tv = new TypedValue();
+		boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
+		if (!found) return 0;
+		if (tv.isColorType()) {
+			return tv.data;
+		} else {
+			return 0;
+		}
+	}
+
+	int color(String attrName) {
+		boolean useFallback = true;
+		if (ENV != void) {
+			useFallback = !ENV.HAS_MATERIAL_COLOR;
+		}
+		return color(attrName, useFallback);
+	}
+
+	setAlpha(int color, int alpha) {
+		return (alpha << 24) | (color & 0x00ffffff);
+	}
+
+	dp(int value) {
+		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, ctx.getResources().getDisplayMetrics());
+	}
+
+	return this;
+}

@@ -1,0 +1,116 @@
+import bsh.This;
+import bsh.NameSpace;
+import android.app.Activity;
+import android.text.TextWatcher;
+import android.content.Context;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import android.view.inputmethod.InputMethodManager;
+import com.google.android.material.textfield.TextInputEditText;
+import java.io.File;
+
+newHandleDialog(This main, String oldHandleName) {
+	This every = main.every;
+	List handleNames = new ArrayList(every.handles.keySet());
+	Activity activity;
+	This input;
+	This tm = main.tm;
+    boolean isNew = oldHandleName == null;
+
+	createNewHandle() {
+		String handleName = input.getSelected();
+		This config = Config(handleName);
+		if (!config.file.exists()) {
+			copyDirectory(every.MAIN_DIRECTORY + "/lib/.preset", config.file.getParentFile().getAbsolutePath());
+			This handle = every.addByName(handleName);
+			handle.config.load();
+			main.addCardAtLast(handle);
+		} else {
+			tasker.showToast("Exists");
+		}
+	}
+
+	editHandleName() {
+		String handleName = input.getSelected();
+		This handle = every.get(oldHandleName);
+        File oldFile = handle.config.file;
+        if (handle != null) {
+            File targetFile = new File(handle.config.file.getParentFile(), handleName);
+            boolean success = oldFile.renameTo(targetFile);
+            if (success) {
+                main.removeCard(handle);
+                handle.config.handleName = handleName;
+                handle.config.load();
+                main.addCardAtLast(handle);
+            }
+        }
+	}
+
+	newHandleSheet() {
+		String title = isNew ? "New Handle" : "Edit Handle";
+		List inputList = new ArrayList();
+		int themeId;
+		if (tm.lastThemeId != 0) themeId = tm.lastThemeId;
+
+		getViews(Context activityContext) {
+			activity = activityContext;
+			tm = ThemeManager(activity);
+			tm.setTheme(themeId);
+			input = InputLayout(activity);
+			input.setHint("Handle Name");
+			if (!isNew) input.setText(config.handleName);
+			String startIcon = isNew ? "main/new_handle.svg" : "main/handle.svg";
+			input.setStartIcon(startIcon);
+			input.editText.addTextChangedListener(new android.text.TextWatcher() {
+				beforeTextChanged(CharSequence textChar, int start, int count, int after) {}
+				onTextChanged(CharSequence textChar, int start, int before, int count) {
+					String inputText = textChar.toString().trim();
+					if (inputText.isEmpty()) {
+						input.inputLayout.setErrorEnabled(true);
+						input.inputLayout.setError("Field can't be empty");
+					} else {
+						if (handleNames.contains(inputText)) {
+							input.inputLayout.setErrorEnabled(true);
+							input.inputLayout.setError("Handle name already exists");
+						} else {
+							input.inputLayout.setErrorEnabled(false);
+							input.inputLayout.setError(null);
+						}
+						input.updateIcon();
+					}
+				}
+				afterTextChanged(android.text.Editable edit) {
+
+				}
+			});
+			inputList.add(input.getView());
+			return inputList;
+		}
+
+		onAttach() {
+			//             input.editText.requestFocus();
+			//             InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+			//             imm.showSoftInput(input.inputLayout, InputMethodManager.SHOW_FORCED);
+		}
+
+		onSave() {
+			if (isNew) {
+				createNewHandle();
+			} else {
+
+			}
+		}
+
+		onCancel() {
+		}
+		return this;
+	}
+
+	This sheetConfig = newHandleSheet();
+	This sheetMenu = SheetMenu(sheetConfig);
+	sheetMenu.show();
+}
+
+newHandleDialog(This main) {
+    newHandleDialog(main, null);
+}

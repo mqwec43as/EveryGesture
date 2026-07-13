@@ -1,0 +1,43 @@
+import bsh.This;
+import bsh.NameSpace;
+
+drawSelectDialog(This main) {
+    final This TOP = this;
+    This every = main.every;
+    Map handleCards = main.handleCards;
+    Set handles = handleCards.keySet();
+    List itemList = new ArrayList();
+    for (String handleName : handles) {
+        This card = handleCards.get(handleName);
+        This handle = every.get(handleName);
+        int gesturesCount = handle.config.library.getGestureEntries().size();
+        Map item = new HashMap();
+        item.put("title", handleName);
+        item.put("subtitle", gesturesCount + " gestures");
+        item.put("handle", handle);
+        item.put("card", card);
+        itemList.add(item);
+    }
+    config() {
+        String title = "Choose Handle";
+        List itemList = itemList;
+        float dimAmount = 0.5f;
+        boolean showFilter = false;
+        int themeId = every.themeId;
+        onSuccess(Map selected) {
+            This card = selected.get("card");
+            This drawDialog = DrawDialog(card);
+            Runnable draw = new Runnable() {
+                run() {
+                    drawDialog.show();
+                }
+            };
+            draw.run();
+        }
+        return this;
+    }
+
+    This config = config();
+    This dialog = ListDialog(config);
+    dialog.show();
+}

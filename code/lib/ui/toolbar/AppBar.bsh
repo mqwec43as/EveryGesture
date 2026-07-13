@@ -1,0 +1,84 @@
+import android.app.Activity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.Gravity;
+import android.graphics.drawable.Drawable;
+import android.content.res.ColorStateList;
+import androidx.appcompat.widget.PopupMenu;
+import com.google.android.material.appbar.MaterialToolbar;
+import bsh.This;
+import android.widget.PopupMenu;
+import com.google.android.material.appbar.AppBarLayout;
+
+AppBar(This main) {
+	Activity activity = main.activity;
+	This tm = main.tm;
+	This every = main.every;
+
+	AppBarLayout appBarLayout = new AppBarLayout(activity);
+	AppBarLayout.LayoutParams appBarParams = new AppBarLayout.LayoutParams(
+		ViewGroup.LayoutParams.MATCH_PARENT,
+		ViewGroup.LayoutParams.WRAP_CONTENT
+	);
+	appBarLayout.setLayoutParams(appBarParams);
+
+	MaterialToolbar toolbar = new MaterialToolbar(activity);
+	toolbar.setTitle("Every Gesture");
+	toolbar.setBackgroundColor(tm.color("colorSurfaceContainer"));
+	toolbar.setTitleTextColor(tm.color("colorOnSurface"));
+
+	int COLLAPSE = 1;
+	int ACTION = 2;
+
+	Menu topMenu = toolbar.getMenu();
+
+	/* Add the collapse button first */
+	MenuItem topBarCollapse = topMenu.add(0, COLLAPSE, 0, "Collapse");
+	/* Add the action menu dots button second */
+	MenuItem topBarAction = topMenu.add(0, ACTION, 1, "Menu");
+
+	PopupMenu popup;
+
+	setIcon(MenuItem item, String path) {
+		listen() {
+			onSuccess(Drawable iconDrawable) {
+				item.setIcon(iconDrawable);
+				item.setIconTintList(ColorStateList.valueOf(tm.color("colorOnSurface")));
+			}
+			return this;
+		}
+		String actionIconPath = every.MAIN_DIRECTORY + "/res/" + path + ".svg";
+		loadSvgIcon(activity, actionIconPath, listen());
+	}
+
+	setIcon(topBarCollapse, "toolbar/collapse");
+	setIcon(topBarAction, "main/dots-vertical");
+
+	topBarCollapse.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+	topBarAction.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+	topBarCollapse.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+		onMenuItemClick(MenuItem item) {
+			main.collapseCards();
+			return true;
+		}
+	});
+
+	topBarAction.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+		onMenuItemClick(MenuItem item) {
+			View anchorView = activity.findViewById(ACTION);
+			if (anchorView == null) {
+				anchorView = toolbar;
+			}
+
+			if (popup == null) popup = PopUpMenu(activity, anchorView);
+			popup.show();
+			return true;
+		}
+	});
+	
+	appBarLayout.addView(toolbar);
+
+	return appBarLayout;
+}

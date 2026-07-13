@@ -1,0 +1,26 @@
+import bsh.This;
+
+log(String logMessage) {
+	tasker.log(logMessage, LOG_FILE, "INFO", this.caller.namespace.name + " #" + this.namespace.invocationLine);
+}
+	
+log(String logMessage, String level) {
+	tasker.log(logMessage, LOG_FILE, level, this.caller.namespace.name + " #" + this.namespace.invocationLine);
+}
+
+log(String logMessage, String level, This caller) {
+	tasker.log(logMessage, LOG_FILE, level, caller.namespace.name + " #" + this.namespace.invocationLine);
+}
+
+log(String logMessage, This caller) {
+	tasker.log(logMessage, LOG_FILE, "INFO", caller.namespace.name + " #" + this.namespace.invocationLine);
+}
+
+log(String logMessage, String level, This caller, boolean useAlert) {
+	tasker.log(logMessage, LOG_FILE, level, caller.namespace.name + " #" + this.namespace.invocationLine);
+	tasker.showToast(logMessage);
+}
+
+log(String logMessage, String level, String tag) {
+	tasker.log(logMessage, LOG_FILE, level, tag);
+}

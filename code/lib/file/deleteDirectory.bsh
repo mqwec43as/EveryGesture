@@ -1,0 +1,52 @@
+import java.io.File;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+
+/*───────────────────────────────────────────────────────────────
+deleteDirectory(String directoryPath, boolean recursive)
+**Deletes a directory**
+Removes a directory from the filesystem. If recursive is true,
+it deletes all files and subdirectories within it first.
+
+Arguments:
+
+* directoryPath → Absolute path to the directory.
+* recursive → Whether to delete contents if not empty.
+
+Example:
+deleteDirectory("/storage/emulated/0/Download/OldFolder", true);
+───────────────────────────────────────────────────────────────*/
+public boolean deleteDirectory(String directoryPath, boolean recursive) {
+	if (directoryPath == null) {
+		return false;
+	}
+
+
+	dir = new File(directoryPath);
+
+	if (!dir.exists() || !dir.isDirectory()) {
+		return false;
+	}
+
+	if (recursive) {
+		files = dir.listFiles();
+		if (files != null) {
+			for (i = 0; i < files.length; i++) {
+				file = files[i];
+				if (file.isDirectory()) {
+					deleteDirectory(file.getAbsolutePath(), true);
+				} else {
+					file.delete();
+				}
+			}
+		}
+	}
+
+	return dir.delete();
+
+
+
+}
+
+public boolean deleteDirectory(String directoryPath) {
+	return deleteDirectory(directoryPath, true);
+}

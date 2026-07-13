@@ -1,0 +1,479 @@
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
+import java.util.concurrent.Callable;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingtoolbar.FloatingToolbarLayout;
+import java.util.function.Consumer;
+import bsh.This;
+import io.reactivex.subjects.CompletableSubject;
+import java.util.concurrent.TimeUnit;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+import android.content.res.ColorStateList;
+import androidx.appcompat.content.res.AppCompatResources;
+import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.card.MaterialCardView;
+import bsh.BshMethod;
+import android.graphics.PorterDuff;
+/*───────────────────────────────────────────────────────────────
+  ListDialog Component
+  ───────────────────────────────────────────────────────────────*/
+ListDialog(This config) {
+
+	Activity activity;
+	Context activityContext;
+	boolean isRemoved = true;
+	boolean hasShown = false;
+	ArrayList selectedItems = new ArrayList();
+
+	String title = config.title == void ? null : config.title;
+	boolean showFilter = config.showFilter == void ? false : config.showFilter;
+	boolean isMulti = config.multiSelect == void ? false : config.multiSelect;
+	List preSelect = config.preSelect == void ? new ArrayList() : config.preSelect;
+	long timeout = config.timeout == void ? 0 : config.timeout;
+	int iconSize = config.iconSize == void ? 40 : config.iconSize;
+	float dimAmount = config.dimAmount == void ? 0.0f : config.dimAmount;
+	int themeId = config.themeId == void ? 0 : config.themeId;
+
+	/* Height Logic Setup */
+	Object rawMaxH = config.maxHeight == void ? 0.8 : config.maxHeight;
+	Object rawMaxL = config.maxHeightList == void ? 0.5 : config.maxHeightList;
+
+	final Map iconCache = new HashMap();
+	FloatingToolbarLayout root;
+
+	List originalList = config.itemList;
+	if (originalList == null) originalList = new ArrayList();
+
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (classes == null) classes = new Class[] {};
+		return config.namespace.getMethod(methodName, classes) != null;
+	}
+
+	boolean hasSuccess = hasMethod("onSuccess", new Class[] { HashMap.class });
+	boolean hasSuccessMulti = hasMethod("onSuccess", new Class[] { ArrayList.class });
+	boolean hasCancel = hasMethod("onCancel", null);
+	boolean hasTimeout = hasMethod("onTimeout", null);
+	boolean hasDismiss = hasMethod("onDismiss", null);
+	boolean hasAttach = hasMethod("onAttach", null);
+	boolean hasDetach = hasMethod("onDetach", null);
+
+	CompletableSubject waitTimeout = CompletableSubject.create();
+
+	remove() {
+		if (activity != null) {
+			activity.finish();
+		}
+
+		isRemoved = true;
+		if (timeout != 0 && !waitTimeout.hasComplete()) waitTimeout.onComplete();
+	}
+
+	setPreSelectedItems(List list) {
+		if (isMulti) {
+			preSelect = list;
+		}
+	}
+
+	clearPreSelectedItems() {
+		if (isMulti) {
+			preSelect = new ArrayList();
+		}
+	}
+
+	layout(Activity act) {
+		activity = act;
+		activityContext = activity;
+		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+		// Commented since Tasker doens'title support running on target display
+		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);
+		// if (dm != null) {
+		// 	Display targetDisplay = dm.getDisplay(displayId);
+		// 	if (targetDisplay != null) {
+		// 		activityContext = activity.createDisplayContext(targetDisplay);
+		// 	}
+		// }
+
+		android.content.pm.PackageManager pm = activity.getPackageManager();
+
+		Window window = activity.getWindow();
+		window.requestFeature(Window.FEATURE_NO_TITLE);
+		window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+		window.setBackgroundDrawableResource(android.R.color.transparent);
+		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+
+		WindowManager.LayoutParams lp = window.getAttributes();
+		lp.gravity = Gravity.BOTTOM;
+		if (dimAmount != 0.0f) {
+			window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+			lp.dimAmount = dimAmount;
+		}
+		
+		window.setAttributes(lp);
+
+		This tm = ThemeManager(activityContext);
+		if (themeId == 0) tm.setThemeDark();
+		else activity.setTheme(themeId);
+
+		root = new FloatingToolbarLayout(activityContext);
+		root.setBackgroundColor(Color.TRANSPARENT);
+
+		LinearLayout mainContainer = new LinearLayout(activityContext);
+		mainContainer.setOrientation(LinearLayout.VERTICAL);
+
+		LinearLayout.LayoutParams mainLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+		mainLp.gravity = Gravity.BOTTOM;
+		mainContainer.setLayoutParams(mainLp);
+		mainContainer.setPadding(dp(20), dp(20), dp(20), dp(20));
+
+		GradientDrawable shape = new GradientDrawable();
+		shape.setCornerRadius(dp(28));
+		shape.setColor((int) tm.color("colorSurfaceContainerHigh"));
+		mainContainer.setBackground(shape);
+		mainContainer.setClipToOutline(true);
+
+		if (title != null) {
+			MaterialToolbar toolbar = new MaterialToolbar(activityContext);
+			toolbar.setTitle(title);
+			toolbar.setTitleCentered(true);
+			mainContainer.addView(toolbar);
+		}
+
+		TextInputEditText filterInput = null;
+		if (showFilter) {
+			TextInputLayout filterWrapper = new TextInputLayout(activityContext);
+			filterWrapper.setHint("Search...");
+			filterWrapper.setBoxBackgroundMode(2);
+			filterInput = new TextInputEditText(filterWrapper.getContext());
+			filterWrapper.addView(filterInput);
+			mainContainer.addView(filterWrapper);
+		}
+
+		ListView listView = new ListView(activityContext);
+		listView.setDivider(null);
+		listView.setDividerHeight(0);
+
+		LinearLayout.LayoutParams listLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+		listView.setLayoutParams(listLp);
+
+		ArrayList filteredList = new ArrayList(originalList);
+
+		if (isMulti && !preSelect.isEmpty()) {
+			for (int i = 0; i < originalList.size(); i++) {
+				Map item = (Map) originalList.get(i);
+				for (int j = 0; j < preSelect.size(); j++) {
+					Object pre = preSelect.get(j);
+
+					boolean hasTitle = item.containsKey("title");
+					boolean hasSubtitle = item.containsKey("subtitle");
+					boolean isTitleMatch = item.get("title").equals(pre.get("title"));
+					boolean isSubtitleMatch;
+					
+					if (hasSubtitle) isSubtitleMatch = item.get("subtitle").equals(pre.get("subtitle"));
+					if (!isTitleMatch && !isSubtitleMatch) continue;
+					
+					boolean isMatch;
+
+					if (hasTitle && hasSubtitle && isTitleMatch && isSubtitleMatch) {
+						isMatch = true;
+					} else if (hasTitle && !hasSubtitle && isTitleMatch) {
+						isMatch = true;
+					}
+					
+					if (!selectedItems.contains(item) && isMatch) {
+						selectedItems.add(item);
+						break;
+					}
+				}
+			}
+		}
+
+		ClassImplementation adapterHandler = new ClassImplementation() {
+			run(Callable superCaller, String methodName, Object[] args) {
+				if (methodName.equals("getCount")) return filteredList.size();
+				if (methodName.equals("getItem")) return filteredList.get((Integer) args[0]);
+				if (methodName.equals("getItemId")) return ((Integer) args[0]).longValue();
+				if (methodName.equals("getView")) {
+					int pos = (Integer) args[0];
+					View adapterView = (View) args[1];
+					Map itemData = (Map) filteredList.get(pos);
+					Object sub = itemData.get("subtitle");
+					boolean hasSub = sub != null && !sub.toString().equals("");
+					LinearLayout row;
+					ImageView iconView;
+					TextView titleTextView, subtitleTextView;
+					Drawable iconDrawable = itemData.get("icon");
+					String iconPath = itemData.get("iconPath");
+					boolean hasIcon = iconDrawable != null && iconDrawable != void;
+					boolean hasIconPath = iconPath != null && !iconPath.equals("");
+
+					if (adapterView == null) {
+						row = new LinearLayout(activityContext);
+						row.setOrientation(0);
+						row.setGravity(Gravity.CENTER_VERTICAL);
+						row.setPadding(dp(0), dp(12), dp(0), dp(12));
+
+						iconView = new ImageView(activityContext);
+						iconView.setLayoutParams(new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize)));
+						iconView.setPadding(0, 0, dp(16), 0);
+						row.addView(iconView);
+
+						LinearLayout itemLayout = new LinearLayout(activityContext);
+						itemLayout.setOrientation(1);
+						itemLayout.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+						titleTextView = new MaterialTextView(activityContext);
+						titleTextView.setTextSize(16);
+						if (hasSub) {
+							Typeface currentTypeface = titleTextView.getTypeface();
+							titleTextView.setTypeface(Typeface.create(currentTypeface, 600, false));
+						}
+						titleTextView.setEllipsize(TextUtils.TruncateAt.END);
+						itemLayout.addView(titleTextView);
+
+						subtitleTextView = new MaterialTextView(activityContext);
+						subtitleTextView.setTextSize(14);
+						subtitleTextView.setTextColor(subtitleTextView.getTextColors().withAlpha(190));
+						itemLayout.addView(subtitleTextView);
+						row.addView(itemLayout);
+
+						if (isMulti) {
+							CheckBox checkBox = new CheckBox(activityContext);
+							checkBox.setFocusable(false);
+							checkBox.setClickable(false);
+							row.addView(checkBox);
+						}
+					} else {
+						row = (LinearLayout) adapterView;
+						iconView = (ImageView) row.getChildAt(0);
+						LinearLayout itemLayout = (LinearLayout) row.getChildAt(1);
+						titleTextView = (TextView) itemLayout.getChildAt(0);
+						subtitleTextView = (TextView) itemLayout.getChildAt(1);
+					}
+
+					titleTextView.setText((String) itemData.get("title"));
+					subtitleTextView.setText(hasSub ? sub.toString() : "");
+					subtitleTextView.setVisibility(hasSub ? View.VISIBLE : View.GONE);
+
+					if (isMulti) {
+						CheckBox checkBox = (CheckBox) row.getChildAt(row.getChildCount() - 1);
+						boolean found = false;
+						/* FIX: Use object identity to handle items with duplicate titles correctly */
+						for (int k = 0; k < selectedItems.size(); k++) {
+							if (selectedItems.get(k).equals(itemData)) {
+								found = true;
+								break;
+							}
+						}
+						checkBox.setChecked(found);
+					}
+
+					if (hasIcon) {
+						try {
+							iconView.setImageDrawable((Drawable) iconDrawable);
+						} catch (Exception e) {
+							// iconView.setImageDrawable(null);
+							iconView.setVisibility(View.GONE);
+						}
+					} else if (hasIconPath) {
+						listener() {
+							onSuccess(Drawable result) {
+								result.setColorFilter(tm.color("colorPrimary"), PorterDuff.Mode.SRC_IN);
+								iconView.setImageDrawable(result);
+								itemData.put("icon", result);
+							}
+							return this;
+						}
+						loadSvgIcon(activityContext, iconPath, listener());
+					}
+					else if ("app".equals(itemData.get("type")) && sub != null) {
+						iconView.setVisibility(0);
+						Drawable dr = (Drawable) iconCache.get(sub.toString());
+						if (dr == null) {
+							try {
+								dr = pm.getApplicationIcon(sub.toString());
+								iconCache.put(sub.toString(), dr);
+							} catch (Exception e) {}
+						}
+						iconView.setImageDrawable(dr);
+					} else if (!hasIcon) {
+						iconView.setVisibility(8);
+					}
+					return row;
+				}
+				return superCaller.call();
+			}
+		};
+
+		BaseAdapter adapter = (BaseAdapter) tasker.implementClass(BaseAdapter.class, adapterHandler);
+		listView.setAdapter(adapter);
+
+		mainContainer.addView(listView);
+
+		/* Button Container */
+		LinearLayout buttonsContainer = new LinearLayout(activityContext);
+		buttonsContainer.setOrientation(0);
+		buttonsContainer.setGravity(Gravity.END);
+		buttonsContainer.setPadding(0, dp(8), 0, 0);
+
+		MaterialButton cBtn = new MaterialButton(activityContext);
+		cBtn.setText("CANCEL");
+		cBtn.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				if (hasCancel) config.onCancel();
+				remove();
+			}
+		});
+		buttonsContainer.addView(cBtn);
+
+		if (isMulti) {
+			MaterialButton okButton = new MaterialButton(activityContext);
+			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
+			ol.leftMargin = dp(12);
+			okButton.setLayoutParams(ol);
+			okButton.setText("OK");
+			okButton.setOnClickListener(new View.OnClickListener() {
+				onClick(View v) {
+					remove();
+					if (hasSuccessMulti) config.onSuccess(selectedItems);
+				}
+			});
+			buttonsContainer.addView(okButton);
+		}
+
+		mainContainer.addView(buttonsContainer);
+
+		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+			onItemClick(AdapterView p, View v, int pos, long id) {
+				Map clicked = (Map) filteredList.get(pos);
+				clicked.put("index", pos);
+				if (isMulti) {
+					int index = -1;
+					/* FIX: Use object identity to handle items with duplicate titles correctly */
+					for (int i = 0; i < selectedItems.size(); i++) {
+						if (selectedItems.get(i) == clicked) {
+							index = i;
+							break;
+						}
+					}
+					if (index != -1) selectedItems.remove(index);
+					else selectedItems.add(clicked);
+					adapter.notifyDataSetChanged();
+				} else {
+					remove();
+					if (hasSuccess) config.onSuccess(clicked);
+				}
+			}
+		});
+
+		if (filterInput != null) {
+			filterInput.addTextChangedListener(new TextWatcher() {
+				beforeTextChanged(CharSequence sequence, int start, int count, int after) {}
+				onTextChanged(CharSequence sequence, int start, int b, int c) {
+					String filterQuery = sequence.toString().toLowerCase();
+					filteredList.clear();
+					if (filterQuery.isEmpty()) filteredList.addAll(originalList);
+					else {
+						for (int i = 0; i < originalList.size(); i++) {
+							Map itemMap = (Map) originalList.get(i);
+							String title = itemMap.get("title").toString().toLowerCase();
+							String subTitle = itemMap.get("subtitle") != null ? itemMap.get("subtitle").toString().toLowerCase() : "";
+							if (title.contains(filterQuery) || subTitle.contains(filterQuery)) filteredList.add(itemMap);
+						}
+					}
+					adapter.notifyDataSetChanged();
+				}
+				afterTextChanged(Editable sequence) {}
+			});
+		}
+
+		root.addView(mainContainer);
+		activity.setContentView(root);
+
+		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+			onViewAttachedToWindow(View v) {
+				hasShown = true;
+				isRemoved = false;
+				if (hasAttach) config.onAttach();
+			}
+			onViewDetachedFromWindow(View v) {
+				remove();
+				if (hasDetach) config.onDetach();
+			}
+		});
+
+
+	}
+
+	show() {
+		if (!isAdded()) {
+			isRemoved = false;
+			hasShown = true;
+			tasker.doWithActivity(new java.util.function.Consumer() {
+				accept(Object activity) { layout((Activity) activity); }
+			});
+			if (timeout != 0) {
+				boolean isSuccess = waitTimeout.blockingAwait(timeout, TimeUnit.MILLISECONDS);
+				if (hasTimeout && !isSuccess) config.onTimeout();
+				remove();
+				return isSuccess;
+			}
+		}
+	}
+
+	toggle() {
+		if (isRemoved()) show();
+		else remove();
+	}
+
+	isAdded() {
+		if (root == null) return false;
+		return root.getParent() != null && root.isAttachedToWindow();
+	}
+
+	isHidden() {
+		if (root == null) return false;
+		return root.getVisibility() == View.GONE && isAdded();
+	}
+
+	isShown() {
+		if (root == null) return false;
+		return root.getVisibility() == View.VISIBLE && isAdded();
+	}
+
+	isRemoved() {
+		if (root == null) return false;
+		return !isAdded();
+	}
+
+	return this;
+}

@@ -1,0 +1,38 @@
+import android.content.Context;
+import android.media.AudioManager;
+
+/*───────────────────────────────────────────────────────────────
+setVolume(int percentage)
+**Adjusts Stream Volume by Percent**
+Increments or decrements the system media volume by a percentage.
+
+Arguments:
+
+* percentage → Percentage offset (e.g., 5 to increase, -5 to decrease).
+───────────────────────────────────────────────────────────────*/
+void setVolume(int percentage) {
+	AudioManager am = context.getSystemService(Context.AUDIO_SERVICE);
+	int streamType = AudioManager.STREAM_MUSIC;
+
+	int maxVol = am.getStreamMaxVolume(streamType);
+	int currentVol = am.getStreamVolume(streamType);
+
+	/* Calculate current percentage */
+	double currentPercent = ((double) currentVol / maxVol) * 100.0;
+
+	/* Target new percentage */
+	double targetPercent = currentPercent + percentage;
+
+	/* Cap bounds between 0 and 100 */
+	if (targetPercent > 100.0) {
+		targetPercent = 100.0;
+	}
+	if (targetPercent < 0.0) {
+		targetPercent = 0.0;
+	}
+
+	int targetVol = (int) Math.round((targetPercent / 100.0) * maxVol);
+	am.setStreamVolume(streamType, targetVol, AudioManager.FLAG_SHOW_UI);
+
+}
+

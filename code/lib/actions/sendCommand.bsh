@@ -1,0 +1,3 @@
+sendCommand(String taskerCommand) {
+	tasker.sendCommand(taskerCommand);
+}

@@ -1,0 +1,3 @@
+runTask(String taskName) {
+    tasker.callTask(taskName, null);
+}

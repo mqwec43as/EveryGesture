@@ -1,0 +1,231 @@
+/*	────────────────────────────────────────────────────────────────
+This code was pimarily generated and commented using AI with minimal human editing.
+──────────────────────────────────────────────────────────────── */
+
+import android.content.Context;
+import android.view.View;
+import android.view.MotionEvent;
+import android.view.GestureDetector;
+import bsh.This;
+import bsh.Namespace;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import android.os.Handler;
+import android.os.Looper;
+
+
+/*───────────────────────────────────────────────────────────────
+	SIMPLE GESTURE CLASS
+	This class is used to add a simple gesture listener to a view.
+
+	Args:
+		android.view.View view: The view to add the gesture listener to.
+		bsh.This eventListener: The event listener to invoke when a gesture is detected. From bsh.This
+		Object[] customObjects: An array of custom objects to pass to the event listener. (Optional)
+
+	Methods:
+		getDetector(): Returns the gesture detector. 
+		listen(): Adds the gesture listener to the view.
+		remove(): Removes the gesture listener from the view.
+		mute(): Mutes the gesture listener.
+		unmute(): Unmutes the gesture listener.
+
+	Events:
+		All events from SimpleGestureListener.https://developer.android.com/reference/android/view/GestureDetector.SimpleOnGestureListener
+		Flick events:
+			onFlickUp()
+			onFlickDown()
+			onFlickLeft()
+			onFlickRight()
+
+	Events Rules:
+		This class will try to invoke the event listener in order of:
+			1. Merged (custom + original) e.g "onDown(AccessibilityNodeInfo nodeInfo, MotionEvent e)"
+			2. Custom Only, e.g "onDown(AccessibilityNodeInfo nodeInfo)"
+			3. Original Only, e.g "onDown(MotionEvent e)"
+			4. No Args, e.g "onFlickLeft()"
+	
+	How to use:
+		1. Create a view.
+		2. Create a SimpleGesture object. SimpleGesture(view, eventListener, customObjects);
+		3. Call listen() to add the gesture listener to the view. Must be called after the view is created and on the UI thread.
+			* Get the gesture detector with getDetector() instead of using listen().
+				* Useful to handle MotionEvent seperately like for making draggable overlays interactive.
+			* Pass MotionEvent to the gesture detector. detector.onTouchEvent(android.view.MotionEvent);
+			* Look at listen() for example.
+		4. Call remove() to remove the gesture listener from the view.
+
+───────────────────────────────────────────────────────────────*/
+bsh.This SimpleGesture(View view, This eventListener, Object[] customObjects) {
+	GestureDetector detector;
+	GestureDetector.SimpleOnGestureListener listener;
+	boolean isMute;
+
+		/*───────────────────────────────────────────────────────────────
+		  invoke(String method, Object[] originalArgs, Object[] customArgs)
+		  **Merged Args Invoker**
+		  Combines customArgs + originalArgs and invokes once.
+		───────────────────────────────────────────────────────────────*/
+		invoke(This base, String method, Object[] originalArgs, Object[] customArgs) {
+			if (base == null) return null;
+
+			if (customArgs == null) customArgs = new Object[] {};
+			if (originalArgs == null) originalArgs = new Object[] {};
+
+			/*────────────────────────────────────────
+			  1. MERGED (custom + original)
+			────────────────────────────────────────*/
+			int cLen = customArgs.length;
+			int oLen = originalArgs.length;
+
+			Object[] merged = new Object[cLen + oLen];
+			Class[] mergedTypes = new Class[cLen + oLen];
+
+			for (int i = 0; i < cLen; i++) {
+				merged[i] = customArgs[i];
+				mergedTypes[i] = customArgs[i].getClass();
+			}
+			for (int i = 0; i < oLen; i++) {
+				merged[cLen + i] = originalArgs[i];
+				mergedTypes[cLen + i] = originalArgs[i].getClass();
+			}
+
+			if (base.namespace.getMethod(method, mergedTypes) != null) {
+				return base.invokeMethod(method, merged);
+			}
+
+			/*────────────────────────────────────────
+			  2. CUSTOM ONLY
+			────────────────────────────────────────*/
+			Class[] customTypes = new Class[cLen];
+			for (int i = 0; i < cLen; i++) {
+				customTypes[i] = customArgs[i].getClass();
+			}
+
+			if (base.namespace.getMethod(method, customTypes) != null) {
+				return base.invokeMethod(method, customArgs);
+			}
+
+			/*────────────────────────────────────────
+			  3. ORIGINAL ONLY
+			────────────────────────────────────────*/
+			Class[] originalTypes = new Class[oLen];
+			for (int i = 0; i < oLen; i++) {
+				originalTypes[i] = originalArgs[i].getClass();
+			}
+
+			if (base.namespace.getMethod(method, originalTypes) != null) {
+				return base.invokeMethod(method, originalArgs);
+			}
+
+			/*────────────────────────────────────────
+			  4. NO-ARGS
+			────────────────────────────────────────*/
+			if (base.namespace.getMethod(method, new Class[] {}) != null) {
+				return base.invokeMethod(method, new Object[] {});
+			}
+
+			return null;
+		}
+
+
+	getDetector() {
+		/*───────────────────────────────────────────────────────────────
+		  onFling router
+		───────────────────────────────────────────────────────────────*/
+		onFling(This target, Object[] originalArgs, MotionEvent e1, MotionEvent e2) {
+			float dx = e2.getRawX() - e1.getRawX();
+			float dy = e2.getRawY() - e1.getRawY();
+			float minDistance =70f;
+
+			String methodName = null;
+
+			if (Math.abs(dx) > Math.abs(dy)) {
+				if (Math.abs(dx) > minDistance) {
+					methodName = dx > 0 ? "onFlickRight" : "onFlickLeft";
+				}
+			} else {
+				if (Math.abs(dy) > minDistance) {
+					methodName = dy > 0 ? "onFlickDown" : "onFlickUp";
+				}
+			}
+
+			if (methodName != null) {
+				invoke(target, methodName, originalArgs, customObjects);
+			}
+		}
+
+		ClassImplementation gestureHandler = new ClassImplementation() {
+			run(Callable superCaller, String methodName, Object[] args) {
+				if (isMute) return superCaller.call();
+
+				switch (methodName) {
+					case "onFling":
+						invoke(eventListener, "onFling", args, customObjects);
+
+						MotionEvent e1 = (MotionEvent) args[0];
+						MotionEvent e2 = (MotionEvent) args[1];
+
+						onFling(eventListener, args, e1, e2);
+						break;
+
+					default:
+						invoke(eventListener, methodName, args, customObjects);
+						break;
+				}
+				return superCaller.call();
+			}
+		};
+
+		listener = tasker.implementClass(GestureDetector.SimpleOnGestureListener.class, gestureHandler);
+		detector = new GestureDetector(view.getContext(), (GestureDetector.OnGestureListener) listener);
+		return detector;
+	}
+
+	setListener() {
+		if (detector == null) detector = getDetector();
+		view.setOnTouchListener(new View.OnTouchListener() {
+			onTouch(View v, MotionEvent event) {
+				detector.onTouchEvent(event);
+				if (event.getAction() == MotionEvent.ACTION_UP) {
+					invoke(eventListener, "onUp", null, customObjects);
+				}
+				return true;
+			}
+		});
+	}
+
+	listen() {
+		if (eventListener.handler != void) {
+			Runnable listenRun = new Runnable() {
+				run() {
+					setListener();
+				}
+			};
+			eventListener.handler.post(listenRun);
+		} else {
+			setListener();
+		}
+	}
+
+	remove() {
+		view.setOnTouchListener(null);
+	}
+
+	mute() {
+		isMute = true;
+	}
+
+	unmute() {
+		isMute = false;
+	}
+
+	return this;
+
+
+}
+
+SimpleGesture(View view, bsh.This eventListener) {
+	return SimpleGesture(view, eventListener, null);
+}

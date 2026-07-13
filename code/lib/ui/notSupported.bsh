@@ -1,0 +1,50 @@
+
+import bsh.This;
+import java.io.File;
+
+notSupported(String part, String extra) {
+    This every = tasker.getJavaVariable("everyGesture");
+    String title = part + " is not supported";
+    String message = "This project is made with the assistance of LLM such as Gemini."
+    + "\n\nYou are free to use LLM, edit, use and distribute this project however you want."
+    + "\n\n" + extra;
+    dialog() {
+        String title = title;
+        boolean showFilter;
+        float dimAmount = 0.5f;
+        List itemList = new ArrayList();
+		int themeId = every.themeId;
+        item(String title, String message, Runnable action) {
+            Map item = new HashMap();
+            item.put("title", title);
+            item.put("subtitle", message);
+            item.put("action", action);
+            itemList.add(item);
+        }
+        String targetPath = every.MAIN_DIRECTORY + "/" + extra;
+        File file = new File(targetPath);
+        Runnable open = new Runnable() {
+            run() {
+                openFile(file.getAbsolutePath());
+            }
+        };
+        item(message, null, null);
+
+        if (file.exists()) {
+            item("Open File", targetPath, open);
+        }
+
+        onSuccess(Map result) {
+            if (result != null) {
+                Runnable action = result.get("action");
+                if (action != null) {
+                    action.run();
+                }
+            }
+        }
+        return this;
+    }
+    This config = dialog();
+    This list = ListDialog(config);
+    list.show();
+}

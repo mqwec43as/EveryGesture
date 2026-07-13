@@ -1,0 +1,12 @@
+import bsh.This;
+
+toThis(Map map, String name) {
+    This returnThis = object();
+    if (name != null) returnThis.namespace.setName(name);
+    for (String key: map.keySet()) {
+        Object value = map.get(key);
+        Class clazz = value.getClass();
+        returnThis.namespace.setTypedVariable(key, clazz, value, false);
+    }
+    return returnThis;
+}

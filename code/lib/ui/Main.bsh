@@ -1,0 +1,313 @@
+import java.util.function.Consumer;
+import android.app.Activity;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.widget.Button;
+import android.view.animation.TranslateAnimation;
+import android.view.animation.DecelerateInterpolator;
+import io.reactivex.functions.Consumer;
+import android.view.Window;
+import android.graphics.PorterDuff;
+import android.content.res.ColorStateList;
+import bsh.This;
+import android.text.TextWatcher;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import java.lang.Runnable;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.navigationrail.NavigationRailView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import android.view.Menu;
+import android.view.MenuItem;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import android.widget.FrameLayout;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.appbar.AppBarLayout;
+import android.widget.PopupMenu;
+import android.content.res.Configuration;
+import android.graphics.drawable.Drawable;
+import bsh.This;
+import bsh.NameSpace;
+
+importCommands("lib");
+importCommands("lib.actions");
+importCommands("lib.file");
+importCommands("lib.ui");
+importCommands("lib.misc");
+importCommands("lib.ui.toolbar");
+importCommands("lib.ui.add");
+
+
+
+Main() {
+	This TOP = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	if (every == null || every == void) {
+		tasker.showToast("No everyGesture data found");
+		return;
+	}
+
+	isPotrait() {
+		return context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+	}
+	Map handleCards = new HashMap();
+	Map handleSpacers = new HashMap();
+	This tm;
+	This addMenu;
+	This selection = GestureSelection(TOP);
+
+	Window window;
+	Activity activity;
+	LinearLayout root;
+	AppBarLayout topAppBar;
+	FrameLayout container;
+	LinearLayout cardContainer;
+	BottomNavigationView navigationBar;
+	FloatingActionButton addButton;
+	View lastSpacer;
+	
+
+	addNavbar() {
+		if (navigationBar != null) return;
+		int iconSizePx = 32;
+		int textSizePx = 36;
+		navigationBar = new BottomNavigationView(activity);
+		navigationBar.setItemIconSize(tm.dp(iconSizePx));
+		Menu menu = navigationBar.getMenu();
+
+		MenuItem handleButton = menu.add(0, 1, 0, "Handles");
+		handleIcon() {
+			onSuccess(Drawable iconDrawable) {
+				handleButton.setIcon(iconDrawable);
+			}
+			return this;
+		}
+		loadSvgIcon(activity, every.MAIN_DIRECTORY + "/res/main/handle.svg", handleIcon());
+		handleButton.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+			public boolean onMenuItemClick(MenuItem item) {
+				item.setChecked(true);
+				return true;
+			}
+		});
+
+		MenuItem settingsButton = menu.add(0, 3, 2, "Settings");
+		settingsButton.setIcon(android.R.drawable.ic_menu_preferences);
+		settingsButton.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+			public boolean onMenuItemClick(MenuItem item) {
+				item.setChecked(true);
+				return true;
+			}
+		});
+
+		navigationBar.setSelectedItemId(1);
+		root.addView(
+			navigationBar,
+			new LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT
+			)
+		);
+	}
+
+	public addSpacer(View container, int spacing) {
+		int spacerHeight = tm.dp(spacing);
+		View spacer = new View(activity);
+		LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, spacerHeight);
+		spacer.setLayoutParams(params);
+		container.addView(spacer);
+		return spacer;
+	}
+
+	addCard(This handleConfig) {
+		This card = HandleCard(TOP, handleConfig);
+		handleCards.put(handleConfig.config.handleName, card);
+		View cardView = card.getView();
+		ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) cardView.getLayoutParams();
+		params.topMargin = tm.dp(16);
+		cardContainer.addView(cardView, params);
+	}
+
+	addCardAtLast(This handleConfig) {
+		cardContainer.removeView(lastSpacer);
+		addCard(handleConfig);
+		cardContainer.addView(lastSpacer);
+	}
+
+	removeCard(This handleConfig) {
+		String handleName = handleConfig.config.handleName;
+		This card = handleCards.get(handleName);
+		cardContainer.removeView(card.getView());
+		handleCards.remove(handleName);
+		// cardContainer.removeView(handleSpacers.get(handleName));
+		// handleSpacers.remove(handleName);
+	}
+
+	addAllCards() {
+		List handles = every.getAll();
+		for (This handleConfig: handles) {
+			addCard(handleConfig);
+		}
+	}
+
+	collapseCards() {
+		for (This card: handleCards.values()) {
+			card.hideGestureList();
+		}
+	}
+
+	/* Dynamic calculation of the system navigation bar height using framework Resource identifiers */
+	addNavbarSpacer() {
+		int navBarHeight = 0;
+		int resourceId = activity.getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+		if (resourceId > 0) {
+			navBarHeight = activity.getResources().getDimensionPixelSize(resourceId);
+		}
+
+		/* Create a dedicated transparent placeholder View exactly matching the system navbar height if potrait */
+		if (isPotrait()) {
+			View navBarSpacer = new View(activity);
+			LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				navBarHeight
+			);
+			root.addView(navBarSpacer, spacerParams);
+		}
+
+	}
+
+	java.util.function.Consumer activityConsumer = new java.util.function.Consumer() {
+		accept(Activity activityContext) {
+			activity = activityContext;
+			tm = ThemeManager((Context) activity);
+			if (every.useDarkTheme) tm.setThemeDark();
+			else tm.setThemeLight();
+			every.themeId = tm.lastThemeId;
+			addMenu = AddMenu(TOP);
+			window = activity.getWindow();
+			window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+			window.setBackgroundDrawableResource(android.R.color.transparent);
+			window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+
+			/* Ensures layout elements are capable of receiving bar space parameters */
+			window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+
+			WindowManager.LayoutParams winParams = window.getAttributes();
+			winParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+			winParams.dimAmount = 0.5f;
+			window.setAttributes(winParams);
+
+			root = new LinearLayout(activity);
+			root.setOrientation(LinearLayout.VERTICAL);
+			root.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			root.setBackgroundColor(tm.color("colorSurfaceDim"));
+
+			topAppBar = AppBar(TOP);
+
+			root.addView(
+				topAppBar,
+				new LinearLayout.LayoutParams(
+					ViewGroup.LayoutParams.MATCH_PARENT,
+					ViewGroup.LayoutParams.WRAP_CONTENT
+				)
+			);
+
+			/* FrameLayout container to layer the FloatingActionButton over the ScrollView */
+			container = new FrameLayout(activity);
+			LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+			container.setLayoutParams(containerParams);
+
+			ScrollView scroll = new ScrollView(activity);
+			FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+			scroll.setLayoutParams(scrollParams);
+
+			cardContainer = new LinearLayout(activity);
+			cardContainer.setOrientation(LinearLayout.VERTICAL);
+			cardContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+			int p = tm.dp(16);
+			cardContainer.setPadding(p, p, p, p);
+			scroll.addView(cardContainer);
+
+
+			addAllCards();
+
+
+			/* Add ScrollView to the container frame */
+			container.addView(scroll);
+
+			/* Original Floating Save Button left exactly where it belongs */
+			addButton = new FloatingActionButton(activity);
+
+			addIcon() {
+				onSuccess(Drawable iconDrawable) {
+					addButton.setImageDrawable(iconDrawable);
+				}
+				return this;
+			}
+			loadSvgIcon(activity, every.MAIN_DIRECTORY + "/res/main/add.svg", addIcon());
+			FrameLayout.LayoutParams addButtonParams = new FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.WRAP_CONTENT,
+				FrameLayout.LayoutParams.WRAP_CONTENT
+			);
+			int addButtonMargin = 54;
+			addButtonParams.gravity = Gravity.BOTTOM | Gravity.END;
+			addButtonParams.setMargins(addButtonMargin, addButtonMargin, addButtonMargin, addButtonMargin);
+			addButton.setOnClickListener(new View.OnClickListener() {
+				onClick(v) {
+					addMenu.show();
+				}
+			});
+
+			lastSpacer = addSpacer(cardContainer, addButtonMargin);
+
+			/* Add addButton to the container frame so it draws on top of the ScrollView at the bottom right */
+			container.addView(addButton, addButtonParams);
+
+			/* Add the unified layered container to the root layout */
+			root.addView(container);
+			addNavbarSpacer();
+
+			activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+				onViewAttachedToWindow(View v) {
+
+				}
+
+				onViewDetachedFromWindow(View v) {
+					tasker.showToast("Cleaning");
+					activity.finish();
+				}
+			});
+
+			activity.setContentView(root);
+		}
+	};
+
+	post(Runnable action) {
+		activity.runOnUiThread(action);
+	}
+
+	tasker.doWithActivity(activityConsumer);
+}

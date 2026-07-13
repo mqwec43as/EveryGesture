@@ -1,0 +1,5 @@
+import bsh.This;
+
+evaluateFile(String filePath) {
+	this.interpreter.source(filePath, this.caller.namespace);
+}

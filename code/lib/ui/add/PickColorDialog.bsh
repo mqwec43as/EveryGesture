@@ -1,0 +1,374 @@
+import bsh.This;
+import bsh.NameSpace;
+import java.util.ArrayList;
+import java.util.List;
+import android.app.Activity;
+import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.BitmapShader;
+import android.graphics.Shader;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RoundRectShape;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import bsh.This;
+
+/* listener format
+	listener() {
+		onSave(String color) {}
+		onSave(int color) {}
+		onCancel() {}
+		return this;
+	}
+*/
+PickColorDialog(This listener) {
+	final This Top = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (classes == null) classes = new Class[] {};
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+	boolean hasSaveString = hasMethod("onSave", new Class[] { String.class });
+	boolean hasSaveInt = hasMethod("onSave", new Class[] { int.class });
+	boolean hasCancel = hasMethod("onCancel", new Class[] {});
+
+	int initialColor;
+	boolean hasInitialColor;
+	if (listener.initialColor != void) {
+		hasInitialColor = true;
+		if (listener.initialColor instanceof String) {
+			initialColor = Color.parseColor(listener.initialColor);
+		} 
+		else initialColor = listener.initialColor;
+	} 
+
+	boolean isScrollable = true;
+	long timeout = 0;
+	int spacing = 10;
+
+	/* --- Visual Configuration Variables --- */
+	float previewCornerRadius =35f;
+	float pickerCornerRadius =35f;
+	float sliderCornerRadius =30f;
+	int previewHeight = 220;
+	int pickerHeight = 900;
+	int sliderHeight = 65;
+
+	/* Slider Thumb Configurations */
+	int hueThumbColor = Color.WHITE;
+	int alphaThumbColor = Color.WHITE;
+	int sliderThumbSizeDp = 24;
+
+	Drawable alphaPattern;
+	Drawable previewPattern;
+
+	/* Helper function to convert dp to pixels using context. */
+	dp(int value) {
+		return (int)(value * context.getResources().getDisplayMetrics().density);
+	}
+
+	/* Create a reusable checkered pattern background with rounded corners. */
+	Drawable createCheckeredDrawable(float cornerRadius) {
+		int checkerSize = dp(10);
+		Bitmap checkerBmp = Bitmap.createBitmap(checkerSize * 2, checkerSize * 2, Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(checkerBmp);
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		canvas.drawRect(0, 0, checkerSize * 2, checkerSize * 2, paint);
+		paint.setColor(Color.parseColor("#CCCCCC"));
+		canvas.drawRect(0, 0, checkerSize, checkerSize, paint);
+		canvas.drawRect(checkerSize, checkerSize, checkerSize * 2, checkerSize * 2, paint);
+		BitmapShader shader = new BitmapShader(checkerBmp, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+		float[] outerRadii = new float[] { cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius, cornerRadius };
+		RoundRectShape roundRectShape = new RoundRectShape(outerRadii, null, null);
+		ShapeDrawable checkeredBg = new ShapeDrawable(roundRectShape);
+		checkeredBg.getPaint().setShader(shader);
+		return checkeredBg;
+	}
+
+	/* State tracking variables & components hosted at the object scope level */
+	float hsv_h = 0.0f;
+	float hsv_s = 0.0f;
+	float hsv_v = 1.0f;
+	int alphaVal = 255;
+	int selectedColor = Color.WHITE;
+	Activity activity;
+	List viewList = new ArrayList();
+
+	/* Hoisted Views for cross-method accessibility */
+	FrameLayout pickerFrame;
+	View alphaBg;
+	GradientDrawable previewDrawable;
+	SeekBar hueSlider;
+	SeekBar alphaSlider;
+	ImageView thumbIcon;
+	int thumbSize = 80;
+
+	/* Method to refresh background gradients, preview color blocks, and adjust thumb tracker layouts */
+	updateViewColors() {
+		int pureHue = Color.HSVToColor(new float[] { hsv_h, 1.0f, 1.0f });
+		/* Create 2D Gradient: Horizontal=Saturation, Vertical=Value */
+		GradientDrawable horiz = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[] { Color.WHITE, pureHue });
+		horiz.setCornerRadius(pickerCornerRadius);
+		GradientDrawable vert = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { Color.TRANSPARENT, Color.BLACK });
+		vert.setCornerRadius(pickerCornerRadius);
+		LayerDrawable layer = new LayerDrawable(new Drawable[] { horiz, vert });
+		pickerFrame.setBackground(layer);
+
+		float[] currentHsv = new float[] { hsv_h, hsv_s, hsv_v };
+		int baseColor = Color.HSVToColor(currentHsv);
+		int finalColor = Color.argb(alphaVal, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
+
+		/* Update Alpha Slider Background Gradient */
+		int transparentColor = Color.argb(0, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
+		int[] alphaGradientColors = new int[] { transparentColor, baseColor };
+		GradientDrawable alphaGradient = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, alphaGradientColors);
+		alphaGradient.setCornerRadius(sliderCornerRadius);
+		if (alphaPattern == null) alphaPattern = createCheckeredDrawable(sliderCornerRadius);
+		LayerDrawable alphaLayer = new LayerDrawable(new Drawable[] { alphaPattern, alphaGradient });
+		alphaBg.setBackground(alphaLayer);
+
+		selectedColor = finalColor;
+		previewDrawable.setColor(finalColor);
+
+		/* Automatically synchronize the position of the 2D Pad tracking thumb once views are fully measured */
+		int width = pickerFrame.getWidth();
+		int height = pickerFrame.getHeight();
+		if (width > 0 && height > 0) {
+			FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) thumbIcon.getLayoutParams();
+			params.leftMargin = (int)((hsv_s * width) - (thumbSize / 2));
+			params.topMargin = (int)(((1.0f - hsv_v) * height) - (thumbSize / 2));
+			thumbIcon.setLayoutParams(params);
+		}
+	}
+
+
+	getColor() {
+		return selectedColor;
+	}
+
+	getColorString() {
+		return String.format("#%08X", new Object[] { new Integer(selectedColor) });
+	}
+
+	setColor(int color, boolean updateViews) {
+		try {
+			selectedColor = color;
+			alphaVal = Color.alpha(color);
+			float[] tempHsv = new float[3];
+			Color.colorToHSV(color, tempHsv);
+			hsv_h = tempHsv[0];
+			hsv_s = tempHsv[1];
+			hsv_v = tempHsv[2];
+		} catch (Exception e) {
+			selectedColor = Color.WHITE;
+			hsv_h = 0.0f;
+			hsv_s = 0.0f;
+			hsv_v = 1.0f;
+			alphaVal = 255;
+		}
+        if (updateViews) updateViewColors();
+	}
+
+	config() {
+		int spacing = 16;
+		int themeId = every.themeId;
+		getViews(Object activityObj) {
+			activity = activityObj;
+			tm = ThemeManager(activity);
+			tm.setTheme(themeId);
+
+			/* Parse initial hex value if supplied, fallback to default White if null or invalid */
+			if (hasInitialColor) {
+				setColor(initialColor, false);
+				hasInitialColor = false;
+			}
+
+			/* 1. Preview View Container (With Rounded Checkered Background) */
+			final FrameLayout previewContainer = new FrameLayout(activity);
+			previewContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, previewHeight));
+
+			/* Generate programmatic Black and White / Gray Checkered Grid Pattern */
+			if (previewPattern == null) previewPattern = createCheckeredDrawable(previewCornerRadius);
+			previewContainer.setBackground(previewPattern);
+
+			/* Dynamic Color Preview Overlay Layer */
+			final View colorPreview = new View(activity);
+			colorPreview.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			previewDrawable = new GradientDrawable();
+			previewDrawable.setCornerRadius(previewCornerRadius);
+			colorPreview.setBackground(previewDrawable);
+
+			previewContainer.addView(colorPreview);
+			viewList.add(previewContainer);
+
+			/* 2. 2D Color Picker Pad (Saturation/Value) */
+			pickerFrame = new FrameLayout(activity);
+			LinearLayout.LayoutParams frameParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, pickerHeight);
+			pickerFrame.setLayoutParams(frameParams);
+
+			/* Draggable thumb */
+			thumbIcon = new ImageView(activity);
+			FrameLayout.LayoutParams thumbParams = new FrameLayout.LayoutParams(thumbSize, thumbSize);
+			thumbIcon.setLayoutParams(thumbParams);
+
+			GradientDrawable circle = new GradientDrawable();
+			circle.setShape(GradientDrawable.OVAL);
+			circle.setColor(Color.TRANSPARENT);
+			circle.setStroke(6, Color.WHITE);
+			thumbIcon.setBackground(circle);
+
+			pickerFrame.addView(thumbIcon);
+			viewList.add(pickerFrame);
+
+			/* 3. Hue Slider with Gradient Background */
+			TextView hueLabel = new TextView(activity);
+			hueLabel.setText("Hue");
+			hueLabel.setPadding(0, 30, 0, 0);
+
+			FrameLayout hueFrame = new FrameLayout(activity);
+
+			/* Custom Hue Gradient Track */
+			View hueBg = new View(activity);
+			int[] hueColors = new int[] { Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED };
+			GradientDrawable hueGradient = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, hueColors);
+			hueGradient.setCornerRadius(sliderCornerRadius);
+			hueBg.setBackground(hueGradient);
+			FrameLayout.LayoutParams hueBgParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sliderHeight);
+			hueBgParams.gravity = Gravity.CENTER_VERTICAL;
+			hueBg.setLayoutParams(hueBgParams);
+			hueFrame.addView(hueBg);
+
+			hueSlider = new SeekBar(activity);
+			hueSlider.setMax(360);
+			hueSlider.setProgress((int) hsv_h);
+			hueSlider.setProgressDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+			/* Custom Hue Slider Thumb configuration via variables */
+			GradientDrawable hueThumbDrawable = new GradientDrawable();
+			hueThumbDrawable.setShape(GradientDrawable.OVAL);
+			hueThumbDrawable.setColor(hueThumbColor);
+			hueThumbDrawable.setSize(dp(sliderThumbSizeDp), dp(sliderThumbSizeDp));
+			hueSlider.setThumb(hueThumbDrawable);
+
+			hueFrame.addView(hueSlider);
+			viewList.add(hueFrame);
+
+			/* 4. Alpha Slider with Dynamic Gradient Background */
+			TextView alphaLabel = new TextView(activity);
+			alphaLabel.setText("Alpha");
+			alphaLabel.setPadding(0, 30, 0, 0);
+
+			FrameLayout alphaFrame = new FrameLayout(activity);
+
+			/* Custom Alpha Gradient Track (Updated dynamically) */
+			alphaBg = new View(activity);
+			FrameLayout.LayoutParams alphaBgParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sliderHeight);
+			alphaBgParams.gravity = Gravity.CENTER_VERTICAL;
+			alphaBg.setLayoutParams(alphaBgParams);
+			alphaFrame.addView(alphaBg);
+
+			alphaSlider = new SeekBar(activity);
+			alphaSlider.setMax(255);
+			alphaSlider.setProgress(alphaVal);
+			alphaSlider.setProgressDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+			/* Custom Alpha Slider Thumb configuration via variables */
+			GradientDrawable alphaThumbDrawable = new GradientDrawable();
+			alphaThumbDrawable.setShape(GradientDrawable.OVAL);
+			alphaThumbDrawable.setColor(alphaThumbColor);
+			alphaThumbDrawable.setSize(dp(sliderThumbSizeDp), dp(sliderThumbSizeDp));
+			alphaSlider.setThumb(alphaThumbDrawable);
+
+			alphaFrame.addView(alphaSlider);
+			viewList.add(alphaFrame);
+
+			/* Listeners */
+			SeekBar.OnSeekBarChangeListener seekListener = new SeekBar.OnSeekBarChangeListener() {
+				onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+					if (seekBar == hueSlider) hsv_h = (float) progress;
+					else if (seekBar == alphaSlider) alphaVal = progress;
+					updateViewColors();
+				}
+				onStartTrackingTouch(SeekBar seekBar) {}
+				onStopTrackingTouch(SeekBar seekBar) {}
+			};
+
+			hueSlider.setOnSeekBarChangeListener(seekListener);
+			alphaSlider.setOnSeekBarChangeListener(seekListener);
+
+			pickerFrame.setOnTouchListener(new View.OnTouchListener() {
+				onTouch(View v, MotionEvent event) {
+					float x = event.getX();
+					float y = event.getY();
+					float width = v.getWidth();
+					float height = v.getHeight();
+
+					if (x < 0) x = 0;
+					if (x > width) x = width;
+					if (y < 0) y = 0;
+					if (y > height) y = height;
+
+					FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) thumbIcon.getLayoutParams();
+					params.leftMargin = (int)(x - (thumbSize / 2));
+					params.topMargin = (int)(y - (thumbSize / 2));
+					thumbIcon.setLayoutParams(params);
+
+					hsv_s = x / width;
+					hsv_v = 1.0f - (y / height);
+					updateViewColors();
+					return true;
+				}
+			});
+
+			/* Handle the first layout pass event to correctly track thumb positioning properties */
+			pickerFrame.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+				onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+					updateViewColors();
+				}
+			});
+
+			updateViewColors();
+
+			return viewList;
+		}
+
+		onSave() {
+			if (hasSaveInt) listener.onSave(getColor());
+			if (hasSaveString) listener.onSave(getColorString());
+		}
+
+		onCancel() {
+            if (hasCancel) listener.onCancel();
+        }
+
+		return this;
+	}
+
+	This config = config();
+	This sheetMenu = SheetMenu(config);
+
+	show() {
+		sheetMenu.show();
+	}
+
+	remove() {
+		sheetMenu.remove();
+	}
+	
+	return this;
+
+}

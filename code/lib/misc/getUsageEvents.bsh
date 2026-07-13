@@ -1,0 +1,185 @@
+/*─────────────────────────────────────────────────────────────── 
+This code was primarily generated using AI.
+───────────────────────────────────────────────────────────────*/
+
+/*──────────────────────────────────────────────────────────────────────────────
+  getUsageEvents(long windowMs, Object filterInput, int limit, boolean returnRaw)
+
+  filterInput:
+    • null → no filter
+    • String → JSON array of event names
+    • ArrayList → event names directly
+
+  returnRaw:
+    • true  → return ArrayList<HashMap> directly
+    • false → return JSON string
+──────────────────────────────────────────────────────────────────────────────*/
+
+import android.app.usage.UsageStatsManager;
+import android.app.usage.UsageEvents;
+import android.content.Context;
+import java.util.Date;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+import org.json.JSONArray;
+
+/*───────────────────────────────────────────────────────────────*/
+toIsoLocal(ts) {
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+	sdf.setTimeZone(TimeZone.getDefault());
+	return sdf.format(new Date(ts));
+}
+
+/*───────────────────────────────────────────────────────────────*/
+getEventTypeName(type) {
+	if (type == 0) return "NONE";
+	if (type == 1) return "MOVE_TO_FOREGROUND";
+	if (type == 2) return "MOVE_TO_BACKGROUND";
+	if (type == 3) return "END_OF_DAY";
+	if (type == 4) return "CONTINUE_PREVIOUS_DAY";
+	if (type == 5) return "CONFIGURATION_CHANGE";
+	if (type == 6) return "SYSTEM_INTERACTION";
+	if (type == 7) return "USER_INTERACTION";
+	if (type == 8) return "SHORTCUT_INVOCATION";
+	if (type == 9) return "NOTIFICATION_SEEN";
+	if (type == 10) return "NOTIFICATION_INTERRUPTION";
+	if (type == 11) return "CHOOSER_ACTION";
+	if (type == 12) return "APP_COMPONENT_USED";
+	if (type == 13) return "SLICE_PINNED";
+	if (type == 14) return "SLICE_PINNED_PRIV";
+	if (type == 15) return "SCREEN_INTERACTIVE";
+	if (type == 16) return "SCREEN_NON_INTERACTIVE";
+	if (type == 17) return "KEYGUARD_SHOWN";
+	if (type == 18) return "KEYGUARD_HIDDEN";
+	if (type == 19) return "FOREGROUND_SERVICE_START";
+	if (type == 20) return "KEYGUARD_DISMISS_AUTH_ATTEMPT";
+	if (type == 21) return "FOREGROUND_SERVICE_STOP";
+	if (type == 22) return "ROLLOVER_FOREGROUND_SERVICE";
+	if (type == 23) return "CONTINUING_FOREGROUND_SERVICE";
+	if (type == 24) return "ACTIVITY_RESUMED";
+	if (type == 25) return "ACTIVITY_PAUSED";
+	if (type == 26) return "ACTIVITY_STOPPED";
+	if (type == 27) return "ACTIVITY_DESTROYED";
+	if (type == 28) return "DEVICE_SHUTDOWN";
+	if (type == 29) return "DEVICE_STARTUP";
+	if (type == 30) return "LOCUS_ID_SET";
+	if (type == 31) return "USER_UNLOCKED";
+	if (type == 32) return "USER_STOPPED";
+	return "UNKNOWN_" + type;
+}
+
+/*───────────────────────────────────────────────────────────────*/
+parseFilterInput(filterInput) {
+
+	if (filterInput == null) return null;
+
+	if (filterInput instanceof java.util.List) {
+		return filterInput;
+	}
+
+	if (filterInput instanceof String) {
+		s = filterInput.trim();
+		if (s.length() == 0) return null;
+
+		try {
+			arr = new JSONArray(s);
+			list = new ArrayList();
+			for (i = 0; i < arr.length(); i++) {
+				list.add(arr.getString(i));
+			}
+			return list;
+		} catch (e) {
+			return null;
+		}
+	}
+
+	return null;
+}
+
+/*───────────────────────────────────────────────────────────────*/
+getUsageEvents(windowMs, filterInput, limit, returnRaw) {
+
+	filterList = parseFilterInput(filterInput);
+
+	endTime = System.currentTimeMillis();
+	startTime = endTime - windowMs;
+
+	usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+	if (usm == null) {
+		if (returnRaw) {
+			err = new ArrayList();
+			return err;
+		}
+		return "{\"error\":\"UsageStatsManager unavailable\"}";
+	}
+
+	usageEvents = usm.queryEvents(startTime, endTime);
+	event = new UsageEvents.Event();
+
+	list = new ArrayList();
+
+	while (usageEvents.getNextEvent(event)) {
+
+		typeName = getEventTypeName(event.getEventType());
+
+		if (filterList != null && !filterList.contains(typeName)) {
+			continue;
+		}
+
+		ts = event.getTimeStamp();
+
+		map = new java.util.HashMap();
+		map.put("timestamp", new Long(ts));
+		map.put("timestampIso", toIsoLocal(ts));
+		map.put("eventType", new Integer(event.getEventType()));
+		map.put("eventName", typeName);
+		map.put("packageName", event.getPackageName());
+		map.put("className", event.getClassName());
+
+		list.add(map);
+	}
+
+	Collections.sort(list, new Comparator() {
+		compare(a, b) {
+			ta = ((Long)((java.util.Map) a).get("timestamp")).longValue();
+			tb = ((Long)((java.util.Map) b).get("timestamp")).longValue();
+			if (ta > tb) return -1;
+			if (ta < tb) return 1;
+			return 0;
+		}
+	});
+
+	if (limit > 0 && list.size() > limit) {
+		sub = new ArrayList();
+		for (i = 0; i < limit; i++) sub.add(list.get(i));
+
+		if (returnRaw) return sub;
+		return tasker.toJson(sub, true);
+	}
+
+	if (returnRaw) return list;
+
+	return tasker.toJson(list, true);
+}
+
+
+getUsageEvents() {
+	filters = new ArrayList();
+	filters.add("ACTIVITY_RESUMED");
+	filters.add("MOVE_TO_FOREGROUND");
+	return getUsageEvents(1000*60*60, filters, 1, true).get(0);
+}
+// filters = new ArrayList();
+// filters.add("ACTIVITY_RESUMED");
+// filters.add("MOVE_TO_FOREGROUND");
+// recent = getUsageEvents(1000*60*60, filters, 1, true);
+
+// return recent.get(0);
+
+
+
+
+

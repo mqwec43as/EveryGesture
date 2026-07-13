@@ -1,0 +1,606 @@
+import java.util.function.Consumer;
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.text.InputType;
+import java.util.HashMap;
+import java.util.Map;
+import java.net.URLDecoder;
+import java.io.File;
+import android.view.WindowManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.widget.Button;
+import android.view.animation.TranslateAnimation;
+import android.view.animation.DecelerateInterpolator;
+import io.reactivex.functions.Consumer;
+import android.view.Window;
+import android.graphics.PorterDuff;
+import android.content.res.ColorStateList;
+import bsh.This;
+import android.text.TextWatcher;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import java.lang.Runnable;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
+ActionPicker(Map targetActionMap, This listener) {
+	This TOP = this;
+	This every = tasker.getJavaVariable("everyGesture");
+	This Actions = every.Actions != null ? every.Actions : Actions();
+	This commandInput;
+	This sheetMenu;
+	List argInputList = new ArrayList();
+	List allInputList = new ArrayList();
+	int argInputHighestIndex = 5;
+	This intervalInput;
+	This lengthInput;
+	This dialog;
+	This tm;
+	This inspector = every.inspector;
+	This typeInput;
+	ChipGroup toggleGroup;
+	Map actionMap = targetActionMap.clone();
+	if (!actionMap.containsKey("length")) actionMap.put("length", (int) 0);
+	if (!actionMap.containsKey("interval")) actionMap.put("interval", (int) 0);
+
+	List targetKeys = Arrays.asList(targetActionMap.keySet());
+	List missingKeys = new ArrayList();
+
+	// dialog
+	This actionDialog;
+
+	Set listInputs = actionMap.keySet();
+	List containerList = new ArrayList();
+	boolean hasCommand = actionMap.containsKey("command");
+	boolean hasArgs = actionMap.containsKey("args");
+	boolean hasInterval = actionMap.containsKey("interval");
+	boolean hasLength = actionMap.containsKey("length");
+
+	boolean hasMethod(String methodName, Class[] classes) {
+		if (classes == null) classes = new Class[] {};
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+
+	boolean hasSave = hasMethod("onSave", new Class[] { HashMap.class });
+	boolean hasCancel = hasMethod("onCancel", new Class[] {});
+
+	refreshArgInputVisibility(int argumentsSize) {
+		int inputsSize = argInputList.size();
+		for (int i = 0; i < inputsSize; i++) {
+			This input = argInputList.get(i);
+			if (i < argumentsSize) {
+				input.reset();
+				input.unhide();
+			} else {
+				input.setPresetDialog(null);
+				input.hide();
+			}
+		}
+	}
+
+
+	InputParameter(This argInput, Class parameterType, String parameterName) {
+		argInput.editText.setText("");
+		argInput.clearPresetDialog();
+		argInput.setInputType(parameterType);
+		argInput.setEndIcon("main/dots-vertical.svg");
+		argInput.parameterName = parameterName;
+		// TODO : This should be based on selected overload for given command
+
+		String hintText = parameterName;
+
+		boolean multiSelect = parameterType.equals(List.class);
+		if (multiSelect && parameterName.endsWith("s")) {
+			parameterName = parameterName.substring(0, parameterName.length() - 1);
+		}
+
+		List presetList;
+
+		This componentDialog;
+		This componentListener;
+		boolean isComponent;
+		if (parameterName.equals("component")) {
+			presetList = Actions.getParameterList("packageName");
+			
+			log("Parameter name is component #" + presetList.size());
+			isComponent = true;
+			componenetListener() {
+				onSuccess(Map selected) {
+					String text = Actions.getParameterTextFromMap(selected);
+					argInput.namespace.setVariable("selected", selected, false);
+					argInput.editText.setText(text);
+				}
+				onCancel() {}
+				return this;
+			}
+
+			componenetListener = componenetListener();
+		} else {
+			presetList = Actions.getParameterList(parameterName);
+		}
+
+		config() {
+			String title = "Select " + parameterName;
+			List itemList = presetList;
+			boolean showFilter = presetList.size() > 5;
+			boolean multiSelect = multiSelect;
+        	float dimAmount = 0.5f;
+			List presetList = new ArrayList();
+			int iconSize = 48;
+			int themeId = every.themeId;
+
+			onSuccess(Map selected) {
+				String text = Actions.getParameterTextFromMap(selected);
+				if (isComponent) {
+					String packageName = selected.get("args");
+					componentDialog = PickComponentDialog(packageName);
+					componentDialog.setListener(componenetListener);
+					componentDialog.show();
+				}
+				else {
+					argInput.namespace.setVariable("selected", selected, false);
+					argInput.editText.setText(text);
+				}
+			}
+
+			onSuccess(List selections) {
+				String text = Actions.getParameterTextFromList(selections);
+				argInput.namespace.setVariable("selected", selections, false);
+				argInput.editText.setText(text);
+			}
+
+			return this;
+		}
+
+		This dialog = ListDialog(config());
+		if (!presetList.isEmpty()) {
+			argInput.setPresetDialog(dialog);
+		}
+		else  {
+			argInput.setPresetDialog(null);
+			log("Unable to get preset list for " + parameterName, "Error");
+		}
+		argInput.setHint(hintText);
+		argInput.unhide();
+		return argInput;
+	}
+
+	setInputsForMethod(bsh.BshMethod overload, boolean showFirst) {
+		String[] parameterNames = overload.parameterNames;
+		This firstInputWithPreset;
+
+		if (parameterNames.length > 0) {
+			for (int i = 0; i < parameterNames.length; i++) {
+				if (i > argInputHighestIndex) break;
+				String parameterName = parameterNames[i];
+				Class parameterType = overload.parameterTypes[i];
+				This input = InputParameter(argInputList.get(i), parameterType, parameterName);
+				boolean hasPreset = Actions.hasParameterList(parameterName);
+				if (parameterName.equals("component")) hasPreset = true;
+				if (hasPreset && firstInputWithPreset == null) {
+					firstInputWithPreset = input;
+				}
+			}
+			if (firstInputWithPreset != null && showFirst) {
+				firstInputWithPreset.openPresetDialog();
+			}
+		}
+		refreshArgInputVisibility(parameterNames.length);
+	}
+
+	OverloadDialog(String selectedCommand) {
+		refreshArgInputVisibility(0);
+		List overloads = inspector.getOverloads(selectedCommand);
+		List overloadList = new ArrayList();
+
+		for (bsh.BshMethod overload: overloads) {
+			String title = String.join(", ", overload.parameterNames);
+			Map item = new HashMap();
+			item.put("title", title);
+			item.put("overload", overload);
+			overloadList.add(item);
+		}
+
+		config() {
+			String title = "Select Arguments";
+			List itemList = overloadList;
+        	float dimAmount = 0.5f;
+			boolean showFilter = false;
+			int iconSize = 48;
+			int themeId = every.themeId;
+			onSuccess(Map selected) {
+				bsh.BshMethod overload = selected.get("overload");
+				setInputsForMethod(overload, true);
+			}
+			return this;
+		}
+
+		return ListDialog(config());
+	}
+
+	ActionDialog() {
+		config() {
+			String title = "Select Action";
+			List itemList = Actions.list;
+        	float dimAmount = 0.5f;
+			int iconSize = 48;
+			int themeId = every.themeId;
+
+			onSuccess(Map selected) {
+				String command = selected.get("command");
+				String commandStr = Actions.getTextVersion(selected);
+				commandInput.editText.setText(commandStr);
+				commandInput.namespace.setVariable("selected", selected, false);
+				refreshArgInputVisibility(0);
+				List overloads = inspector.getOverloads(command);
+				if (overloads.isEmpty()) return;
+				if (overloads.size() == 1) {
+					bsh.BshMethod overload = overloads.get(0);
+					setInputsForMethod(overload, true);
+				} else {
+					This overloadDialog = OverloadDialog(command);
+					overloadDialog.show();
+				}
+			}
+
+			return this;
+		}
+
+		return ListDialog(config());
+	}
+
+	actionDialog = ActionDialog();
+
+	TypeDialog() {
+		Object[][] type = new Object[][] {
+			{
+				"Release",
+				"Gesture is released quickly",
+				"release",
+				"release"
+			},
+			{
+				"Long Press",
+				"Gesture is held down for a long time",
+				"longPress",
+				"longPress"
+			}
+		};
+		List types = new ArrayList();
+		for (int i = 0; i < type.length; i++) {
+			Map item = new HashMap();
+			item.put("title", type[i][0]);
+			item.put("subtitle", type[i][1]);
+			item.put("args", type[i][2]);
+			item.put("replacer", type[i][3]);
+			item.put("iconPath", every.MAIN_DIRECTORY + "/res/actions/" + type[i][3] + ".svg");
+			types.add(item);
+		}
+		config() {
+			String title = "Select Action Type";
+			List itemList = types;
+        	float dimAmount = 0.5f;
+			int iconSize = 48;
+			int themeId = every.themeId;
+			onSuccess(Map selected) {
+				typeInput.editText.setText(selected.get("title"));
+				typeInput.namespace.setVariable("selected", selected, false);
+			}
+
+			return this;
+		}
+		return ListDialog(config());
+	}
+
+	typeInput = TypeDialog();
+
+	Object[][] dialogStructure = new Object[][] {
+		// keyMap, default hint, String[] icons, argPresetDialog
+		{
+			"type",
+			"Action Type",
+			new String[] { "main/type.svg" },
+			typeInput,
+			String.class
+		},
+		{
+			"command",
+			"Action Command",
+			new String[] { "main/tasks.svg" },
+			actionDialog,
+			String.class
+		},
+		{
+			"interval",
+			"Interval",
+			new String[] {
+				"main/interval.svg"
+			},
+			null,
+			Integer.class
+		},
+		{
+			"length",
+			"Length",
+			new String[] {
+				"main/length.svg"
+			},
+			null,
+			Float.class
+		},
+	};
+
+	createChip(Context activity, This input) {
+		Chip chip = new Chip(activity);
+		chip.setText(input.inputLayout.getHint());
+		chip.setCheckable(true);
+		chip.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+			onCheckedChanged(CompoundButton chip, boolean isChecked) {
+				if (isChecked) {
+					input.unhide();
+				} else {
+					input.hide();
+				} 
+			}
+		});
+		toggleGroup.addView(chip);
+		return chip;
+	}
+
+	createInput(Context activity, String key, String hint, String[] icons, This argPresetDialog, Class type) {
+		This input = InputLayout(activity);
+		input.setHint(hint);
+		input.setStartIcon(icons[0]);
+
+		// * Set end icon for only command and args
+		boolean isEssential = key.equals("command") || key.startsWith("arg") || key.equals("type");
+		boolean isOptional = key.equals("interval") || key.equals("length");
+		if (isEssential) input.setEndIcon("main/dots-vertical.svg");
+
+		input.setInitialText(actionMap, key);
+		if (argPresetDialog != null) {
+			input.setPresetDialog(argPresetDialog);
+		}
+		
+		// * create chip for optional
+		if (isOptional) {
+			Chip chip = createChip(activity, input);
+			boolean hasValue;
+			Object value = actionMap.get(key);
+			switch (value.getClass()) {
+				case Integer.class:
+				case Long.class:
+				case int.class:
+				case long.class:
+				case Float.class:
+				case Double.class:
+				case float.class:
+				case double.class:
+					hasValue = value != 0;
+					break;
+				case String.class:
+					if (value == null) hasValue = false;
+					else hasValue = !value.equals("");
+					break;
+				default:
+					hasValue = value != null;
+					break;
+			};
+			chip.setChecked(hasValue);
+			if (!hasValue) input.hide();
+		}
+
+		input.setInputType(type);
+
+		allInputList.addLast(input);
+		return input;
+	}
+
+	fillInput(Map actionConfig) {
+		boolean isEmpty = actionConfig.isEmpty();
+		boolean hasCommand = actionConfig.containsKey("command");
+		boolean hasArgs = actionConfig.containsKey("args");
+		boolean hasInterval = actionConfig.containsKey("interval");
+		boolean hasLength = actionConfig.containsKey("length");
+		if (!hasLength) lengthInput.hide();
+		if (!hasInterval) intervalInput.hide();
+		String command = hasCommand ? actionConfig.get("command") : null;
+
+		if (hasCommand) {
+			Map selected = Actions.getCommandMap(command);
+			commandInput.namespace.setVariable("selected", selected, false);
+		}
+
+		List args = hasArgs ? actionConfig.get("args") : new ArrayList();
+		tasker.setJavaVariable("argS", args);
+		bsh.BshMethod overload = every.inspector.getMethod(command, args);
+		tasker.setJavaVariable("overLoad", overload);
+		List parameterNames = new ArrayList();
+		List parameterTypes = new ArrayList();
+		if (overload != null) {
+			setInputsForMethod(overload, false);
+			parameterNames = Arrays.asList(overload.getParameterNames());
+			parameterTypes = Arrays.asList(overload.getParameterTypes());
+		} else if (hasCommand) {
+			tasker.showToast("Unable to get overload for" + command, "Error");
+			log("Unable to get overload for " + tasker.toJson(actionConfig, true), "Error");
+			sheetMenu.remove();
+			return;
+		}
+
+		List clearPresets = new ArrayList();
+		if (!args.isEmpty() && overload != null) {
+			for (int i = 0; i < args.size(); i++) {
+				This input = argInputList.get(i);
+				Object value = args.get(i);
+				String parameterName = parameterNames.get(i);
+				Class type = parameterTypes.get(i);
+				actionConfig.put("arg" + i, value);
+				String text = Actions.getParameterText(parameterName, value);
+				input.keyString = "arg" + i;
+				input.setText(text);
+				// input.setInitialText(actionConfig, "arg" + i);
+				Object selected;
+				if (Actions.hasParameterList(parameterName)) {
+					if (value instanceof List) {
+						if (parameterName.endsWith("s")) {
+							parameterName = parameterName.substring(0, parameterName.length() - 1);
+						}
+						selected = Actions.getEntryList(parameterName, value);
+					} else if (value instanceof String) {
+						selected = Actions.getEntryMap(parameterName, value);
+					} 
+					if (selected != null) {
+						input.namespace.setVariable("selected", selected, false);	
+					}
+				} else {
+					log("Unable to get preset list for " + parameterName, "Error");
+
+					// * Exclude component temporarily
+					// ! MUST HANDLE THIS LATER
+					if (!parameterName.equals("component")) clearPresets.add(input);
+				}
+				
+			}
+		} 
+
+		// Alway show command
+		commandInput.unhide();
+		if (!hasCommand) {
+			typeInput.openPresetDialog();
+		} else {
+			typeInput.hide();
+		} 
+		if (clearPresets.size() > 0) {
+			for (This input: clearPresets) {
+				input.clearPresetDialog();
+			}
+		}
+	}
+
+	getInputsMap(boolean strict) {
+		Map result = new HashMap();
+		for (This input: allInputList) {
+			if (!input.isVisible()) continue;
+			String key = input.keyString;
+			Object value = input.getSelected();
+			if (value == null && strict) {
+				String hint = input.inputLayout.getHint();
+				tasker.showToast(hint + " can't be empty", "Error");
+				return null;
+			}
+			result.put(key, value);
+		}
+
+		// Turn arg# into single list
+		List args = new ArrayList();
+		for (int i = 0; i < argInputList.size(); i++) {
+			String key = "arg" + i;
+			This input = argInputList.get(i);
+			if (result.containsKey(key) && input.isVisible()) args.add(result.get(key));
+			result.remove(key);
+		}
+		result.put("args", args);
+		return result;
+	}
+
+	config() {
+		boolean isScrollable = true;
+		long timeout = 0;
+		int themeId = every.themeId;
+		getViews(Context activity) {
+			dialog = this;
+			tm = ThemeManager(activity);
+			tm.setTheme(themeId);
+
+			toggleGroup = new ChipGroup(activity);
+
+			for (int i = 0; i < dialogStructure.length; i++) {
+				Object[] row = dialogStructure[i];
+				String key = row[0];
+				String hint = row[1];
+				String[] icons = row[2];
+				This argPresetDialog = row[3];
+				Class type = row[4];
+				This input = createInput(activity, key, hint, icons, argPresetDialog, type);
+				dialog.namespace.setVariable(key + "Input", input, false);
+				containerList.add(input.inputLayout);
+			}
+
+			List arguments = actionMap.get("args");
+			if (arguments == null) arguments = new ArrayList();
+			for (int i = 0; i <= argInputHighestIndex; i++) {
+				String key = "arg" + i;
+				String hint = "Arguments " + (i);
+				String[] icons = new String[] { "main/prompt.svg" };
+				This argPresetDialog = null;
+				boolean hasValue;
+				This input = createInput(activity, key, hint, icons, argPresetDialog, String.class);
+				// The first index is refreshArgInputVisibility
+				containerList.add(i + 2, input.inputLayout);
+				argInputList.addLast(input);
+			}
+
+			refreshArgInputVisibility(arguments.size());
+			fillInput(actionMap);
+
+			containerList.add(toggleGroup);
+			commandInput.setEditable(false);
+
+			if (!hasLength) lengthInput.hide();
+			if (!hasInterval) intervalInput.hide();
+
+			return containerList;
+		}
+
+		onSave() {
+			Map result = getInputsMap(true);
+			if (hasSave) listener.onSave(result);
+		}
+
+		onCancel() {
+			if (hasCancel) listener.onCancel();
+		}
+
+		return this;
+	}
+
+	This config = config();
+	sheetMenu = SheetMenu(config);
+	sheetMenu.show();
+}
+
+
+// Map actionMap = new HashMap();
+// List args = new ArrayList();
+// args.add("Tasker");
+// actionMap.put("command", "openApp");
+// actionMap.put("args", args);
+// actionMap.put("interval", 200);
+// actionMap.put("length", 200.2);
+
+// handler() {
+
+// 	onCancel() {
+
+// 	}
+
+// 	onSave() {
+// 		tasker.showToast(tasker.toJson(actionMap, true), "Map");
+// 	}
+
+// 	return this;
+// }
+
+// ActionPicker(actionMap, handler());

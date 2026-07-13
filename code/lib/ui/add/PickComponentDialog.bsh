@@ -1,0 +1,164 @@
+import bsh.This;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ComponentName;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.ActivityInfo;
+import android.graphics.drawable.Drawable;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+
+
+PickComponentDialog(String packageName) {
+	This listener;
+	This every = tasker.getJavaVariable("everyGesture");
+    This Actions = every.Actions;
+	String label = every.packageManager.getLabel(packageName);
+
+	/*───────────────────────────────────────────────────────────────
+	  getActivityList(String packageName)
+	  **Gets All Activities for a Package**
+	  Retrieves a list of maps containing details of all activities
+	  declared inside the specified application package.
+	 
+	  Arguments:
+	   - packageName → The package name of the target app.
+	 
+	  Returns:
+	   - List → A list of Map objects containing title, subtitle, arg, and icon.
+	  ───────────────────────────────────────────────────────────────*/
+	List getActivityList(String packageName) {
+		List resultList = new ArrayList();
+
+		if (packageName == null || packageName.trim().length() == 0) {
+			return resultList;
+		}
+
+		PackageManager pm = context.getPackageManager();
+		PackageInfo packageInfo = null;
+		Drawable appIconFallback = null;
+		String packageLabel = "";
+
+		try {
+			/* Retrieve the activities along with application information */
+			packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
+			if (packageInfo != null && packageInfo.applicationInfo != null) {
+				appIconFallback = packageInfo.applicationInfo.loadIcon(pm);
+				CharSequence appLabelSeq = pm.getApplicationLabel(packageInfo.applicationInfo);
+				if (appLabelSeq != null) {
+					packageLabel = appLabelSeq.toString();
+				}
+			}
+		} catch (Exception e) {
+			/* Package not found or could not be retrieved */
+			return resultList;
+		}
+
+		if (packageInfo == null || packageInfo.activities == null) {
+			return resultList;
+		}
+
+		ActivityInfo[] activities = packageInfo.activities;
+		for (int i = 0; i < activities.length; i++) {
+			ActivityInfo activityInfo = activities[i];
+			if (activityInfo == null) {
+				continue;
+			}
+
+			ComponentName componentName = new ComponentName(activityInfo.packageName, activityInfo.name);
+
+			/* 1. Get the activity label title */
+			CharSequence labelCharSequence = activityInfo.loadLabel(pm);
+			String title = null;
+			if (labelCharSequence != null) {
+				title = labelCharSequence.toString();
+			}
+
+			/* Fallback if no label is found, OR if it matches the parent application label */
+			if (title == null || title.trim().length() == 0 || title.equals(packageLabel)) {
+				String shortClassName = componentName.getShortClassName();
+				if (shortClassName != null) {
+					/* Strip only the leading dot if it exists */
+					if (shortClassName.startsWith(".")) {
+						shortClassName = shortClassName.substring(1);
+					}
+
+					/* Extract the simple class name (after the last dot if it's in a sub-package) */
+					int lastDotIndex = shortClassName.lastIndexOf('.');
+					String classNameOnly = (lastDotIndex >= 0) ? shortClassName.substring(lastDotIndex + 1) : shortClassName;
+
+					/* Insert spaces before uppercase letters (e.g., SnakeActivityMain -> Snake Activity Main) */
+					title = classNameOnly.replaceAll("(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ");
+				}
+			}
+
+			/* 2. Shorten component class path natively using ComponentName */
+			String subtitle = componentName.getShortClassName();
+
+			/* 3. Get the full component flatten format using ComponentName */
+			String arg = componentName.flattenToString();
+
+			Drawable icon = null;
+			if (activityInfo.getIconResource() != 0) {
+				try {
+					icon = activityInfo.loadIcon(pm);
+				} catch (Exception e) {
+					/* Ignore failure to load activity-specific icon */
+				}
+			}
+			if (icon == null) {
+				icon = appIconFallback;
+			}
+
+			/* Create and populate the unparameterized Map object */
+			Map activityMap = new HashMap();
+			activityMap.put("title", title);
+			activityMap.put("subtitle", subtitle);
+			activityMap.put("args", arg);
+			activityMap.put("icon", icon);
+
+			resultList.add(activityMap);
+		}
+
+		return resultList;
+	}
+
+	ActivityConfig() {
+		String title = "Pick Activity " + label;
+		List itemList = getActivityList(packageName);
+		boolean showFilter = itemList.size() > 5;
+        float dimAmount = 0.5f;
+		int themeId = every.themeId;
+		onSuccess(Map selected) {
+			if (listener != null) {
+				listener.onSuccess(selected);
+			}
+		}
+		onCancel() {
+			if (listener != null) {
+				listener.onCancel();
+			}
+		}
+		return this;
+	}
+
+    This dialogConfig = ActivityConfig();
+    This dialog = ListDialog(dialogConfig);
+
+	setListener(This newListener) {
+		listener = newListener;
+	}
+
+    show() {
+        dialog.show();
+    }
+
+    remove() {
+        dialog.remove();
+    }
+
+	return this;
+}
