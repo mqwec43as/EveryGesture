@@ -187,7 +187,6 @@ TemplateCard(This handleCard, This config, String gestureName) {
 							if (result == null) {
 								return;
 							}
-							tasker.setJavaVariable("resulT", result);
 							boolean added = replaceRule(key, index, result);
 							if (added) TOP.refreshDetails();
 							else tasker.showToast("Failed", "Error");
@@ -360,8 +359,6 @@ TemplateCard(This handleCard, This config, String gestureName) {
 		gestureCard.removeView(templateDetails);
 		templateDetails = getTemplateDetails();
 		gestureCard.addView(templateDetails, 0); // Add the first not last
-		tasker.showToast("Refreshed", "Info");
-		tasker.setJavaVariable("ruleMap", ruleMap);
 	}
 
 	load();

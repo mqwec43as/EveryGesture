@@ -68,7 +68,6 @@ AddMenu(This Main) {
         item.put("action", action);
         items.add(item);
     }
-    tasker.setJavaVariable("itemS", items);
 
 	addMenuConfig() {
         List itemList = items;

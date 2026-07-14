@@ -423,9 +423,7 @@ ActionPicker(Map targetActionMap, This listener) {
 		}
 
 		List args = hasArgs ? actionConfig.get("args") : new ArrayList();
-		tasker.setJavaVariable("argS", args);
 		bsh.BshMethod overload = every.inspector.getMethod(command, args);
-		tasker.setJavaVariable("overLoad", overload);
 		List parameterNames = new ArrayList();
 		List parameterTypes = new ArrayList();
 		if (overload != null) {
