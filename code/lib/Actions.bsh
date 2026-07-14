@@ -26,7 +26,7 @@ Actions() {
 			"Apps Tray Menu",
 			"Opens selected apps on tray menu",
 			"showAppsTray",
-			"Open tray {0} Apps"
+			"Open tray {0}"
 		},
 		{
 			"Run Task",
@@ -260,6 +260,8 @@ Actions() {
 		}
 	};
 
+	static final Object[][] everyAction = everyCommand;
+
 	import android.database.Cursor;
 	import android.net.Uri;
 	import java.util.ArrayList;
@@ -317,38 +319,37 @@ Actions() {
 	import java.util.Map;
 
 	/**
-	 * getLauncableApps()
+	 * getInstalledApps()
 	 * Optimized: Only gathers Package Name and Resource ID to prevent Memory crashes.
 	 */
-	ArrayList getLauncableApps() {
-		ArrayList items = new ArrayList();
+	List getInstalledApps() {
+		List items = new ArrayList();
 		PackageManager pm = context.getPackageManager();
 
-		Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-		mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+		List packages = pm.getInstalledPackages(0);
 
-		List apps = pm.queryIntentActivities(mainIntent, 0);
-
-		Collections.sort(apps, new Comparator() {
-			public int compare(Object o1, Object o2) {
-				String label1 = ((ResolveInfo) o1).loadLabel(pm).toString();
-				String label2 = ((ResolveInfo) o2).loadLabel(pm).toString();
+		Collections.sort(packages, new Comparator() {
+			compare(Object o1, Object o2) {
+				String label1 = ((PackageInfo) o1).applicationInfo.loadLabel(pm).toString();
+				String label2 = ((PackageInfo) o2).applicationInfo.loadLabel(pm).toString();
 				return label1.compareToIgnoreCase(label2);
 			}
 		});
 
-		for (int i = 0; i < apps.size(); i++) {
-			ResolveInfo info = (ResolveInfo) apps.get(i);
+		for (int i = 0; i < packages.size(); i++) {
+			PackageInfo pkgInfo = (PackageInfo) packages.get(i);
+
+			if (pkgInfo.applicationInfo == null) {
+				continue;
+			}
 
 			Map itemMap = new HashMap();
-			String label = info.loadLabel(pm).toString();
+			String label = pkgInfo.applicationInfo.loadLabel(pm).toString();
 			itemMap.put("title", label);
-			itemMap.put("subtitle", info.activityInfo.packageName);
-			itemMap.put("args", info.activityInfo.packageName);
+			itemMap.put("subtitle", pkgInfo.packageName);
+			itemMap.put("args", pkgInfo.packageName);
 			itemMap.put("replacer", label);
-
-			// Use Resource ID instead of loading the full Drawable object
-			itemMap.put("iconResId", info.getIconResource());
+			itemMap.put("iconResId", pkgInfo.applicationInfo.icon);
 			itemMap.put("type", "app");
 
 			items.add(itemMap);
@@ -481,7 +482,7 @@ Actions() {
 	}
 
 	getApps() {
-		actionMenu { "openApp" } = getLauncableApps();
+		actionMenu { "openApp" } = getInstalledApps();
 		actionMenu { "showAppsTray" } = actionMenu { "openApp" };
 		newActionMenu { "packageName" } = actionMenu { "openApp" };
 		newActionMenu { "packageNames" } = actionMenu { "openApp" };
@@ -528,7 +529,6 @@ Actions() {
 		getTasks();
 		getApps();
 		getScripts();
-
 		if (withToast) {
 			showToast("Action List Refreshed");
 		}
@@ -635,7 +635,7 @@ Actions() {
 
 	/*  
 		* For displaying action as one string row, e.g for TemplateCard
-		TODO might need to resolve all args and create based on command
+		TODO might need to resolve all args and create based on command parameter
 	*/
 	String getDisplayText(Map actionMap) {
 		String command = actionMap { "command" };
@@ -653,17 +653,23 @@ Actions() {
 			switch (entry.getClass()) {
 				case String.class:
 					replacer = getReplacer(command, entry);
+					if (command.equals("launchActivity")) replacer = getComponentName(entry);
 					break;
 				case List.class:
+				case ArrayList.class:
 					replacer = entry.size() + " items";
 					break;
+				case JSONArray.class:
+					replacer = entry.length() + " items";
+					break;
 				default:
+					log("Unknown type: " + entry.getClass(), TOP);
 					replacer = entry.toString();
 					break;
 			}
 
 			if (replacer == null) replacer = entry.toString();
-		
+			
 			placeHolder = placeHolder.replace("{" + i + "}", replacer);
 		}
 		// clean leftover {\d+}
@@ -701,6 +707,7 @@ Actions() {
 				getScripts();
 				break;
 			default:
+				log("Unknown parameter: " + parameterName, TOP);
 				try {
 					if (TOP.namespace.getVariable(parameterName) == void) break;
 					Object[][] objects = TOP.namespace.getVariable(parameterName);
@@ -721,6 +728,45 @@ Actions() {
 		return new ArrayList();
 	}
 
+	
+	import android.content.ComponentName;
+	import android.content.pm.ActivityInfo;
+	String getComponentName(String componentName) {
+		ComponentName component = ComponentName.unflattenFromString(componentName);
+		PackageManager pm = context.getPackageManager();
+		ActivityInfo activityInfo = pm.getActivityInfo(component, PackageManager.GET_META_DATA);
+
+		CharSequence label = activityInfo.loadLabel(pm);
+		String labelStr = label.toString();
+		String packageName = component.getPackageName();
+
+		/* Get the main application label (e.g., "Tasker") */
+		ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
+		CharSequence appLabel = pm.getApplicationLabel(appInfo);
+		String appLabelStr = appLabel != null ? appLabel.toString() : "";
+
+		/* Check if the activity label matches the package string or the app name */
+		if (labelStr.equalsIgnoreCase(packageName) || labelStr.equalsIgnoreCase(appLabelStr)) {
+			String className = component.getClassName();
+			int lastDot = className.lastIndexOf('.');
+			String shortName = lastDot == -1 ? className : className.substring(lastDot + 1);
+
+			/* Normalize camelCase shortName to spaced words (e.g., MainActivity -> Main Activity) */
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < shortName.length(); i++) {
+				char c = shortName.charAt(i);
+				if (i > 0 && Character.isUpperCase(c)) {
+					sb.append(" ");
+				}
+				sb.append(c);
+			}
+
+			labelStr = labelStr + ", " + sb.toString();
+		}
+
+		return labelStr;
+
+	}
 	
 
 	// * Get map argValue for args key in the parameter list
@@ -744,7 +790,9 @@ Actions() {
 				String projectName = getProjectName(argValue);
 				if (projectName != null) return createMap(argValue, projectName, argValue, projectName);
 				break;
-			case "className":
+			case "component":
+				String componentName = getComponentName(argValue);
+				if (componentName != null) return createMap(argValue, componentName, argValue, componentName);
 				break;
 		}
 

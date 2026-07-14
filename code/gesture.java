@@ -303,7 +303,12 @@ This updateManager = UpdateManager();
 every.namespace.setVariable("updateManager", updateManager, false);
 
 This Actions = Actions();
-Actions.getApps();
+Runnable refreshList = new Runnable() {
+	public void run() {
+		Actions.refresh();
+	}
+};
+every.execute(refreshList);
 every.namespace.setVariable("Actions", Actions, false);
 
 This inspector = MethodInspector(this);
