@@ -18,3 +18,11 @@ Draw gesture project for android automation app called **[Tasker](https://play.g
 &nbsp;
 <div align="center">
 
+
+<div align="center">
+
+# FAQ & DOCUMENTATION
+</div>
+
+1. [What is everyGesture?](/readme/What%20is%20everyGesture.md)
+

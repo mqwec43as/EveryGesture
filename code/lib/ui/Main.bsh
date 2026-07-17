@@ -59,12 +59,13 @@ importCommands("lib.ui");
 importCommands("lib.misc");
 importCommands("lib.ui.toolbar");
 importCommands("lib.ui.add");
-
+importCommands("lib.ui.helper");
 
 
 Main() {
 	This TOP = this;
 	This every = tasker.getJavaVariable("everyGesture");
+	This monitor;
 	if (every == null || every == void) {
 		tasker.showToast("No everyGesture data found");
 		return;
@@ -89,6 +90,13 @@ Main() {
 	FloatingActionButton addButton;
 	View lastSpacer;
 	
+	activityListener() {
+		onStopped(Object event) {
+			event.activity.finish();
+		}
+		
+		return this;
+	}
 
 	addNavbar() {
 		if (navigationBar != null) return;
@@ -201,6 +209,7 @@ Main() {
 	java.util.function.Consumer activityConsumer = new java.util.function.Consumer() {
 		accept(Activity activityContext) {
 			activity = activityContext;
+			monitor = SimpleActivityMonitor(activity, activityListener());
 			tm = ThemeManager((Context) activity);
 			if (every.useDarkTheme) tm.setThemeDark();
 			else tm.setThemeLight();

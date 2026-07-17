@@ -35,6 +35,7 @@ import io.reactivex.subjects.CompletableSubject;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingtoolbar.FloatingToolbarLayout;
+import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
 
 /*───────────────────────────────────────────────────────────────
 SheetMenu Component
@@ -49,18 +50,39 @@ SheetMenu(This config) {
 	boolean hasShown = false;
 	FloatingToolbarLayout root;
 	CompletableSubject waitTimeout = CompletableSubject.create();
+	This monitor;
 
 	boolean hasMethod(String methodName, Class[] classes) {
 		if (classes == null) classes = new Class[] {};
 		return config.namespace.getMethod(methodName, classes) != null;
 	}
-
+	
 	boolean hasSave = hasMethod("onSave", null);
 	boolean hasCancel = hasMethod("onCancel", null);
 	boolean hasTimeout = hasMethod("onTimeout", null);
 	boolean hasAttach = hasMethod("onAttach", null);
 	boolean hasDetach = hasMethod("onDetach", null);
+	boolean hasDestroyed = hasMethod("onDestroyed", null);
+	boolean hasCreated = hasMethod("onCreated", null);
 	boolean hasGetViews = hasMethod("getViews", new Class[] { Context.class });
+
+	activityListener() {
+		onCreated(ActivityLifecycleEvent event) {
+			if (hasCreated) config.onCreated();
+		}
+
+		onDestroyed(ActivityLifecycleEvent event) {
+			if (hasDestroyed) config.onDestroyed();
+		}
+
+		// ! Might need to remove later if Tasker allows Activity to not be excluded in recents
+		// Remove when activity is stopped
+		onStopped(ActivityLifecycleEvent event) {
+			event.activity.finish();
+		}
+		
+		return this;
+	}
 
 	List viewList = null;
 	boolean isScrollable = config.isScrollable == void ? false : config.isScrollable;
@@ -80,6 +102,7 @@ SheetMenu(This config) {
 
 	layout(Activity act) {
 		activity = act;
+		monitor = SimpleActivityMonitor(activity, activityListener());
 
 		int SNACKBAR_RADIUS = dp(32);
 		int SNACKBAR_HEADER_PADDING = dp(8);

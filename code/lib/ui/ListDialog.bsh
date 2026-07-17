@@ -1,3 +1,5 @@
+importCommands("lib.ui.helper");
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
@@ -54,6 +56,7 @@ ListDialog(This config) {
 	boolean isRemoved = true;
 	boolean hasShown = false;
 	ArrayList selectedItems = new ArrayList();
+	This monitor;
 
 	String title = config.title == void ? null : config.title;
 	boolean showFilter = config.showFilter == void ? false : config.showFilter;
@@ -86,6 +89,26 @@ ListDialog(This config) {
 	boolean hasDismiss = hasMethod("onDismiss", null);
 	boolean hasAttach = hasMethod("onAttach", null);
 	boolean hasDetach = hasMethod("onDetach", null);
+	boolean hasCreated = hasMethod("onCreated", null);
+	boolean hasDestroyed = hasMethod("onDestroyed", null);
+
+	activityListener() {
+		onCreated(ActivityLifecycleEvent event) {
+			if (hasCreated) config.onCreated();
+		}
+
+		onDestroyed(ActivityLifecycleEvent event) {
+			if (hasDestroyed) config.onDestroyed();
+		}
+
+		// ! Might need to remove later if Tasker allows Activity to not be excluded in recents
+		// Remove when activity is stopped
+		onStopped(ActivityLifecycleEvent event) {
+			event.activity.finish();
+		}
+		
+		return this;
+	}
 
 	CompletableSubject waitTimeout = CompletableSubject.create();
 
@@ -112,7 +135,9 @@ ListDialog(This config) {
 
 	layout(Activity act) {
 		activity = act;
+		monitor = SimpleActivityMonitor(activity, activityListener());
 		activityContext = activity;
+
 		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
 		// Commented since Tasker doens'title support running on target display
 		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);

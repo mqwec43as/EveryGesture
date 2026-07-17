@@ -19,8 +19,6 @@ ActionRules(This config) {
 	String MAIN_DIRECTORY = config.MAIN_DIRECTORY;
 	String LOG_FILE = config.LOG_FILE;
 	String handleName = config.handleName;
-	Map lastGesture;
-	Map entry;
 
 	retrieveAction(This gesture) {
 		gesture.hasAction = false;

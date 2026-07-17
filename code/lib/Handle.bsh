@@ -84,8 +84,9 @@ Handle(This config) {
 				} else {
 					recognized.longPress = isLongPress;
 					recognized.handle = config.handleName;
-					every.namespace.setVariable("lastGesture", recognized.gesture, false);
+					every.latestGesture = recognized.gesture;
 					action = config.actionRules.getAction(recognized);
+					every.latestAction = action;
 					if (action.isLongPress && action.hasInterval) {
 						futureTask = every.schedule(action.task, 0, action.interval);
 						saveGuardFutureTask = every.schedule(saveGuard, maximumDuration);
@@ -102,6 +103,8 @@ Handle(This config) {
 			action = null;
 			futureTask = null;
 			saveGuardFutureTask = null;
+			every.latestAction = null;
+			every.latestGesture = null;
 		}
 
 		onRelease(This live, Gesture gesture, boolean isLongPress) {

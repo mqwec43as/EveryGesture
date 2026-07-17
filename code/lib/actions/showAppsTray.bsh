@@ -287,8 +287,8 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 getInitialFromCache() {
 	PointF initialPosition = new PointF(0.5f, 0.5f);
 	This every = tasker.getJavaVariable("everyGesture");
-	if (every.lastGesture != void) {
-		GestureStroke firstStroke = every.lastGesture.getStrokes().get(0);
+	if (every.latestGesture != null) {
+		GestureStroke firstStroke = every.latestGesture.getStrokes().get(0);
 		Path path = firstStroke.getPath();
 		PathMeasure pm = new PathMeasure(path, false);
 		float[] coords = new float[] {0f,0f };

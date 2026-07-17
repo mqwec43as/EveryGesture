@@ -1,0 +1,118 @@
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.internal.operators.observable.ObservableHide;
+import android.app.Activity;
+import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
+import bsh.This;
+import bsh.BshMethod;
+
+SimpleActivityMonitor(Activity activity, This listener) {
+    final This TOP = this;
+    final String CREATE = "Created";
+    final String START = "Started";
+    final String RESUME = "Resumed";
+    final String PAUSE = "Paused";
+    final String STOP = "Stopped";
+    final String DESTROY = "Destroyed";
+    final String USER_LEAVE_HINT = "UserLeaveHint";
+    
+	Disposable disposable;
+	ObservableHide events;
+    ActivityLifecycleEvent lastEvent;
+	long createTime;
+	List history = new ArrayList();
+    List callbackHistory = new ArrayList();
+
+	boolean hasMethod(String methodName) {
+		if (listener == null) return false;
+		Class[] classes = new Class[] { ActivityLifecycleEvent.class };
+		return listener.namespace.getMethod(methodName, classes) != null;
+	}
+
+	monitor() {
+        if (events != null) return;
+		try {
+			events = tasker.getActivityLifecycleEvents(activity);
+			disposable = events.observeOn(Schedulers.io())
+				.subscribe(new io.reactivex.functions.Consumer() {
+					accept(ActivityLifecycleEvent event) {
+                        if (event.eventName.equals(CREATE)) createTime = System.currentTimeMillis();
+						String callbackMethod = "on" + event.eventName;
+						history.add(event);
+                        callbackHistory.add(callbackMethod);
+						if (hasMethod(callbackMethod)) {
+                            activity.runOnUiThread(new Runnable() {
+                                run() {
+                                    listener.invokeMethod(callbackMethod, new Object[] { event });
+                                }
+                            });
+                        }
+					}
+				}, new io.reactivex.functions.Consumer() {
+					accept(Throwable error) {
+						tasker.showToast("Monitor Stream Error: " + error.getMessage());
+					}
+				});
+		} catch (Exception e) {
+			tasker.log("Monitor Stream Error: " + e.getMessage());
+		}
+	}
+
+    setListener(This newListener) {
+        listener = newListener;
+    }
+
+    getLastEvent() {
+        return history.get(history.size() - 1);
+    }
+
+    hasEvent() {
+        return !history.isEmpty();
+    }
+
+    isCreated() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == CREATE;
+    }
+
+    isStarted() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == START;
+    }
+
+    isResumed() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == RESUME;
+    }
+    
+    isPaused() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == PAUSE;
+    }
+
+    isStopped() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == STOP;
+    }
+
+    isUserLeaveHint() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == USER_LEAVE_HINT;
+    }
+
+    isDestroyed() {
+        if (!hasEvent()) return false;
+        return lastEvent.eventName == DESTROY;
+    }
+
+    finish() {
+        activity.finish();
+    }
+
+    if (listener != null) monitor();
+	return this;
+}
+
+SimpleActivityMonitor(Activity activity) {
+    return SimpleActivityMonitor(activity, null);
+}

@@ -34,6 +34,7 @@ import java.lang.Runnable;
 import java.util.Iterator;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor.DelayedWorkQueue;
+import android.gesture.Gesture;
 
 
 everyGesture() {
@@ -52,6 +53,8 @@ everyGesture() {
 	int themeId;
 	boolean useDarkTheme;
 	boolean inHelperMode;
+	Gesture lastGesture;
+	This latestAction;
 	int maxDisplayTextLength = 50;
 	Map screenInfoEvents = new HashMap();
 
@@ -284,8 +287,6 @@ if (!handle.exists() || !handle.isDirectory()) handle.mkdirs();
 File script = new File(MAIN_DIRECTORY + "/scripts");
 if (!script.exists() || !script.isDirectory()) script.mkdirs();
 
-String sampleScript = "tasker.showToast(\"Hello!\");";
-writeFile(sampleScript, MAIN_DIRECTORY + "/scripts/sample.java");
 String varName = "everyGesture";
 
 if (tasker.getJavaVariable(varName) != null ) {
@@ -329,3 +330,32 @@ every.THIS = this;
 String command = "everyGesture=:=start";
 tasker.sendCommand(command);
 // every.removeAll();
+
+
+String sampleScript = """import bsh.This;
+import bsh.Variable;
+
+Variable[] vars = this.namespace.getDeclaredVariables();
+This every = tasker.getJavaVariable("everyGesture");
+String title = "Evaluate Variable List";
+List itemList = new ArrayList();
+int maximumText = 100;
+float dimAmount = 0.5f;
+int themeId = every.themeId;
+
+for (Variable var: vars) {
+	Map item = new HashMap();
+	String name = var.getName();
+	Object value = this.namespace.getVariable(name);
+	String valueString = value == null ? "null" : value.toString();
+	valueString = valueString.length() > maximumText ? valueString.substring(0, maximumText) + "..." : valueString;
+	String type = value.getClass().getCanonicalName();
+	item.put("title", name);
+	item.put("subtitle", type + "\n		" + valueString);
+	itemList.add(item);
+}
+
+This dialog = ListDialog(this);
+dialog.show();""";
+
+writeFile(sampleScript, MAIN_DIRECTORY + "/scripts/Inspect Variable List in Evaluate actions.java");
