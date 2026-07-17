@@ -18,14 +18,13 @@ import android.content.Context;
 /*───────────────────────────────────────────────────────────────
  * openApp(labelOrPackageName)
  * Opens app by exact package OR precise case-insensitive label,
- * OR a fully qualified className name (e.g., com.packageName.ActivityName)
  *──────────────────────────────────────────────────────────────*/
-openApp(String labelOrPackageName) {
-    if (labelOrPackageName == null) return;
+openApp(String packageName) {
+    if (packageName == null) return;
 	This main = tasker.getJavaVariable("everyGesture");
 	This pm = main.packageManager;
     /* Fallback: treat as a package or label and find the main launch intent. */
-    String packageName = pm.resolvePackage(labelOrPackageName);
+    String packageName = pm.resolvePackage(packageName);
 
     if (packageName == null) {
         log("openApp: App not found → ");

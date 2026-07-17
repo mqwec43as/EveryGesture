@@ -314,7 +314,7 @@ HandleCard(This main, This handle) {
 		if (gestureNames != null) {
 			List missing = new ArrayList();
 			ArrayList sortedGestures = new ArrayList(gestureNames);
-			Collections.sort(sortedGestures, String.CASE_INSENSITIVE_ORDER);
+			sortedGestures.sort(String.CASE_INSENSITIVE_ORDER);
 			Iterator it = sortedGestures.iterator();
 			while (it.hasNext()) {
 				String gestureName = it.next();

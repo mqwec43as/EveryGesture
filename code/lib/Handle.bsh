@@ -76,12 +76,13 @@ Handle(This config) {
 			}
 		};
 		
-		recognize(Gesture gesture, boolean isLongPress) {
+		recognize(Gesture gesture, MotionEvent motionEvent, boolean isLongPress) {
 			if (gesture.getStrokesCount() > 0) {
 				recognized = config.engine.recognize(gesture);
 				if (!recognized.isRecognized) {
 					tasker.showToast("No match!");
 				} else {
+					recognized.namespace.setVariable("motionEvent", motionEvent, false);
 					recognized.longPress = isLongPress;
 					recognized.handle = config.handleName;
 					every.latestGesture = recognized.gesture;
@@ -98,7 +99,8 @@ Handle(This config) {
 			}
 		}
 		long start;
-		onDown(This live, Gesture gesture) {
+
+		onDown(This live, Gesture gesture, MotionEvent motionEvent) {
 			recognized = null;
 			action = null;
 			futureTask = null;
@@ -107,15 +109,15 @@ Handle(This config) {
 			every.latestGesture = null;
 		}
 
-		onRelease(This live, Gesture gesture, boolean isLongPress) {
-			recognize(gesture, isLongPress);
+		onRelease(This live, Gesture gesture, MotionEvent motionEvent, boolean isLongPress) {
+			recognize(gesture, motionEvent, isLongPress);
 		}
 
-		onLongPress(This live, Gesture gesture, boolean isLongPress) {
-			recognize(gesture, isLongPress);
+		onLongPress(This live, Gesture gesture, MotionEvent motionEvent, boolean isLongPress) {
+			recognize(gesture, motionEvent, isLongPress);
 		}
 
-		onUp(This live, Gesture gesture) {
+		onUp(This live, Gesture gesture, MotionEvent motionEvent) {
 			if (futureTask != null) futureTask.cancel(true);
 			if (saveGuardFutureTask != null) saveGuardFutureTask.cancel(true);
 		}

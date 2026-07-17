@@ -1,3 +1,5 @@
+importCommands("lib.ui.helper");
+
 import java.util.function.Consumer;
 import android.content.Context;
 import android.view.View;
@@ -98,7 +100,7 @@ ActionPicker(Map targetActionMap, This listener) {
 		argInput.parameterName = parameterName;
 		// TODO : This should be based on selected overload for given command
 
-		String hintText = parameterName;
+		String hintText = normalizeCamelCase(parameterName);
 
 		boolean multiSelect = parameterType.equals(List.class);
 		if (multiSelect && parameterName.endsWith("s")) {
@@ -131,7 +133,7 @@ ActionPicker(Map targetActionMap, This listener) {
 		}
 
 		config() {
-			String title = "Select " + parameterName;
+			String title = "Select " + hintText;
 			List itemList = presetList;
 			boolean showFilter = presetList.size() > 5;
 			boolean multiSelect = multiSelect;
@@ -171,6 +173,7 @@ ActionPicker(Map targetActionMap, This listener) {
 			argInput.setPresetDialog(null);
 			log("Unable to get preset list for " + parameterName, "Error");
 		}
+
 		argInput.setHint(hintText);
 		argInput.unhide();
 		return argInput;
@@ -205,9 +208,15 @@ ActionPicker(Map targetActionMap, This listener) {
 		List overloadList = new ArrayList();
 
 		for (bsh.BshMethod overload: overloads) {
-			String title = String.join(", ", overload.parameterNames);
+			String[] normalized = new String[overload.parameterNames.length];
+			for (int i = 0; i < overload.parameterNames.length; i++) {
+				String parameterName = overload.parameterNames[i];
+				normalized[i] = normalizeCamelCase(parameterName);
+			}
+			String title = String.join(", ", normalized);
 			Map item = new HashMap();
-			item.put("title", title);
+			item.put("title", title);	
+			item.put("subtitle", "#" + normalized.length + " params");
 			item.put("overload", overload);
 			overloadList.add(item);
 		}
@@ -236,6 +245,7 @@ ActionPicker(Map targetActionMap, This listener) {
         	float dimAmount = 0.5f;
 			int iconSize = 48;
 			int themeId = every.themeId;
+			boolean showFilter = true;
 
 			onSuccess(Map selected) {
 				String command = selected.get("command");

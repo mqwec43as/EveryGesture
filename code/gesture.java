@@ -95,7 +95,7 @@ everyGesture() {
 
 	getAll() {
 		List list = new ArrayList(handles.values());
-		Collections.sort(list, new Comparator() {
+		list.sort(new Comparator() {
 			compare(Object o1, Object o2) {
 				String name1 = ((This) o1).config.handleName;
 				String name2 = ((This) o2).config.handleName;
@@ -342,6 +342,7 @@ List itemList = new ArrayList();
 int maximumText = 100;
 float dimAmount = 0.5f;
 int themeId = every.themeId;
+boolean sort = true;
 
 for (Variable var: vars) {
 	Map item = new HashMap();

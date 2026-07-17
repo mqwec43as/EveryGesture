@@ -218,7 +218,7 @@ Config(String handleName) {
 	}
 
 	sortActionList(List actionList) {
-		Collections.sort((List) actionList, new Comparator() {
+		actionList.sort(new Comparator() {
 			compare(Object o1, Object o2) {
 				double length1 = ((Map) o1).getOrDefault("length", Double.POSITIVE_INFINITY);
 				double length2 = ((Map) o2).getOrDefault("length", Double.POSITIVE_INFINITY);

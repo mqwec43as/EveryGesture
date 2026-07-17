@@ -7,7 +7,7 @@ importCommands("lib.activity");
 import bsh.This;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
-import android.gesture.GestureStroke;
+import android.recognized.GestureStroke;
 import java.util.Collections;
 import java.util.Comparator;
 import bsh.BshMethod;
@@ -20,8 +20,9 @@ ActionRules(This config) {
 	String LOG_FILE = config.LOG_FILE;
 	String handleName = config.handleName;
 
-	retrieveAction(This gesture) {
-		gesture.hasAction = false;
+	retrieveAction(This recognized) {
+		recognized.hasAction = false;
+		recognized.index = (int) -1;
 		Map foreground;
 
 		updateForeground() {
@@ -29,14 +30,14 @@ ActionRules(This config) {
 			foreground = getUsageEvents();
 		}
 
-		validateAction(Map action, This gesture) {
+		validateAction(Map action, This recognized) {
 			boolean hasLength = action.containsKey("length");
 			boolean hasPackages = action.containsKey("packages");
 			boolean isMatch;
 
 			if (hasLength) {
 				double length = action.get("length");
-				if (gesture.length < length) {
+				if (recognized.length < length) {
 					isMatch = true;
 				} else {
 					return false;
@@ -61,19 +62,19 @@ ActionRules(This config) {
 			return isMatch;
 		}
 
-		Map templateRules = handleRules.getOrDefault(gesture.name, new HashMap());
+		Map templateRules = handleRules.getOrDefault(recognized.name, new HashMap());
 
-		String actionType = gesture.longPress ? "longPress" : "release";
-		String patternName = gesture.name;
-		double patternLength = gesture.length;
-		double patternScore = gesture.score;
+		String actionType = recognized.longPress ? "longPress" : "release";
+		String patternName = recognized.name;
+		double patternLength = recognized.length;
+		double patternScore = recognized.score;
 
 		Object actionRules = templateRules.getOrDefault(actionType, new ArrayList());
 		double minConfidence = handleRules.getOrDefault("confidence", minimumConfidence);
-		gesture.isTriggered = patternScore > minConfidence;
-		gesture.confidence = minConfidence;
+		recognized.isTriggered = patternScore > minConfidence;
+		recognized.confidence = minConfidence;
 
-		Collections.sort((List) actionRules, new Comparator() {
+		actionRules.sort(new Comparator() {
 			compare(Object o1, Object o2) {
 				// infinity default
 				double length1 = ((Map) o1).getOrDefault("length", Double.POSITIVE_INFINITY);
@@ -86,16 +87,16 @@ ActionRules(This config) {
 		log("Rules count: " + rulesCount + " list: \n" + tasker.toJson(actionRules, true));
 		for (int i = 0; i < rulesCount; i++) {
 			Map action = actionRules.get(i);
-			boolean isMatch = validateAction(action, gesture);
+			boolean isMatch = validateAction(action, recognized);
 			log("Action: " + action + " isMatch: " + isMatch);
 			if (isMatch) {
-				gesture.hasAction = true;
-				gesture.action = action;
+				recognized.hasAction = true;
+				recognized.action = action;
 				break;
 			}
 		}
 
-		return gesture;
+		return recognized;
 	}
 
 	public This Action(This rule) {
@@ -126,6 +127,7 @@ ActionRules(This config) {
 		task = new Runnable() {
 			run() {
 				try {
+					rule.index++;
 					rule.invokeMethod(command, args.toArray());
 				} catch (e) {
 					log("Error: " + e.getMessage(), "ERROR");

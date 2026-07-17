@@ -93,6 +93,12 @@ Actions() {
 			"Adjust volume by percentage",
 			"setVolume",
 			"Set volume {0}%"
+		},
+		{
+			"Recent App",
+			"Open recent app with Shizuku.",
+			"openRecentApp",
+			"Open recent app #{0}"
 		}
 	};
 
@@ -328,7 +334,7 @@ Actions() {
 
 		List packages = pm.getInstalledPackages(0);
 
-		Collections.sort(packages, new Comparator() {
+		packages.sort(new Comparator() {
 			compare(Object o1, Object o2) {
 				String label1 = ((PackageInfo) o1).applicationInfo.loadLabel(pm).toString();
 				String label2 = ((PackageInfo) o2).applicationInfo.loadLabel(pm).toString();
@@ -452,7 +458,7 @@ Actions() {
 	}
 
 	sort(List list, String key) {
-		Collections.sort(list, new Comparator() {
+		list.sort(new Comparator() {
 			public int compare(Object o1, Object o2) {
 				String key1 = ((Map) o1) { key };
 				String key2 = ((Map) o2) { key };

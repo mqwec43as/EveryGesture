@@ -125,7 +125,7 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 		}
 	}
 
-	Collections.sort(sortedAppList, new Comparator() {
+	sortedAppList.sort(new Comparator() {
 		public int compare(Object a, Object b) {
 			String label1 = (String)((Map) a).get("label");
 			String label2 = (String)((Map) b).get("label");

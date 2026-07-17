@@ -46,6 +46,9 @@ import com.google.android.material.textview.MaterialTextView;
 import com.google.android.material.card.MaterialCardView;
 import bsh.BshMethod;
 import android.graphics.PorterDuff;
+import java.util.Collections;
+import java.util.Comparator;
+import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
 /*───────────────────────────────────────────────────────────────
   ListDialog Component
   ───────────────────────────────────────────────────────────────*/
@@ -66,6 +69,7 @@ ListDialog(This config) {
 	int iconSize = config.iconSize == void ? 40 : config.iconSize;
 	float dimAmount = config.dimAmount == void ? 0.0f : config.dimAmount;
 	int themeId = config.themeId == void ? 0 : config.themeId;
+	boolean sort = config.sort == void ? false : config.sort;
 
 	/* Height Logic Setup */
 	Object rawMaxH = config.maxHeight == void ? 0.8 : config.maxHeight;
@@ -76,6 +80,15 @@ ListDialog(This config) {
 
 	List originalList = config.itemList;
 	if (originalList == null) originalList = new ArrayList();
+	if (sort) {
+		originalList.sort(new Comparator() {
+			compare(Object o1, Object o2) {
+				String label1 = ((Map) o1).get("title");
+				String label2 = ((Map) o2).get("title");
+				return label1.compareToIgnoreCase(label2);
+			}
+		});
+	}
 
 	boolean hasMethod(String methodName, Class[] classes) {
 		if (classes == null) classes = new Class[] {};

@@ -33,7 +33,7 @@ This ConfigHelper() {
 		}
 
 		getKeys() {
-			Collections.sort(KEYS, new Comparator() {
+			KEYS.sort(new Comparator() {
 				compare(Object o1, Object o2) {
 					This t1 = (This) o1;
 					This t2 = (This) o2;

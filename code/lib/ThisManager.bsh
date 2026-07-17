@@ -309,7 +309,7 @@ ThisManager(This THIS) {
 			this.interpreter.source(file);
 		}
 
-		Collections.sort(files, String.CASE_INSENSITIVE_ORDER);
+		files.sort(String.CASE_INSENSITIVE_ORDER);
 		return files;
 	}
 
@@ -323,7 +323,7 @@ ThisManager(This THIS) {
 				methodNames.add(result);
 			}
 		}
-		Collections.sort(methodNames, String.CASE_INSENSITIVE_ORDER);
+		methodNames.sort(String.CASE_INSENSITIVE_ORDER);
 		return methodNames;
 	}
 

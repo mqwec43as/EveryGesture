@@ -131,11 +131,11 @@ LivePath(This config) {
 	}
 
 	checkListenerMethods() {
-		hasDown = hasMethod("onDown", new Class[] { This.class, Gesture.class });
-		hasHold = hasMethod("onHold", new Class[] { This.class, Gesture.class });
-		hasRelease = hasMethod("onRelease", new Class[] { This.class, Gesture.class, boolean.class });
-		hasLongPress = hasMethod("onLongPress", new Class[] { This.class, Gesture.class, boolean.class });
-		hasUp = hasMethod("onUp", new Class[] { This.class, Gesture.class });
+		hasDown = hasMethod("onDown", new Class[] { This.class, Gesture.class, MotionEvent.class });
+		hasHold = hasMethod("onHold", new Class[] { This.class, Gesture.class, MotionEvent.class });
+		hasRelease = hasMethod("onRelease", new Class[] { This.class, Gesture.class, MotionEvent.class,boolean.class });
+		hasLongPress = hasMethod("onLongPress", new Class[] { This.class, Gesture.class, MotionEvent.class, boolean.class });
+		hasUp = hasMethod("onUp", new Class[] { This.class, Gesture.class, MotionEvent.class });
 	}
 
 	addFallbackPoint(float x, float y, int id) {
@@ -179,7 +179,7 @@ LivePath(This config) {
 		pointerToPathMap.clear();
 	}
 
-	triggerComplete() {
+	triggerComplete(MotionEvent motionEvent) {
 		if (!RECORDING) return;
 		RECORDING = false;
 		view.setVisibility(View.GONE);
@@ -199,10 +199,10 @@ LivePath(This config) {
 		paths.clear();
 		pathCounter = 0;
 		boolean isAllLongPress = isAllLongPress();
-		Gesture gesture = GESTURE.clone();
+		Gesture gesture = GESTURE;
 
-		if (isAllLongPress && hasLongPress) livePathListener.onLongPress(TOP, gesture, isAllLongPress);
-		else if (hasRelease) livePathListener.onRelease(TOP, gesture, isAllLongPress);
+		if (isAllLongPress && hasLongPress) livePathListener.onLongPress(TOP, gesture, motionEvent, isAllLongPress);
+		else if (hasRelease) livePathListener.onRelease(TOP, gesture, motionEvent, isAllLongPress);
 
 	}
 
@@ -221,7 +221,7 @@ LivePath(This config) {
 				reset();
 				GESTURE = new Gesture();
 				GESTURE_FALLBACK = new ArrayList();
-				if (hasDown) livePathListener.onDown(TOP, GESTURE.clone());
+				if (hasDown) livePathListener.onDown(TOP, GESTURE, motionEvent);
 			}
 
 			float x = motionEvent.getX(pointerIndex) + loc[0];
@@ -299,13 +299,13 @@ LivePath(This config) {
 					gestureLongPressMap.put(new Integer(pId), new Boolean(longPress));
 
 					if (longPress && !initialLongPress) {
-						if (RECORDING && quickComplete) triggerComplete();
+						if (RECORDING && quickComplete) triggerComplete(motionEvent);
 					}
 				}
 			}
 
 			if (config.livePath.render) view.invalidate();
-			if (isAllLongPress() && RECORDING) triggerComplete();
+			if (isAllLongPress() && RECORDING) triggerComplete(motionEvent);
 
 		} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
 			ArrayList points = (ArrayList) gestureStrokesMap.remove(new Integer(pointerId));
@@ -317,11 +317,11 @@ LivePath(This config) {
 
 			if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
 				if (RECORDING) {
-					triggerComplete();
+					triggerComplete(motionEvent);
 				}
 				RECORDING = false;
 
-				if (hasUp) livePathListener.onUp(TOP, GESTURE.clone());
+				if (hasUp) livePathListener.onUp(TOP, GESTURE, motionEvent);
 			}
 
 		}

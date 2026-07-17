@@ -1,3 +1,5 @@
+importCommands("lib.misc");
+
 /*───────────────────────────────────────────────────────────────
 This code was generated using AI and refined with minimal human editing.
 ─────────────────────────────────────────────────────────────── */
@@ -91,10 +93,13 @@ globalAction(String globalActionName) {
 			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS);
 			break;
 		case "lastapp":
-			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
-			/* BeanShell sleep/wait helper */
-			wait(50); 
-			svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+			if (tasker.isShizukuAvailable()) {
+				openRecentApp(1);
+			} else {
+				svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+				wait(100); 
+				svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+			}
 			break;
 		default:
 			/* Unknown action */

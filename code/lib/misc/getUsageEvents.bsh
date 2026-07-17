@@ -142,7 +142,7 @@ getUsageEvents(windowMs, filterInput, limit, returnRaw) {
 		list.add(map);
 	}
 
-	Collections.sort(list, new Comparator() {
+	list.sort(new Comparator() {
 		compare(a, b) {
 			ta = ((Long)((java.util.Map) a).get("timestamp")).longValue();
 			tb = ((Long)((java.util.Map) b).get("timestamp")).longValue();

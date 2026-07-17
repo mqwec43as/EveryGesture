@@ -364,7 +364,7 @@ public This MethodInspector(This THIS) {
 			targetList.add(entry.get(keyString));
 		}
 
-		Collections.sort(targetList, String.CASE_INSENSITIVE_ORDER);
+		targetList.sort(String.CASE_INSENSITIVE_ORDER);
 		return targetList;
 	};
 

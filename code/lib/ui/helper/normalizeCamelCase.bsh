@@ -1,0 +1,11 @@
+String normalizeCamelCase(String input) {
+	if (input == null || input.length() == 0) {
+		return "";
+	}
+	String spaced = input.replaceAll("(?<!^)(?=[A-Z])", " ");
+	char firstChar = spaced.charAt(0);
+	if (Character.isLowerCase(firstChar)) {
+		spaced = Character.toUpperCase(firstChar) + spaced.substring(1);
+	}
+	return spaced;
+}

@@ -33,7 +33,7 @@ GestureSelection(This main) {
 		Set gestureNames = library.getGestureEntries();
 		int themeId = every.themeId;
 		ArrayList sortedGestures = new ArrayList(gestureNames);
-		Collections.sort(sortedGestures, String.CASE_INSENSITIVE_ORDER);
+		sortedGestures.sort(String.CASE_INSENSITIVE_ORDER);
 
 		for (String name: sortedGestures) {
 			Map item = new HashMap();
