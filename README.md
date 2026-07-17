@@ -5,13 +5,15 @@
 
 &nbsp;
 # Every Gesture
-Draw gesture project for android automation app called **[Tasker](https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm)**
+Draw gesture project for android automation app called **[Tasker](https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm)** 
 
+[![Tasker](https://img.shields.io/badge/Tasker-v6.7.6-ffdbcc?style=for-the-badge&labelColor=e65100)](https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm)
 [![Downloads](https://img.shields.io/github/downloads/mqwec43as/EveryGesture/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&&style=for-the-badge)](https://github.com/mqwec43as/EveryGesture/releases/latest/download/EveryGesture.zip)
 [![Stable](https://img.shields.io/github/v/release/mqwec43as/EveryGesture?sort=date&display_name=tag&style=for-the-badge&label=stable
 )](https://github.com/mqwec43as/EveryGesture/releases/latest)
 [![Beta](https://img.shields.io/github/v/release/mqwec43as/EveryGesture?include_prereleases&sort=semver&display_name=tag&style=for-the-badge&label=beta
 )](https://github.com/mqwec43as/EveryGesture/releases)
+
 </div>
 
 
