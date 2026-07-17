@@ -279,7 +279,10 @@ everyGesture() {
 		}
 	}
 
-
+	reload() {
+		source(MAIN_DIRECTORY + "/gesture.java");
+	}
+	
 	return this;
 }
 File handle = new File(MAIN_DIRECTORY + "/handles");
@@ -301,6 +304,7 @@ This every = everyGesture();
 tasker.setJavaVariable(varName, every);
 
 This updateManager = UpdateManager();
+updateManager.directoryPath = MAIN_DIRECTORY;
 every.namespace.setVariable("updateManager", updateManager, false);
 
 This Actions = Actions();
