@@ -216,7 +216,7 @@ DrawDialog(This handleCard) {
 
 	recognize() {
 		// ! Make sure library is loaded from the same instances
-		engine.library.load();
+		library.load();
 		nameInput.setHelperText(" ");
 		engine.ignoreMinimumScore = false;
 		This recognized = engine.recognize(gesture);
@@ -556,6 +556,7 @@ DrawDialog(This handleCard) {
 
 	addGesture() {
 		closeKeyboard(activity);
+		library.load();
 		String gestureName = nameEdit.getText().toString();
 		int strokeCount = gesture.getStrokes().size();
 		if (gestureName.length() > 0 && strokeCount > 0) {
