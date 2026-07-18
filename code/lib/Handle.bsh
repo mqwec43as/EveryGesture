@@ -67,7 +67,7 @@ Handle(This config) {
 		This recognized;
 		This action;
 		ScheduledFutureTask futureTask;
-		long maximumDuration = 20000;
+		long maximumDuration = 40000;
 		ScheduledFutureTask saveGuardFutureTask;
 		Runnable saveGuard = new Runnable() {
 			run() {
@@ -83,10 +83,14 @@ Handle(This config) {
 					tasker.showToast("No match!");
 				} else {
 					recognized.namespace.setVariable("motionEvent", motionEvent, false);
+					recognized.namespace.setVariable("livePath", livePath, false);
+					recognized.namespace.setVariable("every", every, false);
 					recognized.longPress = isLongPress;
-					recognized.handle = config.handleName;
+					recognized.handleName = config.handleName;
+					recognized.handle = TOP;
 					every.latestGesture = recognized.gesture;
 					action = config.actionRules.getAction(recognized);
+					recognized.namespace.setVariable("interval", action.interval, false);
 					every.latestAction = action;
 					if (action.isLongPress && action.hasInterval) {
 						futureTask = every.schedule(action.task, 0, action.interval);
@@ -400,6 +404,21 @@ Handle(This config) {
 				visualShape.setCornerRadius(config.handle.cornerRadius);
 			}
 		}, duration);
+	}
+
+	isOnRightSide() {
+		if (view == null) {
+			return false;
+		}
+		int[] location = new int[2];
+		view.getLocationOnScreen(location);
+		int viewLeft = location[0];
+		int viewWidth = view.getWidth();
+		int viewCenterX = viewLeft + (viewWidth / 2);
+		DisplayMetrics metrics = new DisplayMetrics();
+		baseWm.getDefaultDisplay().getRealMetrics(metrics);
+		int screenWidth = metrics.widthPixels;
+		return viewCenterX > (screenWidth / 2);
 	}
 
 	return this;

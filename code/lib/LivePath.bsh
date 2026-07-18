@@ -25,6 +25,8 @@ import android.gesture.GestureStroke;
 import android.os.Handler;
 import android.os.Looper;
 import bsh.This;
+import android.graphics.PointF;
+import android.graphics.Point;
 
 LivePath(This config) {
 	This TOP = this;
@@ -39,8 +41,8 @@ LivePath(This config) {
 	boolean hasUp;
 
 	boolean quickComplete = false;
-	Gesture GESTURE = new Gesture();
-	List GESTURE_FALLBACK = new ArrayList();
+	Gesture gesture = new Gesture();
+	List gestureFallback = new ArrayList();
 	Map gestureStrokesMap = new HashMap();
 	Map gestureLongPressMap = new HashMap();
 	Map pointerToPathMap = new HashMap();
@@ -48,6 +50,9 @@ LivePath(This config) {
 	Map STAY_CENTER_MAP = new HashMap();
 	Map STAY_TIMER_MAP = new HashMap();
 	boolean RECORDING = false;
+
+	MotionEvent motionEvent;
+	View handleView;
 
 	int overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 	Context CONTEXT = context;
@@ -140,7 +145,7 @@ LivePath(This config) {
 
 	addFallbackPoint(float x, float y, int id) {
 		List point = engine.createPoint(x, y, id);
-		GESTURE_FALLBACK.add(point);
+		gestureFallback.add(point);
 	}
 
 	isAllLongPress() {
@@ -184,13 +189,13 @@ LivePath(This config) {
 		RECORDING = false;
 		view.setVisibility(View.GONE);
 
-		/* Commit active strokes before recognizing if GESTURE is empty */
-		if (GESTURE.getStrokesCount() <= 0) {
+		/* Commit active strokes before recognizing if gesture is empty */
+		if (gesture.getStrokesCount() <= 0) {
 			Object[] keys = gestureStrokesMap.keySet().toArray();
 			for (int i = 0; i < keys.length; i++) {
 				ArrayList pts = (ArrayList) gestureStrokesMap.get(keys[i]);
 				if (pts != null && pts.size() > 1) {
-					GESTURE.addStroke(new GestureStroke(pts));
+					gesture.addStroke(new GestureStroke(pts));
 				}
 			}
 		}
@@ -199,7 +204,7 @@ LivePath(This config) {
 		paths.clear();
 		pathCounter = 0;
 		boolean isAllLongPress = isAllLongPress();
-		Gesture gesture = GESTURE;
+		Gesture gesture = gesture;
 
 		if (isAllLongPress && hasLongPress) livePathListener.onLongPress(TOP, gesture, motionEvent, isAllLongPress);
 		else if (hasRelease) livePathListener.onRelease(TOP, gesture, motionEvent, isAllLongPress);
@@ -207,6 +212,8 @@ LivePath(This config) {
 	}
 
 	onTouchEvent(View handleView, MotionEvent motionEvent) {
+		TOP.handleView = handleView;
+		TOP.motionEvent = motionEvent;
 		int action = motionEvent.getActionMasked();
 		int pointerIndex = motionEvent.getActionIndex();
 		int pointerId = motionEvent.getPointerId(pointerIndex);
@@ -219,9 +226,9 @@ LivePath(This config) {
 			RECORDING = true;
 			if (action == MotionEvent.ACTION_DOWN) {
 				reset();
-				GESTURE = new Gesture();
-				GESTURE_FALLBACK = new ArrayList();
-				if (hasDown) livePathListener.onDown(TOP, GESTURE, motionEvent);
+				gesture = new Gesture();
+				gestureFallback = new ArrayList();
+				if (hasDown) livePathListener.onDown(TOP, gesture, motionEvent);
 			}
 
 			float x = motionEvent.getX(pointerIndex) + loc[0];
@@ -309,8 +316,8 @@ LivePath(This config) {
 
 		} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
 			ArrayList points = (ArrayList) gestureStrokesMap.remove(new Integer(pointerId));
-			if (points != null && points.size() > 1 && GESTURE != null) {
-				GESTURE.addStroke(new GestureStroke(points));
+			if (points != null && points.size() > 1 && gesture != null) {
+				gesture.addStroke(new GestureStroke(points));
 			}
 
 			pointerToPathMap.remove(new Integer(pointerId));
@@ -321,7 +328,7 @@ LivePath(This config) {
 				}
 				RECORDING = false;
 
-				if (hasUp) livePathListener.onUp(TOP, GESTURE, motionEvent);
+				if (hasUp) livePathListener.onUp(TOP, gesture, motionEvent);
 			}
 
 		}
@@ -339,6 +346,17 @@ LivePath(This config) {
 	setLivePathListener(This listener) {
 		livePathListener = listener;
 		checkListenerMethods();
+	}
+
+	getPosition() {
+		PointF point = new PointF();
+		if (motionEvent != null && handleView != null) {
+			int[] loc = new int[2];
+			handleView.getLocationOnScreen(loc);
+			point.x = motionEvent.x + loc[0];
+			point.y = motionEvent.y + loc[1];
+		}
+		return point;
 	}
 
 	return this;

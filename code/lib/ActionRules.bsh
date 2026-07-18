@@ -111,7 +111,7 @@ ActionRules(This config) {
 		if (!rule.hasAction) {
 			command = "sendCommand";
 			boolean longPress = rule.longPress;
-			String commandText = rule.handle + "=:=" + rule.name + "=:=" + longPress;
+			String commandText = rule.handleName + "=:=" + rule.name + "=:=" + longPress;
 			args.add(commandText);
 		} else {
 			Map actionMap = rule.action;
@@ -145,7 +145,7 @@ ActionRules(This config) {
 				}
 
 				if (!everyAction) {
-					String title = rule.handle;
+					String title = rule.handleName;
 					String message = "Gesture: " + rule.name + "\nScore: " + rule.score + "\nLength: " + rule.length;
 					tasker.showToast(message, title);
 					return;
