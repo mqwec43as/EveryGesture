@@ -1,4 +1,5 @@
 importCommands("lib.misc");
+importCommands("lib.shizuku");
 
 import android.app.ActivityManager;
 import android.app.IActivityManager;
@@ -7,9 +8,7 @@ import android.app.ActivityManager.RecentTaskInfo;
 import android.content.Context;
 
 openRecentApp(int lastAppIndex) {
-    if (!hasShizuku()) return null;
-	IBinder binder = tasker.getShizukuService(Context.ACTIVITY_SERVICE);
-	IActivityManager.Stub.Proxy am = IActivityManager.Stub.asInterface(binder);
+	IActivityManager am = every.userService.getIActivityManager();
 	List recents = am.getRecentTasks(lastAppIndex + 1, ActivityManager.RECENT_IGNORE_UNAVAILABLE, 0).getList();
 	if (!recents.isEmpty()) {
 		RecentTaskInfo task = recents.getLast();

@@ -8,12 +8,7 @@ importCommands("lib.file");
 importCommands("lib.misc");
 importCommands("lib.activity");
 importCommands("lib.ui");
-// config = Config(".sample");
-
-// float test = (float) config.livePath.width;
-
-// tasker.setJavaVariable("handlE", Handle(config) );
-
+importCommands("lib.shizuku");
 
 import bsh.This;
 import java.io.File;
@@ -48,6 +43,7 @@ everyGesture() {
 	This thisManager;
 	This packageManager;
 	This updateManager;
+	This userService;
 	boolean updatePreRelease;
 	This rule;
 	int themeId;
@@ -330,6 +326,9 @@ This manager = ThisManager(this);
 every.namespace.setVariable("thisManager", manager, false);
 manager.make("lib/actions/.*\\.bsh$", 2, false);
 every.THIS = this;
+
+This userService = UserServiceManager();
+every.namespace.setVariable("userService", userService, false);
 
 String command = "everyGesture=:=start";
 tasker.sendCommand(command);

@@ -1,0 +1,131 @@
+import android.app.IActivityManager;
+import android.app.IActivityTaskManager;
+import android.os.IBinder;
+import android.content.Context;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+
+UserServiceManager() {
+	boolean hasIActivityManager;
+	boolean hasIActivityTaskManager;
+	String hasIActivityManagerError;
+	String hasIActivityTaskManagerError;
+
+	IBinder iActivityBinder, iActivityTaskBinder;
+	IActivityManager iActivityManager;
+	IActivityTaskManager iActivityTaskManager;
+
+	getErrorMessage(Class clazz) {
+		String text = "";
+		switch (clazz) {
+			case IActivityManager.class:
+				text = hasIActivityManagerError;
+			case IActivityTaskManager.class:
+				text = hasIActivityTaskManagerError;
+		}
+		String defaultErrorMessage = "Can't access " + text + " method due to hidden api restriction";
+		return defaultErrorMessage;
+	}
+
+    checkIActivityManager() {
+        hasIActivityManager = false;
+        IActivityManager.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
+		hasIActivityManager = true;
+    }
+
+    checkIActivityTaskManager() {
+        hasIActivityTaskManager = false;
+        IActivityTaskManager.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
+        hasIActivityTaskManager = true;
+    }
+
+	hasIActivityManager(boolean throwError) {
+		try {
+			checkIActivityManager();
+		} catch (e) {
+			hasIActivityManagerError = e.getMessage();
+			if (throwError) {
+				checkIActivityManager();
+			}
+		}
+		return hasIActivityManager;
+	}
+
+	hasIActivityManager() {
+		return hasIActivityManager(false);
+	}
+
+	hasIActivityTaskManager(boolean throwError) {
+		try {
+            checkIActivityTaskManager();
+		} catch (e) {
+			hasIActivityTaskManagerError = e.getMessage();
+			if (throwError) {
+                checkIActivityTaskManager();
+			}
+		}
+		return hasIActivityTaskManager;
+	}
+
+	hasIActivityTaskManager() {
+		return hasIActivityTaskManager(false);
+	}
+
+	refreshServices() {
+		if (tasker.isShizukuAvailable()) {
+			if (hasIActivityTaskManager) {
+				try {
+					iActivityBinder = tasker.getShizukuService(Context.ACTIVITY_SERVICE);
+					iActivityManager = IActivityManager.Stub.asInterface(iActivityBinder);
+				} catch (e) {
+					throw new JavaCodeException(e.getMessage());
+				}
+			} else {
+				throw new JavaCodeException(getErrorMessage(IActivityManager.class));
+			}
+
+			if (hasIActivityTaskManager) {
+				try {
+					iActivityTaskBinder = tasker.getShizukuService(Context.ACTIVITY_TASK_SERVICE);
+					iActivityTaskManager = IActivityTaskManager.Stub.asInterface(iActivityTaskBinder);
+				} catch (e) {
+					throw new JavaCodeException(e.getMessage());
+				}
+			} else {
+				throw new JavaCodeException(getErrorMessage(IActivityTaskManager.class));
+			}
+		} else {
+			hasIActivityManager = false;
+			hasIActivityTaskManager = false;
+			iActivityBinder = null;
+			iActivityTaskBinder = null;
+			throw new JavaCodeException("Shizuku service is unavailable.");
+		}
+	}
+
+	getIActivityManager() {
+		if (iActivityBinder == null) {
+			refreshServices();
+		} else if (!iActivityBinder.isBinderAlive()) {
+			refreshServices();
+		}
+		return iActivityManager;
+	}
+
+	getIActivityTaskManager() {
+		if (iActivityTaskBinder == null) {
+			refreshServices();
+		} else if (!iActivityTaskBinder.isBinderAlive()) {
+			refreshServices();
+		}
+		return iActivityTaskManager;
+	}
+
+	init() {
+		hasIActivityManager();
+		hasIActivityTaskManager();
+	}
+	
+	init();
+
+	return this;
+}

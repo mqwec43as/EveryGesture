@@ -131,6 +131,8 @@ ActionRules(This config) {
 					rule.invokeMethod(command, args.toArray());
 				} catch (e) {
 					log("Error: " + e.getMessage(), "ERROR");
+					tasker.showToast("Error executing action for " + rule.name, "Error in " + rule.handleName + " handle");
+					throw e;
 				}
 			}
 		};
