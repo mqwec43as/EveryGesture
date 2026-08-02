@@ -99,6 +99,18 @@ Actions() {
 			"Open recent app with Shizuku.",
 			"openRecentApp",
 			"Open recent app #{0}"
+		},
+		{
+			"Toggle Hotspot",
+			"Controls Hotspot with Shizuku.",
+			"toggleHotspot",
+			"{0} Hotspot"
+		},
+		{
+			"Toggle Wifi",
+			"Controls Wifi with Shizuku.",
+			"toggleWifi",
+			"{0} Wifi"
 		}
 	};
 
@@ -267,6 +279,27 @@ Actions() {
 	};
 
 	static final Object[][] everyAction = everyCommand;
+
+	static final Object[][] toggleAction = new Object[][] {
+		{
+			"Off",
+			"Turn off",
+			every.ToggleAction.TURN_OFF,
+			"Turn off"
+		},
+		{
+			"On",
+			"Turn on",
+			every.ToggleAction.TURN_ON,
+			"Turn on"
+		},
+		{
+			"Toggle",
+			"Toggle",
+			every.ToggleAction.TOGGLE,
+			"Toggle"
+		}
+	};
 
 	import android.database.Cursor;
 	import android.net.Uri;

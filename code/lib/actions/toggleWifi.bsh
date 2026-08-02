@@ -1,0 +1,71 @@
+importCommands("lib.shizuku");
+importCommands("lib.helper");
+
+import android.content.Context;
+import android.os.IBinder;
+import android.net.ITetheringConnector;
+import android.net.IIntResultListener;
+import android.net.TetheringManager;
+import android.net.TetheringManager.TetheringRequest;
+import android.net.wifi.IWifiManager;
+import android.net.wifi.WifiManager;
+import android.net.wifi.SoftApConfiguration;
+import io.reactivex.subjects.SingleSubject;
+import java.util.concurrent.TimeUnit;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+  toggleHotspot(int toggleAction)
+  **Controls Hotspot State**
+  Turns on, turns off, toggles, or checks the active status of Wi-Fi tethering.
+
+  Arguments:
+
+  Returns:
+   - int result code for TURN_OFF, TURN_ON, and TOGGLE.
+   - boolean status for CHECK_STATUS.
+  ───────────────────────────────────────────────────────────────*/
+boolean toggleWifi(String toggleAction) {
+    This userService = every.userService;
+    String shellPackageName = "com.android.shell";
+
+    getIWifiManager() {
+        return userService.getIWifiManager();
+    }
+
+    /*───────────────────────────────────────────────────────────────
+      isWifiTethered()
+      **Checks if Wi-Fi Hotspot is Currently Active**
+      ───────────────────────────────────────────────────────────────*/
+    boolean isWifiEnabled() {
+        return getIWifiManager().getWifiEnabledState() == WifiManager.WIFI_STATE_ENABLED;
+    }
+
+    enableWifi() {
+        return getIWifiManager().setWifiEnabled(shellPackageName, true);
+    }
+
+    disableWifi() {
+        return getIWifiManager().setWifiEnabled(shellPackageName, false);
+    }
+
+
+    switch (toggleAction) {
+        case every.ToggleAction.TURN_OFF:
+            return disableWifi();
+
+        case every.ToggleAction.TURN_ON:
+            return disableWifi();
+
+        case every.ToggleAction.TOGGLE:
+            if (isWifiEnabled()) {
+                return disableWifi();
+            } else {
+                return enableWifi();
+            }
+
+        default:
+            tasker.showToast("Invalid Wifi Control Action");
+            return -1;
+    }
+}

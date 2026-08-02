@@ -1,0 +1,126 @@
+importCommands("lib.shizuku");
+importCommands("lib.helper");
+
+import android.content.Context;
+import android.os.IBinder;
+import android.net.ITetheringConnector;
+import android.net.IIntResultListener;
+import android.net.TetheringManager;
+import android.net.TetheringManager.TetheringRequest;
+import android.net.wifi.IWifiManager;
+import android.net.wifi.WifiManager;
+import android.net.wifi.SoftApConfiguration;
+import io.reactivex.subjects.SingleSubject;
+import java.util.concurrent.TimeUnit;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+  toggleHotspot(String toggleAction)
+  **Controls Hotspot State**
+  Turns on, turns off, toggles, or checks the active status of Wi-Fi tethering.
+
+  Returns:
+   - int result code for TURN_OFF, TURN_ON, and TOGGLE.
+   - boolean status for CHECK_STATUS.
+  ───────────────────────────────────────────────────────────────*/
+int toggleHotspot(String toggleAction) {
+    This userService = every.userService;
+    String shellPackageName = "com.android.shell";
+
+    getTetherCon() {
+        return userService.getITetheringConnector();
+    }
+
+    getIWifiManager() {
+        return userService.getIWifiManager();
+    }
+
+    /*───────────────────────────────────────────────────────────────
+      getTetheringListener(SingleSubject subject)
+      **Callback Listener for Disabling Hotspot**
+      ───────────────────────────────────────────────────────────────*/
+    IIntResultListener getTetheringListener(SingleSubject subject) {
+        IIntResultListenerImpl() {
+            onResult(int resultCode) {
+                if (subject != null) subject.onSuccess(Integer.valueOf(resultCode));
+            }
+            return this;
+        }
+        return ImplementHelper(IIntResultListener.Stub.class, IIntResultListenerImpl());
+    }    
+
+    /*───────────────────────────────────────────────────────────────
+      isWifiTethered()
+      **Checks if Wi-Fi Hotspot is Currently Active**
+      ───────────────────────────────────────────────────────────────*/
+    boolean isWifiTethered() {
+        return getIWifiManager().getWifiApEnabledState() == WifiManager.WIFI_AP_STATE_ENABLED;
+    }
+
+    /*───────────────────────────────────────────────────────────────
+      startWifiTethering()
+      **Triggers Hotspot Activation**
+      ───────────────────────────────────────────────────────────────*/
+    int startWifiTethering() {
+        SingleSubject subject = SingleSubject.create();
+        int result = TetheringManager.TETHER_ERROR_NO_ERROR;
+        try {
+            SoftApConfiguration softApConfig = getIWifiManager().getSoftApConfiguration();
+            TetheringRequest.Builder builder = new TetheringRequest.Builder(TetheringManager.TETHERING_WIFI);
+            builder.setSoftApConfiguration(softApConfig);
+            TetheringRequest request = builder.build();
+            getTetherCon().startTethering(
+                request.parcel,
+                shellPackageName,
+                null,
+                getTetheringListener(subject)
+            );
+            Integer resObj = (Integer) subject.timeout(5, TimeUnit.SECONDS).blockingGet();
+            result = resObj.intValue();
+        } catch (Exception e) {
+            tasker.showToast("Failed: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /*───────────────────────────────────────────────────────────────
+      stopWifiTethering()
+      **Triggers Hotspot Deactivation**
+      ───────────────────────────────────────────────────────────────*/
+    int stopWifiTethering() {
+        SingleSubject subject = SingleSubject.create();
+        int result = TetheringManager.TETHER_ERROR_NO_ERROR;
+        try {
+            getTetherCon().stopTethering(
+                TetheringManager.TETHERING_WIFI,
+                shellPackageName,
+                null,
+                getTetheringListener(subject)
+            );
+            Integer resObj = (Integer) subject.timeout(5, TimeUnit.SECONDS).blockingGet();
+            result = resObj.intValue();
+        } catch (Exception e) {
+            tasker.showToast("Failed: " + e.getMessage());
+        }
+        return result;
+    }
+
+    switch (toggleAction) {
+        case every.ToggleAction.TURN_OFF:
+            return stopWifiTethering();
+
+        case every.ToggleAction.TURN_ON:
+            return startWifiTethering();
+
+        case every.ToggleAction.TOGGLE:
+            if (isWifiTethered()) {
+                return stopWifiTethering();
+            } else {
+                return startWifiTethering();
+            }
+
+        default:
+            tasker.showToast("Invalid Hotspot Control Action");
+            return -1;
+    }
+}

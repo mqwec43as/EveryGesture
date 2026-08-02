@@ -1,0 +1,133 @@
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import bsh.BshMethod;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+  ImplementHelper(Class targetClazz, This callbackThis)
+  **Helper for Class Implementation Proxy**
+  Creates a proxy implementation for a target class using Tasker's 
+  implementClass helper, routing method calls to a BeanShell callback.
+
+  Arguments:
+   - targetClazz  → Target Class to implement/extend.
+   - callbackThis → BeanShell context object containing callbacks.
+
+  Returns:
+   - Implemented proxy object instance.
+  ───────────────────────────────────────────────────────────────*/
+Object ImplementHelper(Class targetClazz, This callbackThis) {
+
+	callbackThis.namespace.setVariable("notFoundList", new ArrayList(), false);
+	callbackThis.namespace.setVariable("errorList", new ArrayList(), false);
+
+	/*───────────────────────────────────────────────────────────────
+	  MethodHelper(This listener, String methodName, Object[] args)
+	  **Resolves and Invokes Target Method**
+	  Reflectively locates a method within a BeanShell namespace and invokes it.
+
+	  Arguments:
+	   - listener   → Target BeanShell context containing the method.
+	   - methodName → Name of the method to resolve.
+	   - args       → Arguments array passed to the method.
+
+	  Returns:
+	   - Scripted MethodHelper object containing invocation logic.
+	  ───────────────────────────────────────────────────────────────*/
+	This MethodHelper(This listener, String methodName, Object[] args) {
+		BshMethod method;
+		boolean hasMethod;
+		boolean hasReturn;
+
+		/*───────────────────────────────────────────────────────────────
+		  invoke()
+		  **Invokes Resolved Method**
+		  Executes the located BeanShell method using the current interpreter.
+
+		  Returns:
+		   - Result of the method invocation.
+		  ───────────────────────────────────────────────────────────────*/
+		invoke() {
+			return method.invoke(args, this.interpreter);
+		}
+
+		if (listener == null) return this;
+
+		Class[] classes = new Class[args.length];
+		for (int i = 0; i < args.length; i++) {
+			Class clazz = args[i].getClass();
+			if (clazz == bsh.Primitive.class) {
+				clazz = args[i].getType();
+			}
+			classes[i] = clazz;
+		}
+
+		method = listener.namespace.getMethod(methodName, classes);
+
+		if (method != null) {
+			hasMethod = true;
+			hasReturn = method.returnType != null && !"void".equals(method.returnType.name);
+		}
+
+		return this;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  addNotFound(String methodName, Object[] args)
+	  **Records Unhandled Method Calls**
+	  Formats method signatures and appends missing callbacks to notFoundList.
+
+	  Arguments:
+	   - methodName → Name of the missing method.
+	   - args       → Arguments passed to the method.
+	  ───────────────────────────────────────────────────────────────*/
+	void addNotFound(String methodName, Object[] args) {
+		methodName += " (";
+		List clazzs = new ArrayList();
+		for (Object arg: args) {
+			clazzs.add(arg.getClass().name);
+		}
+		methodName += String.join(", ", clazzs) + ")";
+		if (!callbackThis.notFoundList.contains(methodName)) callbackThis.notFoundList.add(methodName);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  addError(String methodName, Object[] args, Object error)
+	  **Records Method Execution Errors**
+	  Appends exception messages encountered during invocation to errorList.
+
+	  Arguments:
+	   - methodName → Name of the method that threw an error.
+	   - args       → Arguments passed to the method.
+	   - error      → Exception object caught during invocation.
+	  ───────────────────────────────────────────────────────────────*/
+	void addError(String methodName, Object[] args, Object error) {
+		callbackThis.errorList.add(methodName + "# " + e.getMessage());
+	}
+
+	Object implemented = tasker.implementClass(
+		targetClazz,
+		new ClassImplementation() {
+			run(Callable superCaller, String methodName, Object[] args) {
+				This methodHelper = MethodHelper(callbackThis, methodName, args);
+				if (methodHelper.hasMethod) {
+					if (methodHelper.hasReturn) {
+						return methodHelper.invoke();
+					} else {
+						methodHelper.invoke();
+					}
+					return;
+				} else {
+					addNotFound(methodName, args);
+				}
+				try {
+					return superCaller.call();
+				} catch (e) {
+					addError(methodName, args, e);
+					throw new JavaCodeException(e.getMessage());
+				}
+			}
+		}
+	);
+	return implemented;
+}

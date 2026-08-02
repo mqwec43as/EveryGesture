@@ -1,5 +1,7 @@
 import android.app.IActivityManager;
 import android.app.IActivityTaskManager;
+import android.net.wifi.IWifiManager;
+import android.net.ITetheringConnector;
 import android.os.IBinder;
 import android.content.Context;
 import com.joaomgcd.taskerm.action.java.JavaCodeException;
@@ -7,38 +9,61 @@ import com.joaomgcd.taskerm.action.java.JavaCodeException;
 UserServiceManager() {
 	boolean hasIActivityManager;
 	boolean hasIActivityTaskManager;
+	boolean hasITetheringConnector;
+	boolean hasIWifiManager;
+
 	String hasIActivityManagerError;
 	String hasIActivityTaskManagerError;
+	String hasIWifiManagerError;
+	String hasITetheringConnectorError;
 
-	IBinder iActivityBinder, iActivityTaskBinder;
+	IBinder iActivityBinder, iActivityTaskBinder, tetherBinder, wifiBinder;
 	IActivityManager iActivityManager;
 	IActivityTaskManager iActivityTaskManager;
+	ITetheringConnector iTetheringConnector;
+	IWifiManager iWifiManager;
 
-	getErrorMessage(Class clazz) {
+	String getErrorMessage(Class clazz) {
 		String text = "";
 		switch (clazz) {
 			case IActivityManager.class:
 				text = hasIActivityManagerError;
 			case IActivityTaskManager.class:
 				text = hasIActivityTaskManagerError;
+			case IWifiManager.class:
+				text = hasIWifiManagerError;
+			case ITetheringConnector.class:
+				text = hasITetheringConnectorError;
 		}
 		String defaultErrorMessage = "Can't access " + text + " method due to hidden api restriction";
 		return defaultErrorMessage;
 	}
 
-    checkIActivityManager() {
+    void checkIActivityManager() {
         hasIActivityManager = false;
         IActivityManager.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
 		hasIActivityManager = true;
     }
 
-    checkIActivityTaskManager() {
+    void checkIActivityTaskManager() {
         hasIActivityTaskManager = false;
         IActivityTaskManager.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
         hasIActivityTaskManager = true;
     }
 
-	hasIActivityManager(boolean throwError) {
+	void checkIWifiManager() {
+		hasIActivityManager = false;
+		IWifiManager.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
+		hasIActivityManager = true;
+	}
+
+	void checkITetheringConnector() {
+		hasITetheringConnector = false;
+		ITetheringConnector.Stub.class.getMethod("asInterface", new Class[] { IBinder.class });
+		hasITetheringConnector = true;
+	}
+
+	boolean hasIActivityManager(boolean throwError) {
 		try {
 			checkIActivityManager();
 		} catch (e) {
@@ -50,11 +75,11 @@ UserServiceManager() {
 		return hasIActivityManager;
 	}
 
-	hasIActivityManager() {
+	boolean hasIActivityManager() {
 		return hasIActivityManager(false);
 	}
 
-	hasIActivityTaskManager(boolean throwError) {
+	boolean hasIActivityTaskManager(boolean throwError) {
 		try {
             checkIActivityTaskManager();
 		} catch (e) {
@@ -66,63 +91,95 @@ UserServiceManager() {
 		return hasIActivityTaskManager;
 	}
 
-	hasIActivityTaskManager() {
+	boolean hasIActivityTaskManager() {
 		return hasIActivityTaskManager(false);
 	}
 
-	refreshServices() {
-		if (tasker.isShizukuAvailable()) {
-			if (hasIActivityTaskManager) {
-				try {
-					iActivityBinder = tasker.getShizukuService(Context.ACTIVITY_SERVICE);
-					iActivityManager = IActivityManager.Stub.asInterface(iActivityBinder);
-				} catch (e) {
-					throw new JavaCodeException(e.getMessage());
-				}
-			} else {
-				throw new JavaCodeException(getErrorMessage(IActivityManager.class));
+	boolean hasITetheringConnector(boolean throwError) {
+		try {
+			checkITetheringConnector();
+		} catch (e) {
+			hasITetheringConnectorError = e.getMessage();
+			if (throwError) {
+				checkITetheringConnector();
 			}
-
-			if (hasIActivityTaskManager) {
-				try {
-					iActivityTaskBinder = tasker.getShizukuService(Context.ACTIVITY_TASK_SERVICE);
-					iActivityTaskManager = IActivityTaskManager.Stub.asInterface(iActivityTaskBinder);
-				} catch (e) {
-					throw new JavaCodeException(e.getMessage());
-				}
-			} else {
-				throw new JavaCodeException(getErrorMessage(IActivityTaskManager.class));
-			}
-		} else {
-			hasIActivityManager = false;
-			hasIActivityTaskManager = false;
-			iActivityBinder = null;
-			iActivityTaskBinder = null;
-			throw new JavaCodeException("Shizuku service is unavailable.");
 		}
+		return hasITetheringConnector;
 	}
 
-	getIActivityManager() {
-		if (iActivityBinder == null) {
-			refreshServices();
-		} else if (!iActivityBinder.isBinderAlive()) {
-			refreshServices();
+	boolean hasITetheringConnector() {
+		return hasITetheringConnector(false);
+	}
+
+	boolean hasIWifiManager(boolean throwError) {
+		try {
+			checkIWifiManager();
+		} catch (e) {
+			hasIWifiManagerError = e.getMessage();
+			if (throwError) {
+				checkIWifiManager();
+			}
 		}
+		return hasIWifiManager;
+	}
+
+	boolean hasIWifiManager() {
+		return hasIWifiManager(false);
+	}
+
+	IActivityManager getIActivityManager(boolean refresh) {
+		if (iActivityBinder == null || refresh || (iActivityManager != null && !iActivityBinder.isBinderAlive())) {
+			iActivityBinder = tasker.getShizukuService(Context.ACTIVITY_SERVICE);
+			iActivityManager = IActivityManager.Stub.asInterface(iActivityBinder);
+		} 
 		return iActivityManager;
 	}
 
-	getIActivityTaskManager() {
-		if (iActivityTaskBinder == null) {
-			refreshServices();
-		} else if (!iActivityTaskBinder.isBinderAlive()) {
-			refreshServices();
-		}
+	IActivityManager getIActivityManager() {
+		return getIActivityManager(false);
+	}
+
+	IActivityTaskManager getIActivityTaskManager(boolean refresh) {
+		if (iActivityTaskBinder == null || refresh || (iActivityTaskManager != null && !iActivityTaskBinder.isBinderAlive())) {
+			iActivityTaskBinder = tasker.getShizukuService(Context.ACTIVITY_TASK_SERVICE);
+			iActivityTaskManager = IActivityTaskManager.Stub.asInterface(iActivityTaskBinder);
+		} 
 		return iActivityTaskManager;
 	}
 
-	init() {
+	IActivityTaskManager getIActivityTaskManager() {
+		return getIActivityTaskManager(false);
+	}
+
+	ITetheringConnector getITetheringConnector(boolean refresh) {
+		if (iTetheringConnector == null || refresh || (iTetheringConnector != null && !tetherBinder.isBinderAlive())) {
+			tetherBinder = tasker.getShizukuService(Context.TETHERING_SERVICE);
+			iTetheringConnector = ITetheringConnector.Stub.asInterface(tetherBinder);
+		}
+		return iTetheringConnector;
+	}
+
+	ITetheringConnector getITetheringConnector() {
+		return getITetheringConnector(false);
+	}
+	
+	IWifiManager getIWifiManager(boolean refresh) {
+		if (iWifiManager == null || refresh || (iWifiManager != null && !wifiBinder.isBinderAlive())) {
+			wifiBinder = tasker.getShizukuService(Context.WIFI_SERVICE);
+			iWifiManager = IWifiManager.Stub.asInterface(wifiBinder);
+		}
+		return iWifiManager;
+	}
+
+	IWifiManager getIWifiManager() {
+		return getIWifiManager(false);
+	}
+
+	void init() {
 		hasIActivityManager();
 		hasIActivityTaskManager();
+		hasITetheringConnector();
+		hasIWifiManager();
 	}
 	
 	init();

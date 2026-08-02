@@ -33,6 +33,15 @@ import android.gesture.Gesture;
 
 
 everyGesture() {
+
+    ToggleAction() {
+        final String TURN_OFF = "off";
+        final String TURN_ON = "on";
+        final String TOGGLE = "toggle";
+        return this;
+    }
+    final This ToggleAction = ToggleAction();
+
 	Map handles = new HashMap();
 	boolean isReceiverRegistered = false;
 	BroadcastReceiver orientationReceiver;
