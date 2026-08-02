@@ -13,6 +13,7 @@ import java.util.Comparator;
 import bsh.BshMethod;
 
 ActionRules(This config) {
+	This TOP = this;
 	This every = config.every;
 	Map handleRules = config.rules;
 	double minimumConfidence = config.handle.minConfidence;
@@ -23,6 +24,7 @@ ActionRules(This config) {
 	retrieveAction(This recognized) {
 		recognized.hasAction = false;
 		recognized.index = (int) -1;
+		recognized.every = TOP.every != null ? TOP.every : tasker.getJavaVariable("everyGesture");
 		Map foreground;
 
 		updateForeground() {

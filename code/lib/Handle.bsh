@@ -84,7 +84,6 @@ Handle(This config) {
 				} else {
 					recognized.namespace.setVariable("motionEvent", motionEvent, false);
 					recognized.namespace.setVariable("livePath", livePath, false);
-					recognized.namespace.setVariable("every", every, false);
 					recognized.longPress = isLongPress;
 					recognized.handleName = config.handleName;
 					recognized.handle = TOP;
