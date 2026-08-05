@@ -1,0 +1,226 @@
+importCommands("lib.ui.helper");
+
+import bsh.This;
+import bsh.NameSpace;
+import android.app.Activity;
+import android.text.TextWatcher;
+import android.content.Context;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import android.view.inputmethod.InputMethodManager;
+import com.google.android.material.textfield.TextInputEditText;
+import java.io.File;
+
+
+import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import android.gesture.Gesture;
+import android.gesture.GestureLibraries;
+import android.gesture.GestureLibrary;
+import android.gesture.Prediction;
+import android.gesture.GestureStroke;
+import android.gesture.*;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.graphics.PixelFormat;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import java.util.*;
+import android.util.TypedValue;
+import android.content.Context;
+import bsh.This;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.chip.Chip;
+import android.view.GestureDetector;
+import java.util.Collections;
+import android.graphics.PorterDuff;
+import android.widget.ListView;
+import android.widget.BaseAdapter;
+import android.content.res.ColorStateList;
+
+HandleTemplatesActivity(This handleCard) {
+
+	// * Inhereted
+	This every = handleCard.every;
+	This handle = handleCard.handle;
+	This config = handle.config;
+	GestureLibrary library = config.library;
+	This snapshotManager = handleCard.snapshotManager;
+
+	// * Vars
+	Activity CONTEXT;
+	ListView templateListContainer;
+	This input;
+	This tm;
+	This sheetConfig;
+	This sheetMenu;
+	List finalGestureList = new ArrayList();
+	Map templateCards = new HashMap();
+	BaseAdapter adapter;
+	This mBaseAdapterImpl;
+
+	notifyChanged() {
+		if (adapter != null) adapter.notifyDataSetChanged();
+	}
+
+
+	refreshGestureList() {
+		library.load();
+		Set gestureNames = library.getGestureEntries();
+		if (gestureNames == null && config.rules instanceof Map) {
+			gestureNames = ((Map) config.rules).keySet();
+		}
+
+		List gestureList = new ArrayList();
+		if (gestureNames != null) {
+			ArrayList sortedGestures = new ArrayList(gestureNames);
+			sortedGestures.sort(String.CASE_INSENSITIVE_ORDER);
+			for (int i = 0; i < sortedGestures.size(); i++) {
+				String gestureName = (String) sortedGestures.get(i);
+				if (gestureName == null || gestureName.equals("")) {
+					continue;
+				}
+				gestureList.add(gestureName);
+			}
+		}
+
+		List oldGestures = new ArrayList(templateCards.keySet());
+		for (int i = 0; i < oldGestures.size(); i++) {
+			String oldGesture = (String) oldGestures.get(i);
+			if (!gestureList.contains(oldGesture)) {
+				templateCards.remove(oldGesture);
+			}
+		}
+
+		if (adapter != null) {
+			finalGestureList.clear();
+			finalGestureList.addAll(gestureList);
+			notifyChanged();
+			return;
+		} else {
+			finalGestureList = new ArrayList();
+			finalGestureList.addAll(gestureList);
+		}
+	}
+
+
+	This TemplateAdapter(Context context, List items) {
+
+		public int getCount() {
+			return items.size();
+		}
+
+		public Object getItem(int position) {
+			return items.get(position);
+		}
+
+		public long getItemId(int position) {
+			return position;
+		}
+
+		public View getView(int position, View cardView, ViewGroup parent) {
+			String gestureName = getItem(position);
+
+			This card;
+			if (cardView != null) {
+				/* Fixed local shadowing bug here to properly update the map */
+				card = cardView.getTag();
+				if (card == null) card = TemplateCard(handleCard, gestureName);
+				else card.reassign(cardView, gestureName);
+			} else if (cardView == null) {
+				card = TemplateCard(handleCard, gestureName);
+				cardView = card.getView();
+			}
+
+			templateCards.put(gestureName, card);
+			cardView.setTag(card);
+			cardView.setId(position);
+			return cardView;
+		}
+
+		return this;
+	}
+	
+	getAdapter() {
+		refreshGestureList();
+		mBaseAdapterImpl = TemplateAdapter(CONTEXT, finalGestureList);
+		adapter = MyBaseAdapter(mBaseAdapterImpl);
+		return adapter;
+	}
+
+	HandleTemplatesSheet() {
+		String title = config.handleName;
+		List inputList = new ArrayList();
+		int themeId;
+		if (handleCard.tm.lastThemeId != 0) themeId = handleCard.tm.lastThemeId;
+		// boolean isScrollable = true;
+		getViews(Context activityContext) {
+			CONTEXT = activityContext;
+			tm = ThemeManager(CONTEXT);
+			tm.setTheme(themeId);
+			templateListContainer = new ListView(CONTEXT);
+			templateListContainer.setDivider(null);
+			templateListContainer.setDividerHeight(tm.dp(16));
+			templateListContainer.setFocusable(false);
+			templateListContainer.setScrollContainer(false);
+			templateListContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			adapter = getAdapter();
+			templateListContainer.setAdapter(adapter);
+			inputList.add(templateListContainer);
+			return inputList;
+		}
+
+		onAttach() {
+
+		}
+
+		return this;
+	}
+
+	show() {
+		sheetConfig = HandleTemplatesSheet();
+		sheetMenu = SheetMenu(sheetConfig);
+		sheetMenu.show();
+	}
+
+	toggle() {
+		if (sheetMenu == null) sheetMenu.show();
+	}
+
+	isAdded() {
+		if (sheetMenu == null) return false;
+		return sheetMenu.isAdded();
+	}
+
+	isHidden() {
+		if (sheetMenu == null) return false;
+		return !sheetMenu.isAdded();
+	}
+
+	isShown() {
+		if (sheetMenu == null) return false;
+		return sheetMenu.isShown();
+	}
+
+	isRemoved() {
+		if (sheetMenu == null) return false;
+		return sheetMenu.isRemoved();
+	}
+
+	return this;
+
+}

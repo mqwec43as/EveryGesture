@@ -1,0 +1,25 @@
+import android.widget.BaseAdapter;
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import java.util.concurrent.Callable;
+import bsh.This;
+import android.view.View;
+import android.view.ViewGroup;
+
+BaseAdapter MyBaseAdapter(This mBaseAdapterImpl) {
+	ClassImplementation adapterHandler = new ClassImplementation() {
+		run(Callable superCaller, String methodName, Object[] args) {
+			if (methodName.equals("getCount")) return mBaseAdapterImpl.getCount();
+			if (methodName.equals("getItem")) return mBaseAdapterImpl.getItem(args[0]);
+			if (methodName.equals("getItemId")) return mBaseAdapterImpl.getItemId(args[0]);
+			if (methodName.equals("getView")) {
+				int pos = args[0];
+				View convertView = args[1];
+				ViewGroup parent = args[2];
+				return mBaseAdapterImpl.getView(pos, convertView, parent);
+			}
+			return superCaller.call();
+		}
+	};
+	BaseAdapter adapter = tasker.implementClass(BaseAdapter.class, adapterHandler);
+	return adapter;
+}

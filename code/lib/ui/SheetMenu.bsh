@@ -65,6 +65,7 @@ SheetMenu(This config) {
 	boolean hasDestroyed = hasMethod("onDestroyed", null);
 	boolean hasCreated = hasMethod("onCreated", null);
 	boolean hasGetViews = hasMethod("getViews", new Class[] { Context.class });
+	boolean hasGetContainer = hasMethod("getContainer", new Class[] { Context.class });
 
 	activityListener() {
 		onCreated(ActivityLifecycleEvent event) {
@@ -259,29 +260,28 @@ SheetMenu(This config) {
 		/* SAFE add views */
 		if (hasGetViews) {
 			viewList = config.getViews(activity);
-		};
+			if (viewList != null) {
+				for (int i = 0; i < viewList.size(); i++) {
+					Object item = viewList.get(i);
 
-		if (viewList != null) {
-			for (int i = 0; i < viewList.size(); i++) {
-				Object item = viewList.get(i);
+					if (item == null || item == void) continue;
+					if (!(item instanceof View)) continue;
 
-				if (item == null || item == void) continue;
-				if (!(item instanceof View)) continue;
+					if (item.getLayoutParams() == null) {
+						item.setLayoutParams(new LinearLayout.LayoutParams(
+							ViewGroup.LayoutParams.MATCH_PARENT,
+							ViewGroup.LayoutParams.WRAP_CONTENT
+						));
+					}
 
-				if (item.getLayoutParams() == null) {
-					item.setLayoutParams(new LinearLayout.LayoutParams(
-						ViewGroup.LayoutParams.MATCH_PARENT,
-						ViewGroup.LayoutParams.WRAP_CONTENT
-					));
-				}
-
-				// Add only it doesn't have a parent
-				if (item.getParent() == null) {
-					container.addView(item);
-					if (spacing > 0 && i < viewList.size() - 1) addSpacer();
+					// Add only it doesn't have a parent
+					if (item.getParent() == null) {
+						container.addView(item);
+						if (spacing > 0 && i < viewList.size() - 1) addSpacer();
+					}
 				}
 			}
-		}
+		};
 
 		if (isScrollable) {
 			ScrollView contentScroll = new ScrollView(activity);

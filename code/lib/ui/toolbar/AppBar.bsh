@@ -1,3 +1,6 @@
+importCommands("lib.ui");
+importCommands("lib.ui.toolbar");
+
 import android.app.Activity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,17 +31,41 @@ AppBar(This main) {
 	toolbar.setBackgroundColor(tm.color("colorSurfaceContainer"));
 	toolbar.setTitleTextColor(tm.color("colorOnSurface"));
 
-	int COLLAPSE = 1;
+	int INFO = 1;
 	int ACTION = 2;
 
 	Menu topMenu = toolbar.getMenu();
-
-	/* Add the collapse button first */
-	MenuItem topBarCollapse = topMenu.add(0, COLLAPSE, 0, "Collapse");
-	/* Add the action menu dots button second */
-	MenuItem topBarAction = topMenu.add(0, ACTION, 1, "Menu");
-
 	PopupMenu popup;
+
+	Object[][] menus = new Object[][] {
+        {
+            INFO
+            , "Info"
+			, "toolbar/info"
+            , new Runnable() {
+                run() {
+                    notSupported("Disclaimer", "lib/ui/toolbar/PopUpMenu.bsh");
+                }
+            }
+        },
+        {
+			ACTION
+            , "Menu"
+			, "main/dots-vertical"
+            , new Runnable() {
+                run() {
+                	View anchorView = activity.findViewById(ACTION);
+					if (anchorView == null) {
+						anchorView = toolbar;
+					}
+
+					if (popup == null) popup = PopUpMenu(activity, anchorView);
+					popup.show();
+					return true;
+                }
+            }
+        }
+    };
 
 	setIcon(MenuItem item, String path) {
 		listen() {
@@ -52,31 +79,22 @@ AppBar(This main) {
 		loadSvgIcon(activity, actionIconPath, listen());
 	}
 
-	setIcon(topBarCollapse, "toolbar/collapse");
-	setIcon(topBarAction, "main/dots-vertical");
 
-	topBarCollapse.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-	topBarAction.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-
-	topBarCollapse.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-		onMenuItemClick(MenuItem item) {
-			main.collapseCards();
-			return true;
-		}
-	});
-
-	topBarAction.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-		onMenuItemClick(MenuItem item) {
-			View anchorView = activity.findViewById(ACTION);
-			if (anchorView == null) {
-				anchorView = toolbar;
+	for (Object[] menuFormat : menus) {
+		int id = menuFormat[0];
+		String title = menuFormat[1];
+		String iconPath = menuFormat[2];
+		Runnable onClick = menuFormat[3];
+		MenuItem menuItem = topMenu.add(0, id, id, title);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+		setIcon(menuItem, iconPath);
+		menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+			public boolean onMenuItemClick(MenuItem item) {
+				activity.runOnUiThread(onClick);
+				return true;
 			}
-
-			if (popup == null) popup = PopUpMenu(activity, anchorView);
-			popup.show();
-			return true;
-		}
-	});
+		});
+	}
 	
 	appBarLayout.addView(toolbar);
 

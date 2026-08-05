@@ -37,330 +37,172 @@ import java.util.Collections;
 import java.util.Comparator;
 import android.widget.ImageButton;
 import android.widget.PopupMenu;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
 
-TemplateCard(This handleCard, This config, String gestureName) {
+TemplateCard(This handleCard, String gestureName) {
 	Context CONTEXT = handleCard.CONTEXT;
 	final This TOP = this;
-	This tm = ThemeManager(CONTEXT);
+	This tm = handleCard.tm;
 	This every = handleCard.every;
-
-	dp(int value) {
-		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, CONTEXT.getResources().getDisplayMetrics());
-	}
-
-	Res.Card.Template.BACKGROUND_COLOR = tm.color("colorSurfaceContainerHigh");
-	Res.Card.Template.TITLE_COLOR = tm.color("colorOnSurface");
-	Res.Card.Template.SUBTITLE_COLOR = tm.color("colorOnSurfaceVariant");
-	Res.Card.Template.ICON_COLOR = tm.color("colorPrimary");
-	Res.Card.Template.BACKGROUND_RADIUS = tm.dp(8);
-	Res.Card.Template.BACKGROUND_RADIUS_ACTIVE = tm.dp(24);
-	Res.Card.Template.PADDING = tm.dp(8);
-
-	Res.Card.Snapshot.CONTAINER_WIDTH = 254;
-	Res.Card.Snapshot.BACKGROUND_RADIUS = tm.dp(24);
-	Res.Card.Snapshot.BACKGROUND_COLOR = tm.color("colorSurface");
-	Res.Card.Snapshot.RIGHT_MARGIN = tm.dp(8);
-	Res.Card.Snapshot.BOTTOM_MARGIN = 8;
-	Res.Card.Snapshot.RADIUS = tm.dp(16);
-	Res.Card.Snapshot.MARGIN = 5;
-	Res.Card.Snapshot.PADDING = tm.dp(16);
-
+	This config = handleCard.config;
 	Drawable snapDrawable;
 	LinearLayout gestureCard;
 	LinearLayout templateDetails;
-	PopupMenu options;
-	ImageView snapshotView;
-	MaterialToolbar templateActions;
-	LinearLayout actionContainer;
 	LinearLayout details;
+	LinearLayout actionContainer;
+	ImageView snapshotView;
 	TextView gestureNameTV;
-	Map ruleMap;
+	MaterialToolbar templateActions;
+	ListView actionListView;
+	PopupMenu options;
 	GradientDrawable gestureBackground;
 	GradientDrawable snapshotBackground;
-	List gestures = config.library.getGestures(gestureName);
-	Map menuMap = new HashMap();
+	This helper;
+	List actionList = config.getActionList(gestureName);
+	List rowViews = new ArrayList();
+
+	final int TEMPLATE_DETAILS = 100;
+	final int SNAPSHOT = 101;
+	final int DETAILS = 102;
+	final int GESTURE_NAME = 103;
+	final int ACTIONS_CONTAINER = 104;
+	final int TEMPLATE_ACTIONS = 105;
+	final int ACTION_LIST = 106;
 
 	int DELETE = 1;
 	int ADD = 2;
 	int OPTIONS = 3;
 
-	replaceRule(String typeKey, int index, Map rule) {
-		boolean success = config.editRule(gestureName, typeKey, index, rule);
-		if (success) {
-			config.library.load();
-		} else {
-			log("Failed to replace rule for " + gestureName + " in " + typeKey + " at index " + index + ".");
+	Object[][] menuItems = {
+		{
+			DELETE,
+			"Delete",
+			"delete.svg",
+			new Runnable() { run() { TOP.deleteAction(); } }
+		},
+		{
+			ADD,
+			"Add",
+			"add.svg",
+			new Runnable() { run() { TOP.addAction(); } }
+		},
+		{
+			OPTIONS,
+			"Options",
+			"dots-vertical.svg",
+			new Runnable() { run() { TOP.showOptionBar(); } }
 		}
-		return success;
-	}
+	};
 
-	// Helper function to dynamically add menu items and assign click actions
-	createMenuItem(int id, String title, String iconPath, Runnable action) {
-		MenuItem item = templateActions.menu.add(0, id, 0, title);
-		item.setShowAsAction(2); // SHOW_AS_ACTION_ALWAYS
-
-		iconSet() {
-			onSuccess(Drawable drawable) {
-				Drawable mutDrawable = drawable.mutate();
-				mutDrawable.setTint(Res.Card.Template.TITLE_COLOR);
-				item.setIcon(mutDrawable);
-			}
-			return this;
+		
+	build() {
+		if (gestureCard != null) {
+			return gestureCard;
 		}
-		loadSvgIcon(CONTEXT, every.MAIN_DIRECTORY + "/res/main/" + iconPath, iconSet());
 
-		item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-			onMenuItemClick(MenuItem clickedItem) {
-				if (action != null) {
-					action.run();
-				}
-				return true;
-			}
-		});
+		gestureCard = new LinearLayout(CONTEXT);
+		gestureCard.setOrientation(1);
+		gestureBackground = new GradientDrawable();
+		gestureBackground.setColor(handleCard.Res.Card.Template.BACKGROUND_COLOR);
+		gestureBackground.setCornerRadius(handleCard.Res.Card.Template.BACKGROUND_RADIUS);
+		gestureCard.setBackground(gestureBackground);
+		gestureCard.setPadding(handleCard.Res.Card.Template.PADDING, handleCard.Res.Card.Template.PADDING, handleCard.Res.Card.Template.PADDING, handleCard.Res.Card.Template.PADDING);
+		gestureCard.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		gestureCard.setTag(TOP);
 
-		menuMap.put(id, item);
-
-		return item;
-	}
-
-	getTemplateDetails() {
-		// Top Layer Container: Contains snapshot and text details
-		LinearLayout templateDetails = new LinearLayout(CONTEXT);
+		templateDetails = new LinearLayout(CONTEXT);
+		templateDetails.setId(TEMPLATE_DETAILS);
 		templateDetails.setOrientation(0);
-		LinearLayout.LayoutParams templateDetailsParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		templateDetails.setLayoutParams(templateDetailsParams);
+		templateDetails.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// Left: snapshot placeholder
 		snapshotView = new ImageView(CONTEXT);
+		snapshotView.setId(SNAPSHOT);
 		snapshotBackground = new GradientDrawable();
-		snapshotBackground.setColor(Res.Card.Snapshot.BACKGROUND_COLOR);
-		snapshotBackground.setCornerRadius(Res.Card.Snapshot.BACKGROUND_RADIUS);
-		LinearLayout.LayoutParams snapLp = new LinearLayout.LayoutParams(Res.Card.Snapshot.CONTAINER_WIDTH, Res.Card.Snapshot.CONTAINER_WIDTH);
-		snapLp.rightMargin = Res.Card.Snapshot.RIGHT_MARGIN;
+		snapshotBackground.setColor(handleCard.Res.Card.Snapshot.BACKGROUND_COLOR);
+		snapshotBackground.setCornerRadius(handleCard.Res.Card.Snapshot.BACKGROUND_RADIUS);
+		LinearLayout.LayoutParams snapLp = new LinearLayout.LayoutParams(handleCard.Res.Card.Snapshot.CONTAINER_WIDTH, handleCard.Res.Card.Snapshot.CONTAINER_WIDTH);
+		snapLp.rightMargin = handleCard.Res.Card.Snapshot.RIGHT_MARGIN;
 		snapshotView.setLayoutParams(snapLp);
 		snapshotView.setBackground(snapshotBackground);
 		snapshotView.setClipToOutline(true);
-		templateDetails.addView(snapshotView);
 
-		// Right: details (name + actions)
 		details = new LinearLayout(CONTEXT);
+		details.setId(DETAILS);
 		details.setOrientation(1);
 		details.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		gestureNameTV = new TextView(CONTEXT);
+		gestureNameTV.setId(GESTURE_NAME);
 		gestureNameTV.setText(gestureName);
 		gestureNameTV.setTextSize(18);
 		gestureNameTV.setTypeface(null, Typeface.BOLD);
-		gestureNameTV.setTextColor(Res.Card.Template.TITLE_COLOR);
-		details.addView(gestureNameTV);
+		gestureNameTV.setTextColor(handleCard.Res.Card.Template.TITLE_COLOR);
 
 		actionContainer = new LinearLayout(CONTEXT);
+		actionContainer.setId(ACTIONS_CONTAINER);
 		actionContainer.setOrientation(1);
-		LinearLayout.LayoutParams actionContainerParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		actionContainer.setLayoutParams(actionContainerParams);
-		boolean anyAction = false;
-
-		ruleMap = config.rules.get(gestureName);
-
-		if (ruleMap != null) {
-			String[] keys = new String[] { "release", "longPress" };
-			for (ki = 0; ki < keys.length; ki++) {
-				String key = keys[ki];
-				List actionList = ruleMap.get(key);
-				if (actionList == null) continue;
-
-				actionList.sort(new Comparator() {
-					compare(Object o1, Object o2) {
-						double length1 = ((Map) o1).getOrDefault("length", Double.POSITIVE_INFINITY);
-						double length2 = ((Map) o2).getOrDefault("length", Double.POSITIVE_INFINITY);
-						return Double.compare(length1, length2);
-					}
-				});
-
-				for (int ai = 0; ai < actionList.size(); ai++) {
-					Map actionMap = actionList.get(ai);
-					int index = ai;
-					handler() {
-						onCancel() {}
-
-						onSave(Map result) {
-							if (result == null) {
-								return;
-							}
-							boolean added = replaceRule(key, index, result);
-							if (added) TOP.refreshDetails();
-							else tasker.showToast("Failed", "Error");
-						}
-
-						return this;
-					}
-
-					LinearLayout actionRow = ActionRow(TOP, key, actionMap, handler());
-					actionContainer.addView(actionRow);
-					anyAction = true;
-				}
-			}
-		}
-
-		if (!anyAction) {
-			TextView defaultActionTV = new TextView(CONTEXT);
-			defaultActionTV.setText("Default actions");
-			defaultActionTV.setTextSize(14);
-			defaultActionTV.setTextColor(Res.Card.Template.SUBTITLE_COLOR);
-			actionContainer.addView(defaultActionTV);
-		}
-
+		actionContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		
+		details.addView(gestureNameTV);
 		details.addView(actionContainer);
+		templateDetails.addView(snapshotView);
 		templateDetails.addView(details);
-		drawSnapshot();
-		return templateDetails;
-	}
+		gestureCard.addView(templateDetails);
 
-	load() {
-		if (gestureCard == null) {
-			gestureCard = new LinearLayout(CONTEXT);
-			gestureCard.setOrientation(1);
-			gestureBackground = new GradientDrawable();
-			gestureBackground.setColor(Res.Card.Template.BACKGROUND_COLOR);
-			gestureBackground.setCornerRadius(Res.Card.Template.BACKGROUND_RADIUS);
-			gestureCard.setBackground(gestureBackground);
-			LinearLayout.LayoutParams gestureLayoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-			gestureCard.setLayoutParams(gestureLayoutParams);
-			gestureCard.setPadding(Res.Card.Template.PADDING, Res.Card.Template.PADDING, Res.Card.Template.PADDING, Res.Card.Template.PADDING);
-		}
-
-		templateDetails = getTemplateDetails();
-		gestureCard.addView(templateDetails); // Add top layer to root layout
-
-		// Bottom Layer Container: Template actions (MaterialToolbar)
 		templateActions = new MaterialToolbar(CONTEXT);
+		templateActions.setId(TEMPLATE_ACTIONS);
 		templateActions.setContentInsetsAbsolute(0, 0);
 		templateActions.setContentInsetsRelative(0, 0);
-		templateActions.setPadding(0, 0, 0, 0); // Clear standard view padding if any was applied
+		templateActions.setPadding(0, 0, 0, 0);
 		LinearLayout.LayoutParams templateActionsParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		templateActions.setLayoutParams(templateActionsParams);
 		templateActions.setVisibility(View.GONE);
 
-		Object[][] menuItems = {
-			{
-				DELETE,
-				"Delete",
-				"delete.svg",
-				new Runnable() {
-					run() { deleteAction(); }
+		for (int i = 0; i < menuItems.length; i++) {
+			Object[] menuItem = menuItems[i];
+			MenuItem item = templateActions.getMenu().add(0, ((Integer) menuItem[0]).intValue(), 0, (String) menuItem[1]);
+			item.setShowAsAction(2);
+			final Runnable action = (Runnable) menuItem[3];
+			item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+				onMenuItemClick(MenuItem clickedItem) {
+					if (action != null) action.run();
+					return true;
 				}
-			},
-			{
-				ADD,
-				"Add",
-				"add.svg",
-				new Runnable() {
-					run() { addAction(); }
+			});
+			String iconPath = (String) menuItem[2];
+			iconSet() {
+				onSuccess(Drawable drawable) {
+					Drawable mutDrawable = drawable.mutate();
+					mutDrawable.setTint(handleCard.Res.Card.Template.TITLE_COLOR);
+					item.setIcon(mutDrawable);
 				}
-			},
-			{
-				OPTIONS,
-				"Options",
-				"dots-vertical.svg",
-				new Runnable() {
-					run() { 
-						showOptionBar(); 
-					}
-				}
+				return this;
 			}
-		};
-
-		for (Object[] menuItem : menuItems) {
-			createMenuItem(menuItem[0], menuItem[1], menuItem[2], menuItem[3]);
+			loadSvgIcon(CONTEXT, every.MAIN_DIRECTORY + "/res/main/" + iconPath, iconSet());
 		}
-	
-		gestureCard.addView(templateActions); // Add bottom layer to root layout
 
-		// Listener
+
+		gestureCard.addView(templateActions);
+
 		gestureCard.setOnClickListener(new View.OnClickListener() {
 			onClick(View v) {
 				TOP.toggleActions();
 			}
 		});
-	}
 
-	drawSnapshot() {
-		snapDrawable = handleCard.snapshotManager.get(gestureName);
-		try {
-			snapshotView.setImageDrawable(snapDrawable);
-		} catch (e) {}
-	}
-
-	getView() {
+		refreshDetails();
 		return gestureCard;
 	}
 
-	deleteAction() {
-		deleteActionDialog(TOP);
-	}
-
-	showOptionBar() {
-		if (options == null) options = TemplatePopUpMenu(TOP, CONTEXT, templateActions );
-		options.show();
-	}
-
-	addAction() {
-		Map map = new HashMap();
-		listener() {
-			onSave(Map result) {
-				if (result == null) {
-					tasker.showToast("Canceled", "Info");
-					return;
-				}
-				boolean hasType = result.containsKey("type");
-				boolean hasLength = result.containsKey("length");
-				boolean hasCommand = result.containsKey("command");
-
-				if (!hasType && !hasCommand) {
-					tasker.showToast("Missing fields", "Error");
-					return;
-				}
-
-				String type = result.get("type");
-				String command = result.get("command");
-
-				if (config.hasAtleastOneRule(gestureName, type) && !hasLength) {
-					tasker.showToast("Missing length because one or more rules already exist", "Error");
-					return;
-				}
-
-				if (!config.hasRule(gestureName, type)) {
-					config.addRule(gestureName, type, result);
-					refreshDetails();
-				} else {
-					tasker.showToast("Rule already exists please use edit", "Error");
-				}
-			}
-
-			onCancel() {}
-			return this;
+	getView() {
+		if (gestureCard == null) {
+			build();
 		}
-		ActionPicker(map, listener());
+		return gestureCard;
 	}
 
-	toggleActions() {
-		if (templateActions.getVisibility() == View.VISIBLE) {
-			templateActions.setVisibility(View.GONE);
-		} else {
-			templateActions.setVisibility(View.VISIBLE);
-		}
-	}
-
-	getSnapshotDrawable() {
-		return snapDrawable.mutate();
-	}
-
-	refreshDetails() {
-		gestureCard.removeView(templateDetails);
-		templateDetails = getTemplateDetails();
-		gestureCard.addView(templateDetails, 0); // Add the first not last
-	}
-
-	load();
+	TemplateCardHelper(this);
+	
 	return this;
 }

@@ -1,0 +1,167 @@
+importCommands("lib.ui.add");
+
+import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import bsh.This;
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Comparator;
+
+TemplateCardHelper(This templateCard) {
+	setNameSpace(templateCard.namespace);
+	TextView defaultActionTV;
+	// tranverse the view hierarchy to find the other views and set the variable accrodingly
+	reassign(LinearLayout targetGestureCard, String targetGestureName) {
+		TOP.gestureName = targetGestureName;
+		gestureCard = targetGestureCard;
+		templateDetails = gestureCard.findViewById(TEMPLATE_DETAILS);
+		details = gestureCard.findViewById(DETAILS);
+		snapshotView = gestureCard.findViewById(SNAPSHOT);
+		gestureNameTV = gestureCard.findViewById(GESTURE_NAME);
+		actionContainer = gestureCard.findViewById(ACTIONS_CONTAINER);
+		templateActions = gestureCard.findViewById(TEMPLATE_ACTIONS);
+		helper = null;
+		gestureNameTV.setText(TOP.gestureName);
+		refreshDetails();
+		return this;
+	}
+
+	refreshDetails() {
+		refreshActionList();
+		refreshActionRows();
+		drawSnapshot();
+		return this;
+	}
+
+	getGestureName() {
+		return TOP.gestureName;
+	}
+	
+	refreshActionList() {
+		List newActionList = handleCard.config.getActionList(gestureName);
+		actionList.clear();
+		actionList.addAll(newActionList);
+		return this;
+	}
+
+	updateActionRow(int index, String actionType, Map actionMap, This pickerListener) {
+		if (index < rowViews.size()) {
+			View rowView = rowViews.get(index);
+			rowView.setVisibility(View.VISIBLE);
+			This actionRow = rowView.getTag();
+			actionRow.reassign(rowView, actionType, actionMap);
+		} else {
+			This row = ActionRow(TOP, actionType, actionMap);
+			View rowView = row.getView();
+			rowView.setTag(row);
+			rowViews.add(rowView);
+			actionContainer.addView(rowView);
+		}
+	}
+
+	addDefaultAction() {
+		if (defaultActionTV == null) {
+			defaultActionTV = new TextView(CONTEXT);
+			defaultActionTV.setText("Default actions");
+			defaultActionTV.setTextSize(14);
+			defaultActionTV.setTextColor(handleCard.Res.Card.Template.SUBTITLE_COLOR);
+		}
+		try {
+			actionContainer.addView(defaultActionTV);
+		} catch (Exception e) {}
+		
+	}
+
+	removeDefaultAction() {
+		try {
+			if (actionContainer != null) actionContainer.removeView(defaultActionTV);
+		} catch (Exception e) {}
+	}
+
+	refreshActionRows() {
+		int rowSize = rowViews.size();
+		int actionSize = actionList.size();
+		boolean hasMoreAction = actionSize > rowSize;
+		boolean hasActions = actionSize > 0;
+
+		for (View rowView : rowViews) {
+			rowView.setVisibility(View.GONE);
+		}
+
+		if (!hasActions) {
+			addDefaultAction();
+			return;
+		} else {
+			removeDefaultAction();
+		}
+
+		for (int i = 0; i < actionSize; i++) {
+			Map actionMap = actionList.get(i);
+			String actionType = actionMap.get("type");
+			updateActionRow(i, actionType, actionMap, null);
+		}
+
+	}
+
+	drawSnapshot() {
+		Drawable snapshot = handleCard.snapshotManager.get(gestureName);
+		if (templateCard != null && snapshotView != null) {
+			snapshotView.setImageDrawable(snapshot);
+		} 
+		return snapshot;
+	}
+
+	getSnapshotDrawable() {
+		Drawable snapshot = handleCard.snapshotManager.get(gestureName);
+		if (snapshot == null) return null;
+		return snapshot.mutate();
+	}
+
+	replaceRule(String typeKey, int index, Map rule) {
+		boolean success = config.editRule(gestureName, typeKey, index, rule);
+		if (success) {
+			config.library.load();
+		} else {
+			log("Failed to replace rule for " + gestureName + " in " + typeKey + " at index " + index + ".");
+		}
+		return success;
+	}
+
+	addAction() {
+		addNewAction(handleCard, gestureName);
+		return this;
+	}
+
+	deleteAction() {
+		deleteActionDialog(TOP);
+		return this;
+	}
+
+	showOptionBar() {
+		if (options == null) {
+			options = TemplatePopUpMenu(TOP, templateActions);
+		}
+		options.show();
+		return this;
+	}
+
+	toggleActions() {
+		if (templateActions.getVisibility() == View.VISIBLE) {
+			templateActions.setVisibility(View.GONE);
+		} else {
+			templateActions.setVisibility(View.VISIBLE);
+		}
+		return this;
+	}
+
+	return this;
+}

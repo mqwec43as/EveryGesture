@@ -183,6 +183,7 @@ Config(String handleName) {
 	}
 
 	deleteGesture(String gestureName) {
+		engine.library.load();
 		rules.remove(gestureName);
 		engine.library.removeEntry(gestureName);
 		engine.library.save();
@@ -242,8 +243,10 @@ Config(String handleName) {
 					continue;
 				}
 				actionList = sortActionList(actionList);
-				for (Map action : actionList) {
+				for (int ai = 0; ai < actionList.size(); ai++) {
+					Map action = (Map) actionList.get(ai);
 					action.put("type", key);
+					action.put("typeIndex", ai);
 				}
 				flatList.addAll(actionList);
 			}

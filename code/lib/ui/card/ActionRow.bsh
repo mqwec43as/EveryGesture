@@ -14,7 +14,7 @@ import android.content.Context;
 import bsh.This;
 import android.graphics.PorterDuff;
 
-ActionRow(This templateCard, String actionType, Map actionMap, This pickerListener) {
+ActionRow(This templateCard, String actionType, Map actionMap) {
 	Context CONTEXT = templateCard.CONTEXT;
 	This tm = templateCard.tm;
 	final This TOP = this;
@@ -23,37 +23,47 @@ ActionRow(This templateCard, String actionType, Map actionMap, This pickerListen
     
     Res.Card.ICON_SIZE = 80;
 	Res.Card.ICON_MARGIN = 8;
+	Res.Card.ICON_COLOR = tm.color("colorOnSurfaceVariant");
 	Res.Template.ACTION_NAME_TEXT_SIZE = 14;
 
+	final int ACTION_DISPLAY = 1001;
+	final int ACTION_ICON = 1002;
+
 	String actionDisplayName;
-	try {
-		actionDisplayName = Actions.getDisplayText(actionMap);
-	} catch (e) {
-		log("Enable to get action display name for " + actionType + ": " + e.getMessage(), "ERROR");
-		actionDisplayName = "Error";
+
+	LinearLayout view;
+	ImageView icon;
+	LinearLayout textLayout;
+	TextView actionDisplayTV;
+
+	UpdateActionListener() {
+		onCancel() {}
+		onSave(Map result) {
+			if (result == null) return;
+			boolean added = templateCard.replaceRule(actionType, actionMap{"typeIndex"}, result);
+			if (added) templateCard.refreshDetails();
+			else tasker.showToast("Failed", "Error");
+		}
+		return this;
 	}
 
-	LinearLayout row = new LinearLayout(CONTEXT);
-	row.setOrientation(0);
-	row.setGravity(Gravity.CENTER_VERTICAL);
-	LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-	// rowParams.setMargins(0, 8, 0, 8);
-	row.setLayoutParams(rowParams);
-	row.setPadding(8, 8, 8, 8);
+	reassign(View newActionRow, String newActionType, Map newActionMap) {
+		view = newActionRow;
+		actionType = newActionType;
+		actionMap = newActionMap;
+		actionDisplayName = Actions.getDisplayText(actionMap);
+		actionDisplayTV = view.findViewById(ACTION_DISPLAY);
+		actionDisplayTV.setText(actionDisplayName);
+		icon = view.findViewById(ACTION_ICON);
+		loadSvgIcon(CONTEXT, actionType + ".svg", iconListener(icon));
+		pickerListener = UpdateActionListener();
+		return;
+	}
 
-	String actionSvgPath = actionType + ".svg";
-	if (every.MAIN_DIRECTORY != void) actionSvgPath = every.MAIN_DIRECTORY + "/res/actions/" + actionSvgPath;
-	ImageView icon = new ImageView(CONTEXT);
-	LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(Res.Card.ICON_SIZE, Res.Card.ICON_SIZE);
-	iconParams.rightMargin = Res.Card.ICON_MARGIN;
-	iconParams.topMargin = 0;
-	iconParams.bottomMargin = 0;
-	icon.setLayoutParams(iconParams);
-
-	listener() {
+	iconListener(ImageView iconView) {
 		onSuccess(Drawable result) {
-			result.setColorFilter(tm.color("colorOnSurfaceVariant"), PorterDuff.Mode.SRC_IN);
-			icon.setImageDrawable(result);
+			result.setColorFilter(Res.Card.ICON_COLOR, PorterDuff.Mode.SRC_IN);
+			iconView.setImageDrawable(result);
 		}
 		onFileNotExist() {
 			log("SVG not found: " + actionSvgPath);
@@ -61,28 +71,66 @@ ActionRow(This templateCard, String actionType, Map actionMap, This pickerListen
 		return this;
 	}
 
-	loadSvgIcon(CONTEXT, actionSvgPath, listener());
-
-	LinearLayout textLayout = new LinearLayout(CONTEXT);
-	textLayout.setOrientation(1);
-	LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-	textLayout.setLayoutParams(textParams);
-	// textLayout.setPadding(8, 0, 0, 0);
-
-	TextView actionDisplayTV = new TextView(CONTEXT);
-	actionDisplayTV.setText(actionDisplayName);
-	actionDisplayTV.setTextSize(Res.Template.ACTION_NAME_TEXT_SIZE);
-	actionDisplayTV.setTextColor(tm.color("colorOnSurfaceVariant"));
-	actionDisplayTV.setTypeface(null, Typeface.BOLD);
-	textLayout.addView(actionDisplayTV);
-
-	row.addView(icon);
-	row.addView(textLayout);
-	row.setOnClickListener(new View.OnClickListener() {
-		onClick(View v) {
-			Map map = actionMap.clone();
-			ActionPicker(map, pickerListener);
+	launchActionPicker() {
+		Map map = actionMap.clone();
+		ActionPicker(map, UpdateActionListener());
+	}
+	
+	build() {
+		if (view != null) return;
+		try {
+			actionDisplayName = Actions.getDisplayText(actionMap);
+		} catch (e) {
+			log("Enable to get action display name for " + actionType + ": " + e.getMessage(), "ERROR");
+			actionDisplayName = "Error";
 		}
-	});
-	return row;
+		view = new LinearLayout(CONTEXT);
+		view.setOrientation(0);
+		view.setGravity(Gravity.CENTER_VERTICAL);
+		LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		// rowParams.setMargins(0, 8, 0, 8);
+		view.setLayoutParams(rowParams);
+		view.setPadding(8, 8, 8, 8);
+
+		String actionSvgPath = actionType + ".svg";
+		if (every.MAIN_DIRECTORY != void) actionSvgPath = every.MAIN_DIRECTORY + "/res/actions/" + actionSvgPath;
+		
+		icon = new ImageView(CONTEXT);
+		LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(Res.Card.ICON_SIZE, Res.Card.ICON_SIZE);
+		iconParams.rightMargin = Res.Card.ICON_MARGIN;
+		iconParams.topMargin = 0;
+		iconParams.bottomMargin = 0;
+		icon.setLayoutParams(iconParams);
+
+		loadSvgIcon(CONTEXT, actionSvgPath, iconListener(icon));
+
+		textLayout = new LinearLayout(CONTEXT);
+		textLayout.setOrientation(1);
+		LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+		textLayout.setLayoutParams(textParams);
+		// textLayout.setPadding(8, 0, 0, 0);
+
+		actionDisplayTV = new TextView(CONTEXT);
+		actionDisplayTV.setId(ACTION_DISPLAY);
+		actionDisplayTV.setText(actionDisplayName);
+		actionDisplayTV.setTextSize(Res.Template.ACTION_NAME_TEXT_SIZE);
+		actionDisplayTV.setTextColor(tm.color("colorOnSurfaceVariant"));
+		actionDisplayTV.setTypeface(null, Typeface.BOLD);
+		textLayout.addView(actionDisplayTV);
+
+		view.addView(icon);
+		view.addView(textLayout);
+		view.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				launchActionPicker();
+			}
+		});
+	}
+
+	getView() {
+		if (view == null) build();
+		return view;
+	}
+
+	return this;
 }

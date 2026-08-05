@@ -676,13 +676,13 @@ Actions() {
 		* For displaying action as one string row, e.g for TemplateCard
 		TODO might need to resolve all args and create based on command parameter
 	*/
-	String getDisplayText(Map actionMap) {
+	String getDisplayText(Map actionMap, boolean useFullDisplay) {
 		String command = actionMap { "command" };
 		List args = actionMap { "args" };
 		Map commandMap = getCommandMap(command);
 		String placeHolderTemplate = commandMap { "displayText" };
 		String placeHolder = "";
-		if (actionMap.containsKey("length")) placeHolder += actionMap { "length" } + "px - ";
+		if (actionMap.containsKey("length") && useFullDisplay) placeHolder += actionMap { "length" } + "px - ";
 		placeHolder += placeHolderTemplate;
 		if (args == null && placeHolder == null) return placeHolder;
 		if (args.isEmpty()) return placeHolder;
@@ -719,6 +719,10 @@ Actions() {
 			placeHolder = placeHolder.substring(0, maxLength) + "...";
 		}
 		return placeHolder;
+	}
+
+	getDisplayText(Map actionMap) {
+		return getDisplayText(actionMap, true);
 	}
 
 	hasParameterList(String parameterName) {

@@ -180,12 +180,6 @@ Main() {
 		}
 	}
 
-	collapseCards() {
-		for (This card: handleCards.values()) {
-			card.hideGestureList();
-		}
-	}
-
 	/* Dynamic calculation of the system navigation bar height using framework Resource identifiers */
 	addNavbarSpacer() {
 		int navBarHeight = 0;

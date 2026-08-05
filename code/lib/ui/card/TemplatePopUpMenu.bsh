@@ -11,8 +11,8 @@ import com.google.android.material.appbar.MaterialToolbar;
 import bsh.This;
 import android.widget.PopupMenu;
 
-TemplatePopUpMenu(This template, Activity activity, View anchorView) {
-	PopupMenu popup = new PopupMenu(activity, anchorView, Gravity.END);
+TemplatePopUpMenu(This templateCard, View anchorView) {
+	PopupMenu popup = new PopupMenu(templateCard.CONTEXT, anchorView, Gravity.END);
 	Menu popupMenu = popup.getMenu();
 	/* Add options to the dropdown list */
     This TemplatePopUp = object();
@@ -26,7 +26,7 @@ TemplatePopUpMenu(This template, Activity activity, View anchorView) {
             , "Delete Gesture"
             , new Runnable() {
                 run() {
-                    notSupported("Delete Gesture", "lib/ui/card/TemplatePopUpMenu.bsh");
+                    templateCard.handleCard.removeTemplate(templateCard.getGestureName());
                 }
             }
         },
@@ -53,7 +53,7 @@ TemplatePopUpMenu(This template, Activity activity, View anchorView) {
         MenuItem menuItem = popupMenu.add(0, menu.id, i, menu.title);
         menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
-                menu.onClick.run();
+                templateCard.CONTEXT.runOnUiThread(menu.onClick);
                 return true;
             }
         });

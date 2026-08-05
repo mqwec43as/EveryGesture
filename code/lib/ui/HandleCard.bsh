@@ -1,4 +1,6 @@
 importCommands("lib.ui.card");
+importCommands("lib.ui.handle");
+importCommands("lib.ui.add");
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textview.MaterialTextView;
@@ -37,13 +39,35 @@ import com.google.android.material.chip.Chip;
 import android.view.GestureDetector;
 import java.util.Collections;
 import android.graphics.PorterDuff;
+import android.widget.ListView;
+import android.widget.BaseAdapter;
+import android.content.res.ColorStateList;
 
 HandleCard(This main, This handle) {
+
 	Context CONTEXT = main.activity;
 	final This TOP = this;
 	This every = main.every;
 	This tm = ThemeManager(CONTEXT);
 	tm.setTheme(every.themeId);
+
+	Res.Card.Template.BACKGROUND_COLOR = tm.color("colorSurfaceContainerHigh");
+	Res.Card.Template.TITLE_COLOR = tm.color("colorOnSurface");
+	Res.Card.Template.SUBTITLE_COLOR = tm.color("colorOnSurfaceVariant");
+	Res.Card.Template.ICON_COLOR = tm.color("colorPrimary");
+	Res.Card.Template.BACKGROUND_RADIUS = tm.dp(24);
+	Res.Card.Template.BACKGROUND_RADIUS_ACTIVE = tm.dp(24);
+	Res.Card.Template.PADDING = tm.dp(16);
+
+	Res.Card.Snapshot.CONTAINER_WIDTH = 254;
+	Res.Card.Snapshot.BACKGROUND_RADIUS = tm.dp(16);
+	Res.Card.Snapshot.BACKGROUND_COLOR = tm.color("colorSurface");
+	Res.Card.Snapshot.RIGHT_MARGIN = tm.dp(16);
+	Res.Card.Snapshot.BOTTOM_MARGIN = 8;
+	Res.Card.Snapshot.RADIUS = tm.dp(16);
+	Res.Card.Snapshot.MARGIN = 5;
+	Res.Card.Snapshot.PADDING = tm.dp(16);
+
 	This drawDialog;
 	This topGesture;
 	This config = handle.config;
@@ -51,13 +75,16 @@ HandleCard(This main, This handle) {
 	Map templateCards = new HashMap();
 	This snapshotManager;
 	MaterialSwitch handleSwitch;
+	BaseAdapter adapter;
+	List finalGestureList = new ArrayList();
+	This handleTemplatesActivity;
 
 	dp(int value) {
 		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, CONTEXT.getResources().getDisplayMetrics());
 	}
 
 	This Actions = every.Actions != null ? every.Actions : Actions();
-	// Theme-aware handle card styling
+	/* Theme-aware handle card styling. */
 	Res.Card.HANDLE_NAME_TEXT_SIZE = 24;
 	Res.Card.PADDING = dp(8);
 	Res.Card.HANDLE_NAME_COLOR = tm.color("colorOnSurface");
@@ -82,7 +109,7 @@ HandleCard(This main, This handle) {
 			} catch (Exception e) {
 				log("Error: " + e.getMessage(), "ERROR", TOP);
 			}
-			
+
 		}
 	};
 
@@ -94,27 +121,25 @@ HandleCard(This main, This handle) {
 	cardBgRoot.setCornerRadius(Res.Card.HANDLE_RADIUS);
 	cardRoot.setBackground(cardBgRoot);
 	LinearLayout.LayoutParams cardRootLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-// 	cardRootLp.setMargins(Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING);
-// 	cardRoot.setPadding(Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING, Res.Card.PADDING);
 	cardRoot.setLayoutParams(cardRootLp);
 
 	LinearLayout cardContent = new LinearLayout(CONTEXT);
 	cardContent.setOrientation(LinearLayout.VERTICAL);
 	cardContent.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-	
-	// Top row: title + switch and action chips
+
+	/* Top row: title + switch and action chips. */
 	LinearLayout topRow = new LinearLayout(CONTEXT);
 	topRow.setOrientation(LinearLayout.VERTICAL);
 	LinearLayout.LayoutParams topLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	topRow.setLayoutParams(topLp);
 	topRow.setMinimumHeight(Res.Card.HEADER_HEIGHT);
 	topRow.setPadding(Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING, Res.Card.TOP_ROW_PADDING);
-	
+
 	GradientDrawable shape = new GradientDrawable();
-    shape.setShape(GradientDrawable.RECTANGLE);
-    shape.setColor(Res.Card.Handle.TOP_ROW_BACKGROUND_COLOR);
-    shape.setCornerRadius(Res.Card.Handle.TOP_ROW_RADIUS); 
-    topRow.setBackground(shape);
+	shape.setShape(GradientDrawable.RECTANGLE);
+	shape.setColor(Res.Card.Handle.TOP_ROW_BACKGROUND_COLOR);
+	shape.setCornerRadius(Res.Card.Handle.TOP_ROW_RADIUS);
+	topRow.setBackground(shape);
 
 	showDrawDialog() {
 		if (drawDialog == null) {
@@ -123,13 +148,10 @@ HandleCard(This main, This handle) {
 		drawDialog.show();
 	}
 
+
 	topListener() {
 		onSingleTapConfirmed() {
-			if (gestureListContainer.getVisibility() == View.GONE) {
-				showGestureList();
-			} else {
-				hideGestureList();
-			}
+			showHandleTemplatesActivity();
 		}
 
 		onLongPress() {
@@ -145,7 +167,7 @@ HandleCard(This main, This handle) {
 	RelativeLayout titleRow = new RelativeLayout(CONTEXT);
 	titleRow.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-	// Handle name
+	/* Handle name. */
 	TextView handleTV = new TextView(CONTEXT);
 	handleTV.setText(config.handleName);
 	handleTV.setTextSize(Res.Card.HANDLE_NAME_TEXT_SIZE);
@@ -156,7 +178,7 @@ HandleCard(This main, This handle) {
 	handleParams.addRule(RelativeLayout.CENTER_VERTICAL);
 	titleRow.addView(handleTV, handleParams);
 
-	// Handle switch
+	/* Handle switch. */
 	handleSwitch = new MaterialSwitch(CONTEXT);
 	handleSwitch.setText("");
 	int switchPadding = 12;
@@ -179,7 +201,7 @@ HandleCard(This main, This handle) {
 	titleRow.addView(handleSwitch, handleSwitchParams);
 
 	LinearLayout chipRow = new LinearLayout(CONTEXT);
-	chipRow.setOrientation(LinearLayout.HORIZONTAL);
+	// chipRow.setOrientation(LinearLayout.VERTICAL);
 	LinearLayout.LayoutParams chipRowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	chipRowParams.topMargin = dp(4);
 	chipRow.setLayoutParams(chipRowParams);
@@ -188,7 +210,8 @@ HandleCard(This main, This handle) {
 	ChipGroup handleActionChips = new ChipGroup(CONTEXT);
 	LinearLayout.LayoutParams chipGroupParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	handleActionChips.setLayoutParams(chipGroupParams);
-	handleActionChips.setSingleLine(true);
+	handleActionChips.setSingleLine(false);
+	handleActionChips.setChipSpacingVertical(tm.dp(-8));
 	chipRow.addView(handleActionChips);
 
 	createActionChip(String label, String startIconPath, Runnable action) {
@@ -202,7 +225,6 @@ HandleCard(This main, This handle) {
 			}
 		});
 
-		// chip.setChipIconTint(chip.getChipIconTint());
 		ColorStateList color = ColorStateList.valueOf(tm.color("colorOnSurface"));
 		chip.setChipIconTint(color);
 
@@ -247,6 +269,15 @@ HandleCard(This main, This handle) {
 					HandleEdit(TOP);
 				}
 			}
+		},
+		{
+			"Edit Rules",
+			"main/tasks.svg",
+			new Runnable() {
+				run() {
+					showHandleTemplatesActivity();
+				}
+			}
 		}
 	};
 
@@ -261,17 +292,7 @@ HandleCard(This main, This handle) {
 	topRow.addView(titleRow);
 	topRow.addView(chipRow);
 
-	// Expandable container (initially hidden)
-	final LinearLayout gestureListContainer = new LinearLayout(CONTEXT);
-	gestureListContainer.setOrientation(1);
-	gestureListContainer.setVisibility(View.GONE);
-	LinearLayout.LayoutParams gestureListParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-	// gestureListParams.setMargins(Res.Card.Snapshot.MARGIN, 0, Res.Card.Snapshot.MARGIN, 0);
-	gestureListContainer.setLayoutParams(gestureListParams);
-
-	
 	cardContent.addView(topRow);
-	cardContent.addView(gestureListContainer);
 	cardRoot.addView(cardContent);
 
 	addSpacer(View target) {
@@ -290,54 +311,26 @@ HandleCard(This main, This handle) {
 		}
 	}
 
+	notifyChanged() {
+		if (handleTemplatesActivity != null) handleTemplatesActivity.notifyChanged();
+	}
+
 	refreshGestureList() {
-		library.load();
-		List oldGestures = new ArrayList(templateCards.keySet());
-		Set gestureNames = library.getGestureEntries();
-		if (gestureNames == null && config.rules instanceof Map) {
-			gestureNames = ((Map) config.rules).keySet();
-		}
-
-		// for oldGestures that are not found in gestureNames push to missing
-		if (!oldGestures.isEmpty()) {
-			for (int i = 0; i < oldGestures.size(); i++) {
-				String gestureName = (String) oldGestures.get(i);
-				if (!gestureNames.contains(gestureName)) {
-					This card = templateCards.get(gestureName);
-					gestureListContainer.removeView(card.getView());
-					templateCards.remove(gestureName);
-				}
-			}
-		}
-
-
-		if (gestureNames != null) {
-			List missing = new ArrayList();
-			ArrayList sortedGestures = new ArrayList(gestureNames);
-			sortedGestures.sort(String.CASE_INSENSITIVE_ORDER);
-			Iterator it = sortedGestures.iterator();
-			while (it.hasNext()) {
-				String gestureName = it.next();
-				if (templateCards.get(gestureName) != null) {
-					continue;
-				} else {
-					This gestureCard = TemplateCard(TOP, handle.config, gestureName);
-					LinearLayout.LayoutParams params = gestureCard.getView().getLayoutParams();
-					params.setMargins(0, tm.dp(4), 0, 0);
-					gestureCard.getView().setLayoutParams(params);
-					gestureListContainer.addView(gestureCard.getView());
-					templateCards.put(gestureName, gestureCard);
-				} 
-			}
-		}
-	}
-	showGestureList() {
-		gestureListContainer.setVisibility(View.VISIBLE);
-		refreshGestureList();
+		if (handleTemplatesActivity != null) handleTemplatesActivity.refreshGestureList();
 	}
 
-	hideGestureList() {
-		gestureListContainer.setVisibility(View.GONE);
+	showHandleTemplatesActivity() {
+		try {
+			if (handleTemplatesActivity == null) {
+				handleTemplatesActivity = HandleTemplatesActivity(TOP);
+				handleTemplatesActivity.show();
+			} else {
+				handleTemplatesActivity.show();
+			}
+		} catch (Exception e) {
+			log("Error: " + e.getMessage(), "ERROR", TOP);
+			tasker.showToast(e.getMessage(), "Error showing dialog");
+		}
 	}
 
 	getView() {
@@ -345,11 +338,10 @@ HandleCard(This main, This handle) {
 	}
 
 	removeTemplate(String name) {
+		config.deleteGesture(name);
 		This card = templateCards.get(name);
-		if (card != null) {
-			gestureListContainer.removeView(card.getView());
-			templateCards.remove(name);
-		}
+		if (card != null) templateCards.remove(name);
+		refreshGestureList();
 	}
 
 	getSnapshotDrawable(String templateName) {
@@ -359,19 +351,10 @@ HandleCard(This main, This handle) {
 		return null;
 	}
 
-	showAddActionForTemplate(String templateName) {
-		if (templateCards.isEmpty()) {
-			refreshGestureList();
-		}
-		if (templateCards.get(templateName) != null) {
-			templateCards.get(templateName).addAction();
-		}
-	}
-
 	showAddActionDialog() {
 		addListener() {
 			onSuccess(Map selected) {
-				showAddActionForTemplate((String) selected.get("title"));
+				addNewAction(TOP, (String) selected.get("title"));
 			}
 			return this;
 		}
@@ -382,4 +365,5 @@ HandleCard(This main, This handle) {
 	}
 
 	return this;
+
 }

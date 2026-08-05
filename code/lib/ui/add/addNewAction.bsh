@@ -1,0 +1,36 @@
+importCommands("lib.ui");
+import bsh.This;
+
+void addNewAction(This handleCard, String gestureName) {
+    This config = handleCard.config;
+	Map map = new HashMap();
+	listener() {
+		onSave(Map result) {
+			if (result == null) {
+				tasker.showToast("Canceled", "Info");
+				return;
+			}
+			boolean hasType = result.containsKey("type");
+			boolean hasLength = result.containsKey("length");
+			boolean hasCommand = result.containsKey("command");
+			if (!hasType && !hasCommand) {
+				tasker.showToast("Missing fields", "Error");
+				return;
+			}
+			String type = result.get("type");
+			if (config.hasAtleastOneRule(gestureName, type) && !hasLength) {
+				tasker.showToast("Missing length because one or more rules already exist", "Error");
+				return;
+			}
+			if (!config.hasRule(gestureName, type)) {
+				config.addRule(gestureName, type, result);
+				handleCard.refreshGestureList();
+			} else {
+				tasker.showToast("Rule already exists please use edit", "Error");
+			}
+		}
+		onCancel() {}
+		return this;
+	}
+	ActionPicker(map, listener());
+}

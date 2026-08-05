@@ -14,7 +14,7 @@ deleteActionDialog(This templateCard) {
 
     List itemList = new ArrayList();
     for (Map action : actionList) {
-        String title = Actions.getDisplayText(action);
+        String title = Actions.getDisplayText(action, false);
         String type = action.get("type");
         action.remove("type");
         String length = action.containsKey("length") ? action.get("length") + " px" : null;

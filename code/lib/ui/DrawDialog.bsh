@@ -581,11 +581,7 @@ DrawDialog(This handleCard) {
 			onSuccess(List selecteds) {
 				List deleted = new ArrayList();
 				for (Map item: selecteds) {
-					library.load();
 					String name = item.get("title");
-					deleted.add(name);
-					library.removeEntry(name);
-					library.save();
 					handleCard.removeTemplate(name);
 				}
 				library.load();

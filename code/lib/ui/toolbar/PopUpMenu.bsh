@@ -19,8 +19,12 @@ PopUpMenu(Activity activity, View anchorView) {
     This Popup = object();
     Popup.REPO_LINK = (int) 201;
     Popup.REFRESH_LIST = (int) 202;
-    Popup.DISCLAIMER = (int) 203;
-    String REPO_URL = "https://github.com/mqwec43as/EveryGesture";
+    Popup.REPORT_ISSUE = (int) 203;
+    This every = tasker.getJavaVariable("everyGesture");
+    String repo = every.updateManager.repo;
+    String owner = every.updateManager.owner;
+    String REPO_URL = "https://github.com/" + owner + "/" + repo;
+    String ISSUE_URL = REPO_URL + "/issues/new?template=bug_report.md";
 
     Object[][] menus = new Object[][] {
         {
@@ -28,7 +32,7 @@ PopUpMenu(Activity activity, View anchorView) {
             , "Source code"
             , new Runnable() {
                 run() {
-                    tasker.showToast("Opening Source Code");
+                    showToast("Opening Source Code");
                     browseUrl(REPO_URL);
                 }
             }
@@ -47,12 +51,14 @@ PopUpMenu(Activity activity, View anchorView) {
                     every.execute(refresh);
                 }
             }
-        },{
-            Popup.DISCLAIMER
-            , "Disclaimer"
+        },
+        {
+            Popup.REPORT_ISSUE
+            , "Report Issue"
             , new Runnable() {
                 run() {
-                    notSupported("Disclaimer", "lib/ui/toolbar/PopUpMenu.bsh");
+                    showToast("Opening Issue Url");
+                    browseUrl(ISSUE_URL);
                 }
             }
         }
