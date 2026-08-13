@@ -1,0 +1,376 @@
+import android.view.accessibility.AccessibilityNodeInfo;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import java.lang.StringBuilder;
+import java.lang.String;
+import java.lang.Object;
+import java.lang.Integer;
+import android.accessibilityservice.AccessibilityService;
+/*───────────────────────────────────────────────────────────────
+    UiReader()
+    **Scripted Object for Optimized Sequential Node Tree Parsing**
+
+    Returns:
+    - This (Scripted Object Instance)
+───────────────────────────────────────────────────────────────*/
+UiReader() {
+
+	/* Bitwise Filter Flags */
+	final int FLAG_DEFAULT = 1 << 0; /* Extract all nodes (default behavior) */
+	final int FLAG_SKIP_NO_TEXT = 1 << 1; /* Skip nodes that do not contain text/content description */
+	final int FLAG_TEXT_ONLY = 1 << 2; /* Output only the 'text' string key and omit 'default' and 'textid' */
+	final int FLAG_SKIP_NO_ID = 1 << 3; /* Skip nodes that do not have a resource ID */
+	AccessibilityService allySvc;
+	/*───────────────────────────────────────────────────────────────
+	    getService()
+	    **Retrieves and Validates Tasker's Accessibility Service**
+
+	    Returns:
+	    - AccessibilityService instance if running.
+
+	    Example:
+	    AccessibilityService service = reader.getService();
+	───────────────────────────────────────────────────────────────*/
+	getService() {
+		if (allySvc != null) return allySvc;
+		allySvc = tasker.getAccessibilityService();
+		if (allySvc == null) {
+			throw new JavaCodeException("Accessibility Service is not running.");
+		}
+		return allySvc;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    getText(AccessibilityNodeInfo node)
+	    **Extracts Text from an AccessibilityNodeInfo**
+
+	    Arguments:
+	    - node → AccessibilityNodeInfo object to inspect.
+
+	    Returns:
+	    - String text content or null.
+
+	    Example:
+	    String text = reader.getText(node);
+	───────────────────────────────────────────────────────────────*/
+	getText(AccessibilityNodeInfo node) {
+		if (node == null) return null;
+
+		Object textObject = node.getText();
+
+		if (textObject != null) {
+			if (textObject instanceof CharSequence) {
+				String text = textObject.toString().trim();
+				if (text.length() > 0) return text;
+			}
+
+			if (textObject instanceof AccessibilityNodeInfo) {
+				String nestedText = getText((AccessibilityNodeInfo) textObject);
+				if (nestedText != null) return nestedText;
+			}
+		}
+
+		CharSequence contentDesc = node.getContentDescription();
+		if (contentDesc != null) {
+			String text = contentDesc.toString().trim();
+			if (text.length() > 0) return text;
+		}
+
+		return null;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    readByText(String text)
+	    **Finds Accessibility Nodes matching target text and formats output**
+
+	    Arguments:
+	    - text → Target text string to match.
+
+	    Returns:
+	    - Map containing formatted extraction outputs for matched nodes.
+
+	    Example:
+	    Map result = reader.readByText("Settings");
+	───────────────────────────────────────────────────────────────*/
+	readByText(String text) {
+		return readByText(text, FLAG_DEFAULT);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    readByText(String text, int flags)
+	    **Finds Accessibility Nodes matching text with custom flags**
+
+	    Arguments:
+	    - text → Target text string to match.
+	    - flags → Combination of bitwise filter flags.
+
+	    Returns:
+	    - Map containing formatted extraction outputs for matched nodes.
+
+	    Example:
+	    Map result = reader.readByText("Settings", reader.FLAG_TEXT_ONLY);
+	───────────────────────────────────────────────────────────────*/
+	readByText(String text, int flags) {
+		List nodes = findByText(text);
+		return processNodes(nodes, flags);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    readById(String viewId)
+	    **Finds Accessibility Nodes matching target view ID and formats output**
+
+	    Arguments:
+	    - viewId → Fully qualified resource ID string.
+
+	    Returns:
+	    - Map containing formatted extraction outputs for matched nodes.
+
+	    Example:
+	    Map result = reader.readById("com.android.settings:id/title");
+	───────────────────────────────────────────────────────────────*/
+	readById(String viewId) {
+		return readById(viewId, FLAG_DEFAULT);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    readById(String viewId, int flags)
+	    **Finds Accessibility Nodes matching view ID with custom flags**
+
+	    Arguments:
+	    - viewId → Fully qualified resource ID string.
+	    - flags → Combination of bitwise filter flags.
+
+	    Returns:
+	    - Map containing formatted extraction outputs for matched nodes.
+
+	    Example:
+	    Map result = reader.readById("com.android.settings:id/title", reader.FLAG_SKIP_NO_TEXT);
+	───────────────────────────────────────────────────────────────*/
+	readById(String viewId, int flags) {
+		List nodes = findById(viewId);
+		return processNodes(nodes, flags);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    findByText(String text)
+	    **Finds Accessibility Nodes matching target text directly**
+
+	    Arguments:
+	    - text → Target text string to match.
+
+	    Returns:
+	    - List of matching AccessibilityNodeInfo elements or null.
+
+	    Example:
+	    List nodes = reader.findByText("Cancel");
+	───────────────────────────────────────────────────────────────*/
+	findByText(String text) {
+		AccessibilityNodeInfo rootNode = getService().getRootInActiveWindow();
+		if (rootNode == null) {
+			return null;
+		}
+
+		return rootNode.findAccessibilityNodeInfosByText(text);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    findById(String viewId)
+	    **Finds Accessibility Nodes matching target view ID directly**
+
+	    Arguments:
+	    - viewId → Fully qualified resource ID string.
+
+	    Returns:
+	    - List of matching AccessibilityNodeInfo elements or null.
+
+	    Example:
+	    List nodes = reader.findById("com.app:id/button");
+	───────────────────────────────────────────────────────────────*/
+	findById(String viewId) {
+		AccessibilityNodeInfo rootNode = getService().getRootInActiveWindow();
+		if (rootNode == null) {
+			return null;
+		}
+
+		return rootNode.findAccessibilityNodeInfosByViewId(viewId);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    processNodes(List nodes, int flags)
+	    **Helper logic to process node lists into standardized map**
+
+	    Arguments:
+	    - nodes → List of AccessibilityNodeInfo items to parse.
+	    - flags → Bitwise options.
+
+	    Returns:
+	    - Map containing parsed accessibility outputs.
+
+	    Example:
+	    Map result = reader.processNodes(nodeList, reader.FLAG_DEFAULT);
+	───────────────────────────────────────────────────────────────*/
+	processNodes(List nodes, int flags) {
+		boolean skipNoText = (flags & FLAG_SKIP_NO_TEXT) != 0;
+		boolean skipNoId = (flags & FLAG_SKIP_NO_ID) != 0;
+		boolean textOnly = (flags & FLAG_TEXT_ONLY) != 0;
+
+		StringBuilder defaultStringBuilder = textOnly ? null : new StringBuilder();
+		StringBuilder textStringBuilder = new StringBuilder();
+		Map textIdMap = textOnly ? null : new HashMap();
+		Map classIndexMap = textOnly ? null : new HashMap();
+
+		boolean firstEntry = true;
+
+		if (nodes != null) {
+			for (int i = 0; i < nodes.size(); i++) {
+				AccessibilityNodeInfo node = (AccessibilityNodeInfo) nodes.get(i);
+				if (node == null) continue;
+
+				String resourceName = node.getViewIdResourceName();
+				boolean hasResourceId = (resourceName != null);
+
+				if (skipNoId && !hasResourceId) continue;
+
+				if (skipNoText) {
+					CharSequence rawTxt = node.getText();
+					CharSequence rawDesc = node.getContentDescription();
+
+					boolean rawTxtEmpty = (rawTxt == null || rawTxt.toString().trim().length() == 0);
+					boolean rawDescEmpty = (rawDesc == null || rawDesc.toString().trim().length() == 0);
+
+					if (rawTxtEmpty && rawDescEmpty) continue;
+				}
+
+				String extractedText = getText(node);
+				boolean hasExtractedText = (extractedText != null);
+
+				if (skipNoText && !hasExtractedText) continue;
+
+				if (hasResourceId || hasExtractedText) {
+
+					if (textOnly) {
+						if (hasExtractedText) {
+							if (!firstEntry) textStringBuilder.append("\n\n");
+							textStringBuilder.append(extractedText);
+							firstEntry = false;
+						}
+						continue;
+					}
+
+					String className = node.getClassName();
+					String mapKey;
+
+					if (hasResourceId) {
+						mapKey = resourceName;
+					} else {
+						if (className == null) className = "NoClassName";
+
+						int currentClassCount;
+						Integer boxedCount = (Integer) classIndexMap.get(className);
+						if (boxedCount != null) {
+							currentClassCount = boxedCount.intValue() + 1;
+						} else {
+							currentClassCount = 1;
+						}
+
+						classIndexMap.put(className, new Integer(currentClassCount));
+						mapKey = className + "$" + currentClassCount;
+					}
+
+					textIdMap.put(mapKey, hasResourceId ? resourceName : "");
+
+					if (!firstEntry) {
+						defaultStringBuilder.append("\n\n");
+						textStringBuilder.append("\n\n");
+					}
+
+					defaultStringBuilder.append("[").append(mapKey).append("]\n");
+
+					if (hasExtractedText) {
+						defaultStringBuilder.append(extractedText);
+						textStringBuilder.append(extractedText);
+					}
+
+					firstEntry = false;
+				}
+			}
+		}
+		This result = object();
+		result.text = textStringBuilder.toString() + "\n";
+
+		if (!textOnly) {
+			result.defaultText = defaultStringBuilder != null ? defaultStringBuilder.toString() + "\n" : "";
+			result.textid = textIdMap != null ? textIdMap : new HashMap();
+		}
+
+		return result;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    read()
+	    **Reads Node Tree with FLAG_DEFAULT**
+
+	    Returns:
+	    - Map containing default extraction outputs.
+
+	    Example:
+	    Map data = reader.read();
+	───────────────────────────────────────────────────────────────*/
+	read() {
+		return read(FLAG_DEFAULT, null);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    read(int flags)
+	    **Reads Node Tree with Bitwise Flags and active root window**
+
+	    Arguments:
+	    - flags → Bitwise options.
+
+	    Returns:
+	    - Map containing extracted outputs.
+
+	    Example:
+	    Map data = reader.read(reader.FLAG_SKIP_NO_TEXT);
+	───────────────────────────────────────────────────────────────*/
+	read(int flags) {
+		return read(flags, null);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	    read(int flags, AccessibilityNodeInfo customRoot)
+	    **Extracts Accessibility Data with Bitwise Flag Options**
+
+	    Arguments:
+	    - flags → Bitwise options.
+	    - customRoot → Explicit root node to search from.
+
+	    Returns:
+	    - Map containing parsed accessibility data.
+
+	    Example:
+	    Map data = reader.read(reader.FLAG_DEFAULT, rootNode);
+	───────────────────────────────────────────────────────────────*/
+	read(int flags, AccessibilityNodeInfo customRoot) {
+
+		AccessibilityNodeInfo targetNode = customRoot;
+		if (targetNode == null) {
+			targetNode = getService().getRootInActiveWindow();
+		}
+
+		if (targetNode == null) {
+			throw new JavaCodeException("Could not retrieve root accessibility node.");
+		}
+
+		List root = getService().getChildrenRecursive(targetNode);
+		if (root == null || root == void) {
+			throw new JavaCodeException("Could not retrieve accessibility nodes.");
+		}
+
+		return processNodes(root, flags);
+	}
+
+	return this;
+}

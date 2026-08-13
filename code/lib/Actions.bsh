@@ -111,6 +111,12 @@ Actions() {
 			"Controls Wifi with Shizuku.",
 			"toggleWifi",
 			"{0} Wifi"
+		},
+		{
+			"Screen Event",
+			"Read screen and fire assigned events or commands with global variables",
+			"screenInfo",
+			"Trigger screen event"
 		}
 	};
 

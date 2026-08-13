@@ -9,6 +9,7 @@ importCommands("lib.misc");
 importCommands("lib.activity");
 importCommands("lib.ui");
 importCommands("lib.shizuku");
+importCommands("lib.actions.ui");
 
 import bsh.This;
 import java.io.File;
@@ -312,6 +313,9 @@ This updateManager = UpdateManager();
 updateManager.directoryPath = MAIN_DIRECTORY;
 every.namespace.setVariable("updateManager", updateManager, false);
 
+This uiReader = UiReader();
+every.namespace.setVariable("uiReader", uiReader, false);
+
 This Actions = Actions();
 Runnable refreshList = new Runnable() {
 	public void run() {
@@ -344,31 +348,7 @@ tasker.sendCommand(command);
 // every.removeAll();
 
 
-String sampleScript = """import bsh.This;
-import bsh.Variable;
-
-Variable[] vars = this.namespace.getDeclaredVariables();
-This every = tasker.getJavaVariable("everyGesture");
-String title = "Evaluate Variable List";
-List itemList = new ArrayList();
-int maximumText = 100;
-float dimAmount = 0.5f;
-int themeId = every.themeId;
-boolean sort = true;
-
-for (Variable var: vars) {
-	Map item = new HashMap();
-	String name = var.getName();
-	Object value = this.namespace.getVariable(name);
-	String valueString = value == null ? "null" : value.toString();
-	valueString = valueString.length() > maximumText ? valueString.substring(0, maximumText) + "..." : valueString;
-	String type = value.getClass().getCanonicalName();
-	item.put("title", name);
-	item.put("subtitle", type + "\n		" + valueString);
-	itemList.add(item);
-}
-
-This dialog = ListDialog(this);
-dialog.show();""";
+String sampleScript = """
+InspectVariablesDialog(this);""";
 
 writeFile(sampleScript, MAIN_DIRECTORY + "/scripts/Inspect Variable List in Evaluate actions.java");

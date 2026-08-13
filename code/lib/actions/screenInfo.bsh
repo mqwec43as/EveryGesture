@@ -1,5 +1,5 @@
 importCommands("lib.misc");
-
+importCommands("lib");
 import bsh.This;
 import bsh.NameSpace;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -7,60 +7,102 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 screenInfo() {
-    This TOP = this;
-    This every = tasker.getJavaVariable("everyGesture");
-    getRoot() {
-        return context.getAccessibilityService().getRootInActiveWindow();
-    }
+	setNameSpace(this.caller.namespace);
+	This TOP = this;
 
-    Map recent = getUsageEvents();
-    String handle = gesture{"handle"};
-    boolean type = gesture{"longPress"};
-    String name = gesture{"name"};
-    String command = handle + "=:=" + name +  "=:=" + type;
-    AccessibilityNodeInfo root = getRoot();
-    String packageName = root.getPackageName();
-    String className = recent{"className"};
-    String appName = every.packageManager.getLabel(packageName);
-    
-    set() {
-        NameSpace callerSpace = this.caller.namespace;
-        String[] varNames = TOP.namespace.getVariableNames();
-        for (String varName: varNames) {
-            if (varName.equals("TOP")) continue;
-            callerSpace.setVariable(varName, TOP.namespace.getVariable(varName), false);
-        }
-    }
+	getRoot() {
+		return tasker.getAccessibilityService().getRootInActiveWindow();
+	}
 
-    // * FIRING EVENTS
+	Map recent = getUsageEvents();
+	String command = handleName + "=:=" + name + "=:=" + longPress;
+	AccessibilityNodeInfo root;
+	String packageName = recent { "packageName" };
+	This reader = every.uiReader;
+	String className = recent { "className" };
+	String appName = every.packageManager.getLabel(packageName);
+	This helper = handle.config.helper;
+	String text;
+	This read;
+	set() {
+		NameSpace callerSpace = this.caller.namespace;
+		helper.toNameSpace(callerSpace, TOP.namespace, true);
+	}
 
-    // * Check if the package name matches
-    isPackageMatch(String targetPackage) {
-        Pattern pattern = Pattern.compile(targetPackage);
-        Matcher matcher = pattern.matcher(packageName);
-        return matcher.matches(); 
-    }
+	isPackageMatch(String targetPackage) {
+		Pattern pattern = Pattern.compile(targetPackage);
+		Matcher matcher = pattern.matcher(packageName);
+		return matcher.matches();
+	}
 
-    runEvents(This event) {
-        Runnable runnable = new Runnable() {
-            run() {
-                try {
-                    boolean isTriggered = true;
-                    // * Check only when packageName is specified
-                    if (TOP.packageName != void) isTriggered = isPackageMatch(TOP.packageName);
+	read() {
+		if (read == null) read = reader.read();
+		NameSpace callerSpace = this.caller.namespace;
+		helper.toNameSpace(callerSpace, read.namespace, true);
+	}
 
-                    if (isTriggered) event.onTrigger(TOP);
-                } catch (e) {
-                    log("Error: " + e.getMessage());
-                }
-            }
-        };
-        every.executor.execute(runnable);
-    }
+	readByText(String text) {
+		if (read == null) read = reader.readByText(text, reader.FLAG_SKIP_NO_TEXT);
+		NameSpace callerSpace = this.caller.namespace;
+		helper.toNameSpace(callerSpace, read.namespace, true);
+	}
 
-    List events = new ArrayList(every.screenInfoEvents.values());
-    if (events.isEmpty()) return;
-    for (This event: events) {
-        runEvents(event);
-    }
+	readById(String id) {
+		if (read == null) read = reader.readById(id, reader.FLAG_SKIP_NO_TEXT);
+		NameSpace callerSpace = this.caller.namespace;
+		helper.toNameSpace(callerSpace, read.namespace, true);
+	}
+
+	setVar(String name, String value) {
+		String prefixHandle = "EG_";
+		tasker.setVariable(prefixHandle + name, value);
+	}
+
+	fireDefault() {
+		if (read == null) read();
+		setVar("AppActivity", className);
+		setVar("Text", read.text);
+		setVar("TextResource", read.defaultText);
+		setVar("AppPackage", packageName);
+		setVar("AppName", appName);
+		String newCom = command + "=:=" +  tasker.toJson(action, true);
+		tasker.sendCommand(newCom);
+	}
+
+	runEvents(This event) {
+		Runnable runnable = new Runnable() {
+			run() {
+				try {
+					if (longPress) {
+						event.onLongPress(TOP);
+					} else {
+						event.onRelease(TOP);
+					}
+				} catch (e) {
+					tasker.showToast(e.getMessage());
+				}
+			}
+		};
+		every.executor.execute(runnable);
+	}
+
+	List events = new ArrayList(every.screenInfoEvents.values());
+	if (events.isEmpty()) {
+		fireDefault();
+		return;
+	}
+
+	boolean hasFired;
+	for (This event: events) {
+		boolean isFiring = true;
+		if (event.packageName != void) {
+			isFiring = isPackageMatch(event.packageName);
+		}
+		if (isFiring) {
+			if (!hasFired) hasFired = true;
+			runEvents(event);
+		}
+	}
+	
+	if (!hasFired) fireDefault();
 }
