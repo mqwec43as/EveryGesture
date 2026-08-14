@@ -16,7 +16,6 @@ screenInfo() {
 
 	Map recent = getUsageEvents();
 	String command = handleName + "=:=" + name + "=:=" + longPress;
-	AccessibilityNodeInfo root;
 	String packageName = recent { "packageName" };
 	This reader = every.uiReader;
 	String className = recent { "className" };

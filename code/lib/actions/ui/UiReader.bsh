@@ -279,7 +279,7 @@ UiReader() {
 						mapKey = className + "$" + currentClassCount;
 					}
 
-					textIdMap.put(mapKey, hasResourceId ? resourceName : "");
+					textIdMap.put(mapKey, extractedText);
 
 					if (!firstEntry) {
 						defaultStringBuilder.append("\n\n");

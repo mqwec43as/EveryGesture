@@ -12,17 +12,17 @@ import java.util.Iterator;
   Recursively converts a JSONArray and its nested structures.
   ───────────────────────────────────────────────────────────────*/
 public List toList(JSONArray array) {
-    List list = new ArrayList();
-    for (int i = 0; i < array.length(); i++) {
-        Object value = array.get(i);
-        if (value instanceof JSONArray) {
-            value = toList((JSONArray) value);
-        } else if (value instanceof JSONObject) {
-            value = toMap((JSONObject) value);
-        }
-        list.add(value);
-    }
-    return list;
+	List list = new ArrayList();
+	for (int i = 0; i < array.length(); i++) {
+		Object value = array.get(i);
+		if (value instanceof JSONArray) {
+			value = toList((JSONArray) value);
+		} else if (value instanceof JSONObject) {
+			value = toMap((JSONObject) value);
+		}
+		list.add(value);
+	}
+	return list;
 }
 
 
@@ -32,21 +32,34 @@ public List toList(JSONArray array) {
   Recursively converts a JSONObject and its nested structures.
   ───────────────────────────────────────────────────────────────*/
 public Map toMap(JSONObject jsonobj) {
-    Map map = new HashMap();
-    Iterator keys = jsonobj.keys();
-    while (keys.hasNext()) {
-        String key = (String) keys.next();
-        Object value = jsonobj.get(key);
-        if (value instanceof JSONArray) {
-            value = toList((JSONArray) value);
-        } else if (value instanceof JSONObject) {
-            value = toMap((JSONObject) value);
-        }
-        map.put(key, value);
-    }
-    return map;
+	Map map = new HashMap();
+	Iterator keys = jsonobj.keys();
+	while (keys.hasNext()) {
+		String key = (String) keys.next();
+		Object value = jsonobj.get(key);
+		if (value instanceof JSONArray) {
+			value = toList((JSONArray) value);
+		} else if (value instanceof JSONObject) {
+			value = toMap((JSONObject) value);
+		}
+		map.put(key, value);
+	}
+	return map;
 }
 
 public Map toMap(String jsonStr) {
 	return toMap(new JSONObject(jsonStr));
+}
+
+/*───────────────────────────────────────────────────────────────
+  Recursively iterates over target variables and converts nested
+  This objects to Maps.
+  ───────────────────────────────────────────────────────────────*/
+public Map toMap(This target) {
+	Map map = new HashMap();
+	for (String name: target.variables) {
+		Object value = target.namespace.getVariable(name);
+		if (!(value instanceof This)) map { name } = value;
+	}
+	return map;
 }

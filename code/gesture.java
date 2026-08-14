@@ -35,13 +35,13 @@ import android.gesture.Gesture;
 
 everyGesture() {
 
-    ToggleAction() {
-        final String TURN_OFF = "off";
-        final String TURN_ON = "on";
-        final String TOGGLE = "toggle";
-        return this;
-    }
-    final This ToggleAction = ToggleAction();
+	ToggleAction() {
+		final String TURN_OFF = "off";
+		final String TURN_ON = "on";
+		final String TOGGLE = "toggle";
+		return this;
+	}
+	final This ToggleAction = ToggleAction();
 
 	Map handles = new HashMap();
 	boolean isReceiverRegistered = false;
@@ -82,7 +82,7 @@ everyGesture() {
 		customThreadFactory, // Thread factory
 		new ThreadPoolExecutor.DiscardOldestPolicy()
 	);
-	
+
 	/* ScheduledThreadPoolExecutor manages core size via constructor */
 	ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(2, customThreadFactory);
 	scheduledExecutor.setMaximumPoolSize(4);
@@ -130,8 +130,8 @@ everyGesture() {
 		List keys = new ArrayList(handles.keySet());
 		for (String key: keys) {
 			try {
-			remove(key);
-			} catch(e) {
+				remove(key);
+			} catch (e) {
 				log(e.getMessage(), "ERROR");
 			}
 		}
@@ -166,7 +166,7 @@ everyGesture() {
 			log("Failed to unregister orientation receiver. " + e.getMessage(), "ERROR");
 		}
 	}
-	
+
 	addByName(String handleName, boolean create) {
 		This config = config = Config(handleName);
 		config.load();
@@ -233,15 +233,15 @@ everyGesture() {
 	setInfoEvent(String name, This infoEvent) {
 		screenInfoEvents.put(name, infoEvent);
 	}
-	
+
 	deleteInfoEvent(String name) {
-	 	screenInfoEvents.remove(name);
+		screenInfoEvents.remove(name);
 	}
 
 	openMainActivity() {
 		Main();
 	}
-	
+
 	execute(Runnable task) {
 		return executor.execute(task);
 	}
@@ -288,9 +288,10 @@ everyGesture() {
 	reload() {
 		source(MAIN_DIRECTORY + "/gesture.java");
 	}
-	
+
 	return this;
 }
+
 File handle = new File(MAIN_DIRECTORY + "/handles");
 if (!handle.exists() || !handle.isDirectory()) handle.mkdirs();
 File script = new File(MAIN_DIRECTORY + "/scripts");
@@ -298,10 +299,10 @@ if (!script.exists() || !script.isDirectory()) script.mkdirs();
 
 String varName = "everyGesture";
 
-if (tasker.getJavaVariable(varName) != null ) {
+if (tasker.getJavaVariable(varName) != null) {
 	This old = tasker.getJavaVariable(varName);
 	old.removeAll();
-	old.unregister(); 
+	old.unregister();
 	if (old.scheduledExecutor != void) old.scheduledExecutor.shutdownNow();
 	if (old.executor != void) old.executor.shutdownNow();
 }
@@ -327,7 +328,7 @@ every.namespace.setVariable("Actions", Actions, false);
 
 This inspector = MethodInspector(this);
 inspector.read();
-every.namespace.setVariable("inspector",inspector, false );
+every.namespace.setVariable("inspector", inspector, false);
 
 This packageManager = PackageManager();
 every.namespace.setVariable("packageManager", packageManager, false);
@@ -348,7 +349,7 @@ tasker.sendCommand(command);
 // every.removeAll();
 
 
-String sampleScript = """
+String sampleScript ="""
 InspectVariablesDialog(this);""";
 
 writeFile(sampleScript, MAIN_DIRECTORY + "/scripts/Inspect Variable List in Evaluate actions.java");
