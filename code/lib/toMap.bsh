@@ -51,6 +51,15 @@ public Map toMap(String jsonStr) {
 	return toMap(new JSONObject(jsonStr));
 }
 
+hasThis(List list) {
+	if (list == null) return false;
+	if (list.size() == 0) return false;
+	for (Object obj: list) {
+		if (obj instanceof This) return true;
+	}
+	return false;
+}
+
 /*───────────────────────────────────────────────────────────────
   Recursively iterates over target variables and converts nested
   This objects to Maps.
@@ -59,7 +68,13 @@ public Map toMap(This target) {
 	Map map = new HashMap();
 	for (String name: target.variables) {
 		Object value = target.namespace.getVariable(name);
-		if (!(value instanceof This)) map { name } = value;
+		tasker.setJavaVariable("lastName", name);
+		if (!(value instanceof This)) {
+			if (value instanceof List) {
+				if (hasThis(value)) continue;
+			}
+			map { name } = value;
+		}
 	}
 	return map;
 }
