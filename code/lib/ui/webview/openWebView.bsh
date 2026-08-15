@@ -1,0 +1,185 @@
+importCommands("lib.ui");
+
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
+import android.app.Activity;
+import android.view.ViewGroup;
+import android.view.View;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebSettings;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.widget.LinearLayout;
+import android.widget.Button;
+import android.graphics.Color;
+import java.util.function.Consumer;
+import java.util.concurrent.Callable;
+import android.view.Gravity;
+
+openWebView(String targetUrl) {
+	Activity CONTEXT;
+	WebView webView;
+    This every = tasker.getJavaVariable("everyGesture");
+
+	/*───────────────────────────────────────────────────────────────
+	    Safely destroys the WebView to release resources and finishes
+	    the temporary activity context.
+	    
+	    Arguments:
+	    - webView → WebView instance to destroy.
+
+	    Return:
+	───────────────────────────────────────────────────────────────*/
+	cleanupWebView() {
+        if (webView != null) {
+            // 1. Clear clients to prevent leaks
+            webView.setWebViewClient(null);
+            webView.setWebChromeClient(null);
+
+            // 2. Clear browser data
+            webView.clearCache(true);
+            webView.clearHistory();
+            webView.clearFormData();
+            webView.clearSslPreferences();
+
+            // 3. Stop active operations
+            webView.stopLoading();
+            webView.loadUrl("about:blank");
+
+            // 4. Detach from UI layout hierarchy
+            if (webView.getParent() != null) {
+                ((ViewGroup) webView.getParent()).removeView(webView);
+            }
+            webView.removeAllViews();
+
+            // 5. Permanently destroy the instance
+            webView.destroy();
+            webView = null;
+        }
+	}
+
+	finish() {
+		cleanupWebView();
+		if (CONTEXT != null) {
+			CONTEXT.finish();
+		}
+		tasker.showToast("Close WebView");
+	}
+
+	final String finalUrl = targetUrl;
+	Consumer webViewConsumer = new java.util.function.Consumer() {
+		accept(Object activityObj) {
+			CONTEXT = (Activity) activityObj;
+            This tm = ThemeManager(CONTEXT);
+            if (every.useDarkTheme) tm.setThemeDark();
+            else tm.setThemeLight();
+			/* Root layout holding toolbar and WebView. */
+			LinearLayout rootLayout = new LinearLayout(CONTEXT);
+			rootLayout.setOrientation(LinearLayout.VERTICAL);
+			rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				ViewGroup.LayoutParams.MATCH_PARENT
+			));
+
+			/* Top toolbar layout. */
+			LinearLayout toolbar = new LinearLayout(CONTEXT);
+			toolbar.setOrientation(LinearLayout.HORIZONTAL);
+			toolbar.setBackgroundColor(tm.color("colorSurface"));
+			toolbar.setPadding(16, 16, 16, 16);
+
+            LinearLayout.LayoutParams toolbarParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            // params.gravity = Gravity.CENTER;
+			toolbar.setLayoutParams(toolbarParams);
+
+			/* Close button for toolbar. */
+			Button closeButton = new Button(CONTEXT);
+			closeButton.setText("Close");
+			closeButton.setTextColor(tm.color("colorOnSurface"));
+			closeButton.setBackgroundColor(Color.TRANSPARENT);
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            buttonParams.gravity = Gravity.CENTER;
+			toolbar.addView(closeButton,buttonParams);
+
+			/* Initialize WebView with standard settings. */
+			webView = new WebView(CONTEXT);
+			webView.setLayoutParams(new LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				0,
+				1.0f
+			));
+
+			WebSettings settings = webView.getSettings();
+			settings.setJavaScriptEnabled(true);
+			settings.setDomStorageEnabled(true);
+			settings.setBuiltInZoomControls(true);
+			settings.setDisplayZoomControls(false);
+
+			/* Implement WebViewClient using tasker.implementClass to intercept link loading. */
+			ClassImplementation clientHandler = new ClassImplementation() {
+				run(Callable superCaller, String methodName, Object[] args) {
+					switch (methodName) {
+						default:
+							return superCaller.call();
+					}
+				}
+			};
+
+			WebViewClient customClient = (WebViewClient) tasker.implementClass(WebViewClient.class, clientHandler);
+			webView.setWebViewClient(customClient);
+
+			webView.loadUrl(finalUrl);
+			rootLayout.addView(webView);
+			rootLayout.addView(toolbar);
+
+			/* Implement Dialog using tasker.implementClass to handle back navigation. */
+			Class[] dialogTypes = new Class[] { android.content.Context.class, int.class };
+			Object[] dialogArgs = new Object[] { CONTEXT, android.R.style.Theme_Black_NoTitleBar_Fullscreen };
+
+			ClassImplementation dialogHandler = new ClassImplementation() {
+				run(Callable superCaller, String methodName, Object[] args) {
+					switch (methodName) {
+						case "onBackPressed": {
+							if (webView.canGoBack()) {
+								webView.goBack();
+							} else {
+								superCaller.call();
+							}
+							return null;
+						}
+						default:
+							return superCaller.call();
+					}
+				}
+			};
+
+			final Dialog dialog = (Dialog) tasker.implementClass(Dialog.class, dialogHandler, dialogTypes, dialogArgs);
+			dialog.setContentView(rootLayout);
+
+			/* Set close button click listener to dismiss dialog right away. */
+			closeButton.setOnClickListener(new View.OnClickListener() {
+				onClick(View v) {
+					dialog.dismiss();
+				}
+			});
+
+			/* Clean up resources and finish context when dialog is dismissed. */
+			dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+				onDismiss(DialogInterface d) {
+					finish();
+				}
+			});
+
+			dialog.show();
+		}
+	};
+
+	/* Launch temporary activity and block until user closes the screen. */
+	tasker.doWithActivity(webViewConsumer);
+
+
+
+}
+

@@ -7,6 +7,7 @@ import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
 import bsh.This;
 import bsh.BshMethod;
 import android.app.Activity;
+import io.reactivex.Observable;
 
 SimpleActivityMonitor(Activity activity, This listener) {
     final This TOP = this;
@@ -26,7 +27,7 @@ SimpleActivityMonitor(Activity activity, This listener) {
     if (!hasActivityMonitor) return this;
 
 	Disposable disposable;
-	ObservableHide events;
+	Observable events;
     ActivityLifecycleEvent lastEvent;
 	long createTime;
 	List history = new ArrayList();

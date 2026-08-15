@@ -1,5 +1,6 @@
-importCommands("lib.ui.actions");
+importCommands("lib.actions");
 importCommands("lib.ui.misc");
+importCommands("lib.ui.webview");
 
 import android.app.Activity;
 import android.view.Menu;
@@ -15,31 +16,70 @@ import android.widget.PopupMenu;
 PopUpMenu(Activity activity, View anchorView) {
 	PopupMenu popup = new PopupMenu(activity, anchorView, Gravity.END);
 	Menu popupMenu = popup.getMenu();
-	/* Add options to the dropdown list */
-    This Popup = object();
-    Popup.REPO_LINK = (int) 201;
-    Popup.REFRESH_LIST = (int) 202;
-    Popup.REPORT_ISSUE = (int) 203;
     This every = tasker.getJavaVariable("everyGesture");
     String repo = every.updateManager.repo;
     String owner = every.updateManager.owner;
-    String REPO_URL = "https://github.com/" + owner + "/" + repo;
-    String ISSUE_URL = REPO_URL + "/issues/new?template=bug_report.md";
+    final String REPO_URL = "https://github.com/" + owner + "/" + repo;
+    
+    Popup() {
+        final int LEARN = (int) 201;
+        final String LEARN_TEXT = "Learn More";
+        final String LEARN_URL = REPO_URL + "#features";
 
+        final int REFRESH_LIST = (int) 202;
+        final String REFRESH_LIST_TEXT = "Refresh Action List";
+
+        final int REPORT_ISSUE = (int) 203;
+        final String REPORT_ISSUE_TEXT = "Report Issue";
+        final String ISSUE_URL = REPO_URL + "/issues/new?template=bug_report.md";
+
+        final int TOGGLE_HELPER_MODE = (int) 204;
+        final String TOGGLE_HELPER_MODE_TEXT = "Toggle Helper Mode";
+
+        final int TOGGLE_DARK_THEME = (int) 205;
+        final String TOGGLE_DARK_THEME_TEXT = "Toggle Dark Theme";
+
+        final int FAQ_AND_DOCUMENTATION = (int) 206;
+        final String FAQ_AND_DOCUMENTATION_TEXT = "FAQ and Documentation";
+        final String FAQ_AND_DOCUMENTATION_URL = REPO_URL + "#faq--documentation";
+
+        return this;
+    }
+
+    This Popup = Popup();
+
+    // * Menu Items
     Object[][] menus = new Object[][] {
         {
-            Popup.REPO_LINK
-            , "Source code"
+            Popup.LEARN
+            , Popup.LEARN_TEXT
             , new Runnable() {
                 run() {
-                    showToast("Opening Source Code");
-                    browseUrl(REPO_URL);
+                    openWebView(Popup.LEARN_URL);
+                }
+            }
+        },
+        {
+            Popup.FAQ_AND_DOCUMENTATION
+            , Popup.FAQ_AND_DOCUMENTATION_TEXT
+            , new Runnable() {
+                run() {
+                    openWebView(Popup.FAQ_AND_DOCUMENTATION_URL);
+                }
+            }
+        },
+        {
+            Popup.REPORT_ISSUE
+            , Popup.REPORT_ISSUE_TEXT
+            , new Runnable() {
+                run() {
+                    browseUrl(Popup.ISSUE_URL);
                 }
             }
         },
         {
             Popup.REFRESH_LIST
-            , "Refresh Action List"
+            , Popup.REFRESH_LIST_TEXT
             , new Runnable() {
                 run() {
                     This every = tasker.getJavaVariable("everyGesture");
@@ -53,12 +93,22 @@ PopUpMenu(Activity activity, View anchorView) {
             }
         },
         {
-            Popup.REPORT_ISSUE
-            , "Report Issue"
+            Popup.TOGGLE_HELPER_MODE
+            , Popup.TOGGLE_HELPER_MODE_TEXT
             , new Runnable() {
                 run() {
-                    showToast("Opening Issue Url");
-                    browseUrl(ISSUE_URL);
+                    everyAction(every.Actions.TOGGLE_HELPER_MODE);
+                }
+            }
+        },
+        {
+            Popup.TOGGLE_DARK_THEME
+            , Popup.TOGGLE_DARK_THEME_TEXT
+            , new Runnable() {
+                run() {
+                    every.useDarkTheme = !every.useDarkTheme;
+                    activity.finish();
+                    everyAction(every.Actions.OPEN_MAIN_ACTIVITY);
                 }
             }
         }

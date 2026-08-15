@@ -165,8 +165,7 @@ HandleTemplatesActivity(This handleCard) {
 	HandleTemplatesSheet() {
 		String title = config.handleName;
 		List inputList = new ArrayList();
-		int themeId;
-		if (handleCard.tm.lastThemeId != 0) themeId = handleCard.tm.lastThemeId;
+		int themeId = every.themeId;
 		// boolean isScrollable = true;
 		getViews(Context activityContext) {
 			CONTEXT = activityContext;

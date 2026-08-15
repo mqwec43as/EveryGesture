@@ -8,6 +8,9 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 Actions() {
+	final String TOGGLE_HELPER_MODE = "helper";
+	final String OPEN_MAIN_ACTIVITY = "activity";
+
 	This every = tasker.getJavaVariable("everyGesture");
 	static final Object[][] mainActions = new Object[][] {
 		{
@@ -273,13 +276,13 @@ Actions() {
 		{
 			"Command Helper",
 			"Toggle helper mode to input Tasker Command pattern",
-			"helper",
+			TOGGLE_HELPER_MODE,
 			"Toggle helper mode"
 		},
 		{
 			"Main Activity",
 			"Open main activity",
-			"activity",
+			OPEN_MAIN_ACTIVITY,
 			"Open main activity"
 		}
 	};

@@ -3,7 +3,7 @@ importCommands("lib.ui");
 everyAction(String everyCommand) {
 	This every = tasker.getJavaVariable("everyGesture");
 	switch (everyCommand) {
-		case "helper":
+		case every.Actions.TOGGLE_HELPER_MODE:
 			every.inHelperMode = !every.inHelperMode;
 			String name = "the same gesture";
 			if (rule != void) name = rule.name;
@@ -14,7 +14,7 @@ everyAction(String everyCommand) {
 				tasker.showToast("Gesture helper is turned off");
 			}
 			break;
-		case "activity":
+		case every.Actions.OPEN_MAIN_ACTIVITY:
 			Main();
 			break;
 	}
