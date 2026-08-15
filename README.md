@@ -89,4 +89,6 @@ handle.setInteractable(false);
 </div>
 
 1. [What is everyGesture?](/readme/What%20is%20everyGesture.md)
-
+2. [How to intercept default command](/readme/React%20to%20default%20command.md)
+3. [What is screen event and how to use it](/readme/What%20is%20Screen%20Event%20and%20how%20to%20react%20to%20it.md)
+4. [Configure profile to intercept command or screen event in Helper Mode](/readme/Helper%20mode.md)
