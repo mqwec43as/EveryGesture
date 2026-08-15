@@ -216,7 +216,7 @@ DrawDialog(This handleCard) {
 
 	recognize() {
 		// ! Make sure library is loaded from the same instances
-		library.load();
+		engine.library.load();
 		nameInput.setHelperText(" ");
 		engine.ignoreMinimumScore = false;
 		This recognized = engine.recognize(gesture);
@@ -226,8 +226,8 @@ DrawDialog(This handleCard) {
 			return;
 		}
 		double score = Math.round(recognized.score * 100.0) / 100.0;
-		List gestures = library.getGestures(recognized.name);
-		int size = library.getGestureEntries().size();
+		List gestures = engine.library.getGestures(recognized.name);
+		int size = engine.library.getGestureEntries().size();
 		setGhost(gestures);
 		updateInfoChips(recognized);
 	}
@@ -297,8 +297,8 @@ DrawDialog(This handleCard) {
 	}
 
 	updateInfoChips(This result) {
-		library.load();
-		int size = library.getGestureEntries().size();
+		engine.library.load();
+		int size = engine.library.getGestureEntries().size();
 		float length;
 		String name;
 		double score;
@@ -556,13 +556,13 @@ DrawDialog(This handleCard) {
 
 	addGesture() {
 		closeKeyboard(activity);
-		library.load();
+		engine.library.load();
 		String gestureName = nameEdit.getText().toString();
 		int strokeCount = gesture.getStrokes().size();
 		if (gestureName.length() > 0 && strokeCount > 0) {
-			library.addGesture(gestureName, gesture);
-			library.save();
-			library.load();
+			engine.library.addGesture(gestureName, gesture);
+			engine.library.save();
+			engine.library.load();
 			handleCard.refreshGestureList();
 			nameEdit.setText("");
 			resetInfoChips();
@@ -584,7 +584,7 @@ DrawDialog(This handleCard) {
 					String name = item.get("title");
 					handleCard.removeTemplate(name);
 				}
-				library.load();
+				engine.library.load();
 				clearCanvas();
 				handleCard.refreshGestureList();
 				tasker.showToast(String.join("\n", deleted), "Deleted");
