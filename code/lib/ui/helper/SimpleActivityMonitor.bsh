@@ -3,8 +3,10 @@ import io.reactivex.schedulers.Schedulers;
 import io.reactivex.internal.operators.observable.ObservableHide;
 import android.app.Activity;
 import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
+import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
 import bsh.This;
 import bsh.BshMethod;
+import android.app.Activity;
 
 SimpleActivityMonitor(Activity activity, This listener) {
     final This TOP = this;
@@ -15,7 +17,14 @@ SimpleActivityMonitor(Activity activity, This listener) {
     final String STOP = "Stopped";
     final String DESTROY = "Destroyed";
     final String USER_LEAVE_HINT = "UserLeaveHint";
-    
+
+    boolean hasActivityMonitor;
+    try {
+        JavaCodeSceneV2Helper.class.getMethod("getActivityLifecycleEvents", new Class[] { Activity.class });
+        hasActivityMonitor = true;
+    } catch (e) {}
+    if (!hasActivityMonitor) return this;
+
 	Disposable disposable;
 	ObservableHide events;
     ActivityLifecycleEvent lastEvent;
