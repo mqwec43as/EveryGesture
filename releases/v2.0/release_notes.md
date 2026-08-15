@@ -7,3 +7,6 @@
 ### Changed
 1. Always refers to the engine in draw dialog.
 2. Improve template cards list by using adapter view.
+
+### Fixed
+1. Crash when lifecycle monitor is not available.
