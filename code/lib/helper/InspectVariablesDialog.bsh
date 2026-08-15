@@ -1,36 +1,206 @@
 importCommands("lib.ui");
+importCommands("lib.misc");
 
 import bsh.This;
 import bsh.Variable;
 import bsh.NameSpace;
+import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
+import android.os.Bundle;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
+/*───────────────────────────────────────────────────────────────
+    Creates and shows a ListDialog containing all declared variables 
+    from a given BeanShell NameSpace context.
+
+    Arguments:
+    - space → BeanShell NameSpace instance containing target variables.
+
+    Return:
+───────────────────────────────────────────────────────────────*/
 InspectVariablesDialog(NameSpace space) {
-	Variable[] vars = space.getDeclaredVariables();
-	This every = every == void ? tasker.getJavaVariable("everyGesture") : every;
-	String title = space.name + " Variables #" + vars.length;
-	List itemList = new ArrayList();
-	int maximumText = 100;
-	float dimAmount = 0.5f;
-	int themeId = every.themeId;
-	boolean sort = true;
-	boolean showFilter = true;
+    /* Get all declared variables within the provided BeanShell namespace. */
+    Variable[] vars = space.getDeclaredVariables();
 
-	for (Variable var: vars) {
-		Map item = new HashMap();
-		String name = var.getName();
-		Object value = space.getVariable(name);
-		String valueString = value == null ? "null" : value.toString();
-		valueString = valueString.length() > maximumText ? valueString.substring(0, maximumText) + "..." : valueString;
-		String type = value.getClass().getCanonicalName();
-		item.put("title", name);
-		item.put("subtitle", type + "\n		" + valueString);
-		itemList.add(item);
+    /* Fallback to get global Tasker variable "everyGesture" if 'every' is undefined. */
+    This every = every == void ? tasker.getJavaVariable("everyGesture") : every;
+    String title = space.name + " Variables #" + vars.length;
+    List itemList = new ArrayList();
+    int maximumText = 500;
+    float dimAmount = 0.5f;
+    int themeId = every.themeId;
+    boolean sort = true;
+    boolean showFilter = true;
+
+    /* Iterate through each variable to extract details for the ListDialog UI. */
+    for (int i = 0; i < vars.length; i++) {
+        Variable var = vars[i];
+        Map item = new HashMap();
+        String name = var.getName();
+        Object value = space.getVariable(name);
+        String valueString = value == null ? "null" : value.toString();
+        
+        /* Truncate long variable values to keep the UI clean. */
+        valueString = valueString.length() > maximumText ? valueString.substring(0, maximumText) + "..." : valueString;
+        String type = value == null ? "null" : value.getClass().getCanonicalName();
+        
+        item.put("title", name);
+        item.put("subtitle", type + "\n     " + valueString);
+        itemList.add(item);
+    }
+
+	onSuccess(Map item) {
+		String key = item.get("title");
+		setClipboard(key);
+		tasker.showToast(key, "Copied to clipboard");
 	}
 
-	This dialog = ListDialog(this);
-	dialog.show();
+    /* Initialize and show the customized ListDialog UI. */
+    This dialog = ListDialog(this);
+    dialog.show();
 }
 
+/*───────────────────────────────────────────────────────────────
+    Overloaded wrapper method to create and show a ListDialog using 
+    a scripted object's 'This' instance.
+
+    Arguments:
+    - targetThis → BeanShell 'This' reference containing the target namespace.
+
+    Return:
+───────────────────────────────────────────────────────────────*/
 InspectVariablesDialog(This targetThis) {
-	InspectVariablesDialog(targetThis.namespace);
+    InspectVariablesDialog(targetThis.namespace);
+}
+
+import bsh.This;
+import bsh.Variable;
+import bsh.NameSpace;
+import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
+import android.os.Bundle;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
+import org.json.JSONObject;
+import org.json.JSONArray;
+
+/*───────────────────────────────────────────────────────────────
+    Extracts all possible top-level/nested keys from a JSON string 
+    or JSON structure and stores them as "%name.key" maps into 
+    the target list, using keyList to prevent duplicates.
+───────────────────────────────────────────────────────────────*/
+void extractJsonKeys(Object jsonInput, String baseName, List keyList, List targetList) {
+    if (jsonInput == null) return;
+    String strVal = jsonInput.toString().trim();
+    if (strVal.length() == 0) return;
+
+    try {
+        if (strVal.startsWith("{")) {
+            JSONObject jsonObject = new JSONObject(strVal);
+            Iterator keys = jsonObject.keys();
+            while (keys.hasNext()) {
+                String k = (String) keys.next();
+                String formattedKey = baseName + "." + k;
+                
+                if (!keyList.contains(formattedKey)) {
+                    keyList.add(formattedKey);
+                    
+                    Object val = jsonObject.get(k);
+                    String valString = val == null ? "null" : val.toString();
+                    
+                    Map item = new HashMap();
+                    item.put("title", formattedKey);
+                    item.put("subtitle", valString);
+                    targetList.add(item);
+                }
+                
+                extractJsonKeys(jsonObject.get(k), baseName, keyList, targetList);
+            }
+        } else if (strVal.startsWith("[")) {
+            JSONArray jsonArray = new JSONArray(strVal);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                extractJsonKeys(jsonArray.get(i), baseName, keyList, targetList);
+            }
+        }
+    } catch (Exception e) {
+        /* Not valid JSON or failed to parse, safely ignore */
+    }
+}
+
+/*───────────────────────────────────────────────────────────────
+    Creates and shows a ListDialog containing all task variables
+    retrieved from JavaCodeSceneV2Helper.getTaskVariables().
+    If variable values contain valid JSON, extracts keys and adds 
+    them as %name.key items along with their respective values 
+    to the item list without duplicate key entries.
+
+    Arguments:
+    taskery → JavaCodeSceneV2Helper instance.
+
+    Return:
+───────────────────────────────────────────────────────────────*/
+InspectVariablesDialog(JavaCodeSceneV2Helper taskery) {
+    /* Fetch all current Tasker task variables as a Bundle. */
+    Bundle vars = taskery.getTaskVariables();
+
+    /* Fallback to get global Tasker variable "everyGesture" if 'every' is undefined. */
+    This every = every == void ? tasker.getJavaVariable("everyGesture") : every;
+    String title = "Task Variables #" + vars.size();
+    List itemList = new ArrayList();
+    List keyList = new ArrayList();
+    List jsonItemList = new ArrayList();
+    int maximumText = 500;
+    float dimAmount = 0.5f;
+    int themeId = every.themeId;
+    boolean sort = true;
+    boolean showFilter = true;
+
+    /* Iterate through all Bundle keys to filter and process variable key-value pairs. */
+    Iterator keys = vars.keySet().iterator();
+    while (keys.hasNext()) {
+        String key = (String) keys.next();
+        
+        /* Skip internal array index/structured keys containing '#'. */
+        if (key.contains("#")) continue;
+        
+        Object value = vars.get(key);
+        Map item = new HashMap();
+        String valueString = value == null ? "null" : value.toString();
+        
+        /* Attempt to parse JSON and extract keys/values into intermediate list */
+        extractJsonKeys(value, key, keyList, jsonItemList);
+
+        /* Truncate long variable values to keep the UI clean. */
+        valueString = valueString.length() > maximumText ? valueString.substring(0, maximumText) + "..." : valueString;
+        
+        item.put("title", key);
+        item.put("subtitle", valueString);
+        itemList.add(item);
+    }
+
+    /* Append uniquely collected JSON key-value items into the final itemList */
+    for (int i = 0; i < jsonItemList.size(); i++) {
+        Map jsonItem = jsonItemList.get(i);
+        String subVal = jsonItem.get("subtitle");
+        
+        if (subVal != null && subVal.length() > maximumText) {
+            jsonItem.put("subtitle", subVal.substring(0, maximumText) + "...");
+        }
+        itemList.add(jsonItem);
+    }
+
+	onSuccess(Map item) {
+		String key =  item.get("title");
+		setClipboard(key);
+		tasker.showToast(key, "Copied to clipboard");
+	}
+
+    /* Initialize and show the customized ListDialog UI. */
+    This dialog = ListDialog(this);
+    dialog.show();
 }

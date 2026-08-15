@@ -1,0 +1,28 @@
+import android.content.Context;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+
+/*───────────────────────────────────────────────────────────────
+    Copies a string of text to the system clipboard.
+    
+    Arguments:
+    - text → The text string to set to the clipboard.
+
+    Return:
+    
+    Example:
+    setClipboard("Hello world!");
+───────────────────────────────────────────────────────────────*/
+void setClipboard(String text) {
+    if (text == null) {
+        return;
+    }
+    
+    ClipboardManager cm = context.getSystemService(Context.CLIPBOARD_SERVICE);
+    if (cm == null) {
+        return;
+    }
+
+    ClipData clip = ClipData.newPlainText("Tasker", text);
+    cm.setPrimaryClip(clip);
+}

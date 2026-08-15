@@ -10,6 +10,8 @@ importCommands("lib.activity");
 importCommands("lib.ui");
 importCommands("lib.shizuku");
 importCommands("lib.actions.ui");
+importCommands("lib.every");
+importCommands("lib.helper");
 
 import bsh.This;
 import java.io.File;
@@ -31,6 +33,8 @@ import java.util.Iterator;
 import java.util.concurrent.RunnableScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor.DelayedWorkQueue;
 import android.gesture.Gesture;
+import bsh.NameSpace;
+import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
 
 
 everyGesture() {
@@ -45,15 +49,18 @@ everyGesture() {
 
 	Map handles = new HashMap();
 	boolean isReceiverRegistered = false;
-	BroadcastReceiver orientationReceiver;
+	BroadcastReceiver orientationReceiver = createOrientationReceiver(handles);
 	String LOG_FILE = LOG_FILE;
 	String MAIN_DIRECTORY = MAIN_DIRECTORY;
 	This Actions;
 	This inspector;
 	This thisManager;
-	This packageManager;
-	This updateManager;
-	This userService;
+	This packageManager = PackageManager();
+	This updateManager = UpdateManager();
+	updateManager.directoryPath = MAIN_DIRECTORY;
+	This userService = UserServiceManager();
+	This helperModeManager = HelperModeManager();
+	This uiReader = UiReader();
 	boolean updatePreRelease;
 	This rule;
 	int themeId;
@@ -91,6 +98,23 @@ everyGesture() {
 	scheduledExecutor.setRemoveOnCancelPolicy(true);
 	scheduledExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
 
+	set() {
+		String script = "addClassPath(\"" + MAIN_DIRECTORY + "\");";
+		script +="\nimportCommands(\"lib\");";
+		File libDir = new File(MAIN_DIRECTORY + "/lib");
+		
+		// Import every directory in the lib directory
+		if (libDir.exists() && libDir.isDirectory()) {
+			File[] files = libDir.listFiles();
+			for (File file: files) {
+				if (file.isDirectory()) {
+					script += "\nimportCommands(\"lib." + file.getName() + "\");";
+				}
+			}
+		}
+		this.interpreter.eval(script);
+	}
+
 	add(This handle) {
 		handles.put(handle.config.handleName, handle);
 	}
@@ -120,7 +144,7 @@ everyGesture() {
 	getHandleNames() {
 		List list = new ArrayList();
 		Set names = handles.keySet();
-		for (String name : names) {
+		for (String name: names) {
 			list.add(name);
 		}
 		return list;
@@ -239,6 +263,7 @@ everyGesture() {
 	}
 
 	openMainActivity() {
+		set();
 		Main();
 	}
 
@@ -289,6 +314,28 @@ everyGesture() {
 		source(MAIN_DIRECTORY + "/gesture.java");
 	}
 
+	cleanResources() {
+		removeAll();
+		unregister();
+		scheduledExecutor.shutdownNow();
+		executor.shutdownNow();
+	}
+
+	inspectVariables(This targetThis) {
+		set();
+		InspectVariablesDialog(targetThis);
+	}
+
+	inspectVariables(NameSpace targetNameSpace) {
+		set();
+		InspectVariablesDialog(targetNameSpace);
+	}
+
+	inspectVariables(JavaCodeSceneV2Helper targetTasker) {
+		set();
+		InspectVariablesDialog(targetTasker);
+	}
+
 	return this;
 }
 
@@ -301,21 +348,26 @@ String varName = "everyGesture";
 
 if (tasker.getJavaVariable(varName) != null) {
 	This old = tasker.getJavaVariable(varName);
-	old.removeAll();
-	old.unregister();
-	if (old.scheduledExecutor != void) old.scheduledExecutor.shutdownNow();
-	if (old.executor != void) old.executor.shutdownNow();
+	try {
+		boolean hasClean = old.namespace.getMethod("cleanResources", new Class[] {});
+		if (!hasClean) throw new Exception("err");
+		old.cleanResources();
+		tasker.setJavaVariable(varName, null);
+	} catch (e) {
+		old.removeAll();
+		old.unregister();
+		old.scheduledExecutor.shutdownNow();
+		old.executor.shutdownNow();
+		tasker.setJavaVariable(varName, null);
+	}
 }
 
 This every = everyGesture();
 tasker.setJavaVariable(varName, every);
-
-This updateManager = UpdateManager();
-updateManager.directoryPath = MAIN_DIRECTORY;
-every.namespace.setVariable("updateManager", updateManager, false);
-
-This uiReader = UiReader();
-every.namespace.setVariable("uiReader", uiReader, false);
+every.auto(true);
+setVar(String name, Object value) {
+	every.namespace.setVariable(name, value, false);
+}
 
 This Actions = Actions();
 Runnable refreshList = new Runnable() {
@@ -324,30 +376,19 @@ Runnable refreshList = new Runnable() {
 	}
 };
 every.execute(refreshList);
-every.namespace.setVariable("Actions", Actions, false);
+setVar("Actions", Actions);
 
 This inspector = MethodInspector(this);
 inspector.read();
-every.namespace.setVariable("inspector", inspector, false);
+setVar("inspector", inspector);
 
-This packageManager = PackageManager();
-every.namespace.setVariable("packageManager", packageManager, false);
-
-receiver = createOrientationReceiver(every.handles);
-every.auto(true);
-every.namespace.setVariable("orientationReceiver", receiver, false);
 This manager = ThisManager(this);
-every.namespace.setVariable("thisManager", manager, false);
+setVar("thisManager", manager);
 manager.make("lib/actions/.*\\.bsh$", 2, false);
 every.THIS = this;
 
-This userService = UserServiceManager();
-every.namespace.setVariable("userService", userService, false);
-
 String command = "everyGesture=:=start";
 tasker.sendCommand(command);
-// every.removeAll();
-
 
 String sampleScript ="""
 InspectVariablesDialog(this);""";

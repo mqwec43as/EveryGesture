@@ -1,0 +1,87 @@
+importCommands("lib.misc");
+import bsh.This;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.app.ActivityManager;
+import android.content.Context;
+
+public This HelperModeManager() {
+    this.inHelperMode = true;
+
+    final String EDIT_ID = "net.dinglisch.android.taskerm:id/edittext";
+    final String ACTION_BAR = "android:id/action_bar";
+    final String VARIABLES_FORMAT = "%handle,%gesture,%longpress,%info";
+    final String EVENT_EDIT = "net.dinglisch.android.taskerm.EventEdit";
+    final String PACKAGE_NAME = context.getPackageName();
+    
+    getService() {
+        return tasker.getAccessibilityService();
+    }
+
+    getRoot() {
+        return getService().getRootInActiveWindow();
+    }
+
+    findId(AccessibilityNodeInfo root, String id, int index) {
+        List nodes = root.findAccessibilityNodeInfosByViewId(id); 
+        if (nodes.size() <= index) return null;
+        return nodes.get(index);
+    }
+
+    isInEventEdit() {
+        Map map = getUsageEvents();
+        String packageName = map.get("packageName");
+        String className = map.get("className");
+        if (PACKAGE_NAME.equals(packageName) && EVENT_EDIT.equals(className)) {
+            return true;
+        } else return false;
+    }
+
+    isInCommandEvent(AccessibilityNodeInfo root) {
+        AccessibilityNodeInfo node = findId(root, ACTION_BAR, 0);
+        if (node == null) return false;
+        String commandText = "Command";
+        List nodes = node.findAccessibilityNodeInfosByText(commandText);
+        if (nodes.size() > 0) return true;
+        return false;
+    }
+
+    setText(AccessibilityNodeInfo root, String id, int index, text) {
+        AccessibilityNodeInfo node = findId(root, id, index);
+        if (node == null) return;
+        Bundle args = new Bundle();
+        args.putString(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+        node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+        node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.getId());
+    }
+
+    fillCommandFormat(This recognized) {
+        if (!recognized.namespace.name.equals("Recognized")) {
+            throw new RuntimeException("Not a Recognized object");
+        }
+        if (!isInEventEdit()) return;
+        AccessibilityNodeInfo root = getRoot();
+        if (!isInCommandEvent(root)) return;
+        String format = recognized.defaultCommand + "=:=*";
+        setText(root, EDIT_ID, 0, format);
+        setText(root, EDIT_ID, 1, VARIABLES_FORMAT);
+    }
+
+    showInfo(This recognized) {
+		String message = "Gesture: " + recognized.name + "\nScore: " + recognized.score + "\nLength: " + recognized.length;
+		tasker.showToast(message, recognized.handleName);
+    }
+
+    help(This recognized) {
+        if (isInEventEdit()) {
+            try {
+                fillCommandFormat(recognized);
+            } catch(e) {
+                log(e.getMessage(), "ERROR");
+                tasker.showToast(e.getMessage(), "Can't fill command format");
+            }
+        }
+        showInfo(recognized);
+    }
+
+    return this;
+}

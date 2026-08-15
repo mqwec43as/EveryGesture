@@ -15,7 +15,6 @@ screenInfo() {
 	}
 
 	Map recent = getUsageEvents();
-	String command = handleName + "=:=" + name + "=:=" + longPress;
 	String packageName = recent { "packageName" };
 	This reader = every.uiReader;
 	String className = recent { "className" };
@@ -23,6 +22,7 @@ screenInfo() {
 	This helper = handle.config.helper;
 	String text;
 	This read;
+	
 	set() {
 		NameSpace callerSpace = this.caller.namespace;
 		helper.toNameSpace(callerSpace, TOP.namespace, true);
@@ -59,13 +59,17 @@ screenInfo() {
 
 	fireDefault() {
 		if (read == null) read();
+		helper.toNameSpace(TOP.namespace, read.namespace, true);
 		setVar("AppActivity", className);
 		setVar("Text", read.text);
 		setVar("TextResource", read.defaultText);
 		setVar("AppPackage", packageName);
 		setVar("AppName", appName);
-		String newCom = command + "=:=" +  tasker.toJson(action, true);
+		Map map = toMap(TOP);
+		String json = tasker.toJson(map, true);
+		String newCom = defaultCommand + "=:=" + json;
 		tasker.sendCommand(newCom);
+		tasker.setVariable("Every", json, true);
 	}
 
 	runEvents(This event) {

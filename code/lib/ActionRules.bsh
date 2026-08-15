@@ -76,6 +76,9 @@ ActionRules(This config) {
 		recognized.isTriggered = patternScore > minConfidence;
 		recognized.confidence = minConfidence;
 
+		// * Set default command
+		recognized.defaultCommand = "Every=:=" + recognized.handleName + "=:=" + recognized.name + "=:=" + recognized.longPress;
+
 		actionRules.sort(new Comparator() {
 			compare(Object o1, Object o2) {
 				// infinity default
@@ -113,7 +116,9 @@ ActionRules(This config) {
 		if (!rule.hasAction) {
 			command = "sendCommand";
 			boolean longPress = rule.longPress;
-			String commandText = rule.handleName + "=:=" + rule.name + "=:=" + longPress;
+			Map map = toMap(rule);
+			String json = tasker.toJson(map, true);
+			String commandText = rule.defaultCommand + "=:=" + json;
 			args.add(commandText);
 		} else {
 			Map actionMap = rule.action;
@@ -140,20 +145,28 @@ ActionRules(This config) {
 		};
 
 		run() {
+			// Todo: Add separate object to handle helper mode e.g EveryActionHelper
+			
+			// Check if in helper mode
 			if (every.inHelperMode) {
 				boolean everyAction;
 
+				// Check if every action
 				if (rule.hasAction) {
 					String command = rule.action.get("command");
 					if (command.startsWith("every")) everyAction = true;
 				}
 
+
+				/* 
+				 * Every action is exempted from helper mode
+				 ! Otherwise it's not possible to toggling
+				*/
 				if (!everyAction) {
-					String title = rule.handleName;
-					String message = "Gesture: " + rule.name + "\nScore: " + rule.score + "\nLength: " + rule.length;
-					tasker.showToast(message, title);
+					every.helperModeManager.help(rule);
 					return;
 				}
+
 			}
 
 			if (rule.isTriggered) {
