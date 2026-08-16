@@ -45,8 +45,22 @@ everyGesture() {
 		final String TOGGLE = "toggle";
 		return this;
 	}
+
 	final This ToggleAction = ToggleAction();
 
+	EventType() {
+		final int COMMAND = 0;
+		final int EVENT_BRIDGE = 1;
+		final int RELEASE = 0;
+		final int LONG_PRESS = 1;
+		return this;
+	}
+
+	final This EventType = EventType();
+
+	int EventMethod = EventType.COMMAND;
+	long EventDelay = 100;
+	
 	Map handles = new HashMap();
 	boolean isReceiverRegistered = false;
 	BroadcastReceiver orientationReceiver = createOrientationReceiver(handles);

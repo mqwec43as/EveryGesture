@@ -1,5 +1,6 @@
 importCommands("lib.misc");
 importCommands("lib");
+
 import bsh.This;
 import bsh.NameSpace;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -7,8 +8,22 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 screenInfo() {
+
 	setNameSpace(this.caller.namespace);
 	This TOP = this;
+
+	NameType() {
+		final String PREFIX = "EG_";
+		final String APP_ACTIVITY = "AppActivity";
+		final String TEXT = "Text";
+		final String TEXT_RESOURCE = "TextResource";
+		final String APP_PACKAGE = "AppPackage";
+		final String APP_NAME = "AppName";
+		final String EVENT_BRIDGE = "EventBridge";
+		return this;
+	}
+
+	final This NameType = NameType();
 
 	getRoot() {
 		return tasker.getAccessibilityService().getRootInActiveWindow();
@@ -22,7 +37,17 @@ screenInfo() {
 	This helper = handle.config.helper;
 	String text;
 	This read;
-	
+
+	setVar(String name, String value) {
+		tasker.setVariable(NameType.PREFIX + name, value, true);
+	}
+
+	setVar(NameType.APP_ACTIVITY, null);
+	setVar(NameType.APP_PACKAGE, null);
+	setVar(NameType.APP_NAME, null);
+	setVar(NameType.TEXT, null);
+	setVar(NameType.TEXT_RESOURCE, null);
+
 	set() {
 		NameSpace callerSpace = this.caller.namespace;
 		helper.toNameSpace(callerSpace, TOP.namespace, true);
@@ -52,24 +77,47 @@ screenInfo() {
 		helper.toNameSpace(callerSpace, read.namespace, true);
 	}
 
-	setVar(String name, String value) {
-		String prefixHandle = "EG_";
-		tasker.setVariable(prefixHandle + name, value);
+	fireCommand(String command) {
+		int eventMethod = every.EventMethod != void ? every.EventMethod : every.EventType.COMMAND;
+		switch (eventMethod) {
+			case every.EventType.COMMAND:
+				tasker.sendCommand(command);
+				break;
+			case every.EventType.EVENT_BRIDGE:
+				setVar(NameType.EVENT_BRIDGE, command);
+				break;
+			default:
+				// ! Bridge Event because there is command event fired quicker than variable set event
+				setVar(NameType.EVENT_BRIDGE, command);
+				break;
+		};
 	}
 
 	fireDefault() {
 		if (read == null) read();
 		helper.toNameSpace(TOP.namespace, read.namespace, true);
-		setVar("AppActivity", className);
-		setVar("Text", read.text);
-		setVar("TextResource", read.defaultText);
-		setVar("AppPackage", packageName);
-		setVar("AppName", appName);
+		setVar(NameType.APP_ACTIVITY, className);
+		setVar(NameType.TEXT, read.text);
+		setVar(NameType.TEXT_RESOURCE, read.defaultText);
+		setVar(NameType.APP_PACKAGE, packageName);
+		setVar(NameType.APP_NAME, appName);
+
 		Map map = toMap(TOP);
 		String json = tasker.toJson(map, true);
 		String newCom = defaultCommand + "=:=" + json;
-		tasker.sendCommand(newCom);
-		tasker.setVariable("Every", json, true);
+
+		long eventDelay = every.EventDelay != void ? every.EventDelay : 0;
+		Runnable runnable = new Runnable() {
+			run() {
+				fireCommand(newCom);
+			}
+		};
+
+		if (eventDelay > 0) {
+			every.schedule(runnable, eventDelay);
+		} else {
+			every.execute(runnable);
+		}
 	}
 
 	runEvents(This event) {
@@ -106,6 +154,6 @@ screenInfo() {
 			runEvents(event);
 		}
 	}
-	
+
 	if (!hasFired) fireDefault();
 }
