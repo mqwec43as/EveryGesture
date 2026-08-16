@@ -77,7 +77,8 @@ ActionRules(This config) {
 		recognized.confidence = minConfidence;
 
 		// * Set default command
-		recognized.defaultCommand = "Every=:=" + recognized.handleName + "=:=" + recognized.name + "=:=" + recognized.longPress;
+		String command = "Every=:=" + recognized.handleName + "=:=" + recognized.name + "=:=" + recognized.longPress;
+		recognized.defaultCommand = command.toLowerCase();
 
 		actionRules.sort(new Comparator() {
 			compare(Object o1, Object o2) {

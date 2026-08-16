@@ -166,7 +166,7 @@ InspectVariablesDialog(JavaCodeSceneV2Helper taskery) {
         String key = (String) keys.next();
         
         /* Skip internal array index/structured keys containing '#'. */
-        if (key.contains("#")) continue;
+        if (key.contains("#") || key.contains(".")) continue;
         
         Object value = vars.get(key);
         Map item = new HashMap();
@@ -187,7 +187,6 @@ InspectVariablesDialog(JavaCodeSceneV2Helper taskery) {
     for (int i = 0; i < jsonItemList.size(); i++) {
         Map jsonItem = jsonItemList.get(i);
         String subVal = jsonItem.get("subtitle");
-        
         if (subVal != null && subVal.length() > maximumText) {
             jsonItem.put("subtitle", subVal.substring(0, maximumText) + "...");
         }
