@@ -1,0 +1,75 @@
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import java.util.concurrent.ConcurrentHashMap;
+import android.content.Context;
+import android.os.IBinder;
+import java.lang.reflect.Method;
+
+ShizukuServiceManager() {
+
+	final String SHELL_PACKAGE_NAME = "com.android.shell";
+	final String SHELL_USER = "shell";
+	final Map services = new ConcurrentHashMap();
+	final Map ibinders = new ConcurrentHashMap();
+
+	/*───────────────────────────────────────────────────────────────
+	  Common Helper Methods
+	───────────────────────────────────────────────────────────────*/
+
+	/* Retrieves binder for a system service from Shizuku. */
+	IBinder getIBinder(String serviceName) {
+		IBinder binder;
+
+		if (ibinders.containsKey(serviceName)) {
+			binder = (IBinder) ibinders.get(serviceName);
+		} else {
+			binder = tasker.getShizukuService(serviceName);
+			if (binder != null) {
+				ibinders.put(serviceName, binder);
+			}
+		}
+
+		return binder;
+	}
+
+	/* Retrieves service for a system service from Shizuku. */
+	Object getService(String serviceName) {
+		IBinder binder = getIBinder(serviceName);
+		String descriptor = binder.getInterfaceDescriptor();
+		if (descriptor == null || descriptor.length() == 0) {
+			throw new JavaCodeException("Binder returned empty descriptor for service: " + serviceName);
+		}
+
+		Class stubClass = Class.forName(descriptor + "$Stub");
+		Method asInterfaceMethod = stubClass.getMethod("asInterface", new Class[] { IBinder.class });
+		
+		Object service;
+
+		try {
+			service = asInterfaceMethod.invoke(null, new Object[] { binder });
+		} catch (Exception e) {
+			throw new JavaCodeException("Failed to obtain service " + serviceName);
+		}
+
+		services.put(serviceName, service);
+		return service;
+	}
+
+	/* Checks if a system service exists from Shizuku. */
+	hasService(String serviceName) {
+		try {
+			getService(serviceName);
+			return true;
+		} catch (JavaCodeException e) {
+			return false;
+		}
+	}
+
+	/* Checks if a system service binder exists from Shizuku. */
+	isBinderAlive(String serviceName) {
+		IBinder binder = (IBinder) ibinders.get(serviceName);
+		if (binder == null) return false;
+		return binder.isBinderAlive();
+	}
+
+	return this;
+}

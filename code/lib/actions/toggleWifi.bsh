@@ -26,11 +26,10 @@ import bsh.This;
    - boolean status for CHECK_STATUS.
   ───────────────────────────────────────────────────────────────*/
 boolean toggleWifi(String toggleAction) {
-    This userService = every.userService;
-    String shellPackageName = "com.android.shell";
+    This shizukuManager = every.shizukuManager;
 
     getIWifiManager() {
-        return userService.getIWifiManager();
+        return shizukuManager.getService(Context.WIFI_SERVICE);
     }
 
     /*───────────────────────────────────────────────────────────────
@@ -42,11 +41,11 @@ boolean toggleWifi(String toggleAction) {
     }
 
     enableWifi() {
-        return getIWifiManager().setWifiEnabled(shellPackageName, true);
+        return getIWifiManager().setWifiEnabled(shizukuManager.SHELL_PACKAGE_NAME, true);
     }
 
     disableWifi() {
-        return getIWifiManager().setWifiEnabled(shellPackageName, false);
+        return getIWifiManager().setWifiEnabled(shizukuManager.SHELL_PACKAGE_NAME, false);
     }
 
 

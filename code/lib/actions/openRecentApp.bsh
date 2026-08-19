@@ -8,7 +8,7 @@ import android.app.ActivityManager.RecentTaskInfo;
 import android.content.Context;
 
 openRecentApp(int lastAppIndex) {
-	IActivityManager am = every.userService.getIActivityManager();
+	IActivityManager am = every.shizukuManager.getService(Context.ACTIVITY_SERVICE);
 	List recents = am.getRecentTasks(lastAppIndex + 1, ActivityManager.RECENT_IGNORE_UNAVAILABLE, 0).getList();
 	if (!recents.isEmpty()) {
 		RecentTaskInfo task = recents.getLast();

@@ -72,7 +72,7 @@ everyGesture() {
 	This packageManager = PackageManager();
 	This updateManager = UpdateManager();
 	updateManager.directoryPath = MAIN_DIRECTORY;
-	This userService = UserServiceManager();
+	This shizukuManager = ShizukuServiceManager();
 	This helperModeManager = HelperModeManager();
 	This uiReader = UiReader();
 	boolean updatePreRelease;
