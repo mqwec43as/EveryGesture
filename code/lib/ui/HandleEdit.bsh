@@ -84,7 +84,6 @@ HandleEdit(This handleCard) {
 		}
 
 		input.setInputType(type);
-		log("initialtext: " + initialtext + " type: " + type + " actual class: " + initialtext.getClass());
 		input.setTextWithClass(initialtext);
 		return input;
 	}

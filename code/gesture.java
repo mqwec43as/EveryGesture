@@ -39,6 +39,10 @@ import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
 
 everyGesture() {
 
+	/* ───────────────────────────────────────────────────────────────
+	 * Constants
+	───────────────────────────────────────────────────────────────*/
+
 	ToggleAction() {
 		final String TURN_OFF = "off";
 		final String TURN_ON = "on";
@@ -46,6 +50,7 @@ everyGesture() {
 		return this;
 	}
 
+	// * Constant for toggling action
 	final This ToggleAction = ToggleAction();
 
 	EventType() {
@@ -56,11 +61,14 @@ everyGesture() {
 		return this;
 	}
 
+	// * Constant for event type
 	final This EventType = EventType();
 
+	/* ───────────────────────────────────────────────────────────────
+	 * Variables
+	 ! Don't delete!
+	   ───────────────────────────────────────────────────────────────*/
 	int EventMethod = EventType.COMMAND;
-	long EventDelay = 100;
-	
 	Map handles = new HashMap();
 	boolean isReceiverRegistered = false;
 	BroadcastReceiver orientationReceiver = createOrientationReceiver(handles);
@@ -75,15 +83,26 @@ everyGesture() {
 	This shizukuManager = ShizukuServiceManager();
 	This helperModeManager = HelperModeManager();
 	This uiReader = UiReader();
-	boolean updatePreRelease;
+	Map screenInfoEvents = new HashMap();
 	This rule;
 	int themeId;
-	boolean useDarkTheme;
 	boolean inHelperMode;
 	Gesture lastGesture;
 	This latestAction;
+
+	/* ───────────────────────────────────────────────────────────────
+	 * Configuration
+	   ───────────────────────────────────────────────────────────────*/
+	// * Delay before triggering ScreenEvent
+	long EventDelay = 100;
+	// * Use dark theme for UI
+	boolean useDarkTheme;
+	// * Update uses pre-release or not
+	boolean updatePreRelease;
+	// * Maximum displayed action characters in the handle templates activity
 	int maxDisplayTextLength = 50;
-	Map screenInfoEvents = new HashMap();
+	// * Task maximum duration
+	long taskMaximumDuration = 40000;
 
 	ThreadFactory customThreadFactory = new ThreadFactory() {
 		private AtomicInteger count = new AtomicInteger(0);

@@ -1,7 +1,0 @@
-hasShizuku() {
-    boolean hasShizuku = tasker.isShizukuAvailable();
-    if (!hasShizuku) {
-        tasker.showToast("Shizuku is not available", "Error");
-    }
-    return hasShizuku;
-}

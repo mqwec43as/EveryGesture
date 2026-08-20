@@ -67,7 +67,6 @@ Handle(This config) {
 		This recognized;
 		This action;
 		ScheduledFutureTask futureTask;
-		long maximumDuration = 40000;
 		ScheduledFutureTask saveGuardFutureTask;
 		Runnable saveGuard = new Runnable() {
 			run() {
@@ -93,7 +92,7 @@ Handle(This config) {
 					every.latestAction = action;
 					if (action.isLongPress && action.hasInterval) {
 						futureTask = every.schedule(action.task, 0, action.interval);
-						saveGuardFutureTask = every.schedule(saveGuard, maximumDuration);
+						saveGuardFutureTask = every.schedule(saveGuard, every.taskMaximumDuration);
 					} else {
 						action.run();
 					}
