@@ -143,7 +143,13 @@ HandleEdit(This handleCard) {
 
 	createForm(This keyConfiguration) {
 		String configName = keyConfiguration.name.toLowerCase();
-		This header = createHeader(activity, keyConfiguration.name);
+		String title = configName;
+		if ("handle".equals(configName)) {
+			title = "Handle";
+		} else if ("livepath".equals(configName)) {
+			title = "Trailing Path";
+		}
+		This header = createHeader(activity, title);
 		inputList.add(header.getView());
 		if (configName.equals("handle")) {
 			header.setInputs(handleInputs);
@@ -153,7 +159,7 @@ HandleEdit(This handleCard) {
 		for (This keyConfig: keyConfiguration.getKeys()) {
 			String key = keyConfig.key;
 			Class type = keyConfig.inputType;
-			String hint = keyConfig.displayName;
+			String hint = keyConfig.description;
 			Object value = keyConfiguration.getValue(keyConfig.key);
 			String[] icons = new String[] { "main/prompt.svg" };
 			This input;

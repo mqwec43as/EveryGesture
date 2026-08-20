@@ -71,7 +71,7 @@ This ConfigHelper() {
 			false,
 			false,
 			"Use Accessibility",
-			"Display handle over system window"
+			"Display over system window"
 		},
 		{
 			"autoEnable",
@@ -87,9 +87,9 @@ This ConfigHelper() {
 			Boolean.class,
 			Boolean.class,
 			false,
-			false,
+			true,
 			"Filter with $Q Recognizer",
-			"Recognize straight lines better with additional delay"
+			"Recognize straight lines better with $Q recognizer"
 		},
 		{
 			"size",
@@ -143,7 +143,7 @@ This ConfigHelper() {
 			new PointF(0, 0),
 			new PointF(0, 0),
 			"Initial Position Percent",
-			"Initial position of handle as percentage of screen"
+			"Initial position as percentage of screen"
 		}
 	};
 
@@ -174,7 +174,7 @@ This ConfigHelper() {
 			new ArrayList(),
 			new ArrayList(),
 			"Dash Interval",
-			"Dash interval of trail"
+			"Interval between dashes"
 		},
 		{
 			"effect",
@@ -183,7 +183,7 @@ This ConfigHelper() {
 			new ArrayList(),
 			new ArrayList(),
 			"Effect",
-			"Effect of trail"
+			"Trail effect"
 		},
 		{
 			"width",
@@ -192,7 +192,7 @@ This ConfigHelper() {
 			20,
 			20,
 			"Width",
-			"Width of trail"
+			"Trail width"
 		},
 		{
 			"stayRadius",

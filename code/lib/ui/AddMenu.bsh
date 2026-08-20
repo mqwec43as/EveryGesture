@@ -58,7 +58,6 @@ AddMenu(This Main) {
                 item.put("icon", result);
             }
             onFileNotExist() {
-                tasker.showToast(iconPath + "not exist");
             }
             return this;
         }
