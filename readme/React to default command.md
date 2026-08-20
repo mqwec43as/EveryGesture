@@ -43,6 +43,10 @@ Example, performing "up" gesture on a handle name "Right Middle".
 ```
 Every=:=Right Middle=:=up=:=*
 ```
+&nbsp;
+
+> [!TIP]
+> Use helper mode to automatically fill necessary fields. [Check it out here.](/readme/Helper%20mode.md)
 
 &nbsp;
 
