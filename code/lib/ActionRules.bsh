@@ -90,7 +90,6 @@ ActionRules(This config) {
 		});
 
 		int rulesCount = actionRules.size();
-		log("Rules count: " + rulesCount + " list: \n" + tasker.toJson(actionRules, true));
 		for (int i = 0; i < rulesCount; i++) {
 			Map action = actionRules.get(i);
 			boolean isMatch = validateAction(action, recognized);

@@ -139,8 +139,6 @@ Engine(int RESAMPLE_POINTS, float MINIMUM_SCORE) {
 	}
 
 	/*───────────────────────────────────────────────────────────────
-	toPoints(gesture)
-	**Converts Gesture to Flat Point List**
 	Iterates through all strokes and coordinate pairs to create a 
 	single list of [x, y, strokeId].
 
@@ -216,14 +214,61 @@ Engine(int RESAMPLE_POINTS, float MINIMUM_SCORE) {
 	}
 
 	/*───────────────────────────────────────────────────────────────
-	  addTemplate(String name, List pts)
+	  Add template to be used for dollarq
 	───────────────────────────────────────────────────────────────*/
-	void addTemplate(String name, List pts) {
-		List norm = translateToOrigin(scalePoints(resample(pts, RESAMPLE_POINTS)));
+	void addTemplate(String name, Gesture gesture, boolean addToLibray) {
+		if (name == null) return;
+		if (addToLibray) {
+			library.addGesture(name, gesture);
+			library.save();
+			library.load();
+		}
+		List points = toPoints(gesture);
+		List norm = translateToOrigin(scalePoints(resample(points, RESAMPLE_POINTS)));
 		Map map = new HashMap();
 		map.put("name", name);
 		map.put("points", norm);
 		TEMPLATES.add(map);
+	}
+
+	void addTemplate(String name, Gesture gesture) {
+		addTemplate(name, gesture, false);
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  Remove template from dollarq templates
+	─────────────────────────────────────────────────────────────── */
+	boolean removeTemplate(String name) {
+		if (name == null) return false;
+		boolean removed = false;
+		library.removeEntry(name);
+		for (int i = 0; i < TEMPLATES.size(); i++) {
+			Map template = (Map) TEMPLATES.get(i);
+			String templateName = template.get("name");
+			if (templateName.equals(name)) {
+				TEMPLATES.remove(i);
+				if (!removed) removed = true;
+			}
+		}
+		if (removed) {
+			library.save();
+			library.load();
+		}
+		return removed;
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  Reload existing dollarq templates from library
+	─────────────────────────────────────────────────────────────── */
+	void reloadTemplates() {
+		TEMPLATES.clear();
+		Set entryNames = library.getGestureEntries();
+		for (String name: entryNames) {
+			ArrayList gestures = library.getGestures(name);
+			for (Gesture gesture: gestures) {
+				addTemplate(name, gesture);
+			}
+		}
 	}
 
 	getStrokesCount(String name) {
@@ -265,7 +310,7 @@ Engine(int RESAMPLE_POINTS, float MINIMUM_SCORE) {
 		String name = prediction.name;
 		List fallback = new ArrayList();
 		int predictionStrokesCount = getStrokesCount(name);
-		
+
 		if (predictionStrokesCount != gesture.strokesCount) return recognized;
 
 		if (candidates.size() > 1 && gesture.strokesCount < 2 && filterWithDollarQ) {
@@ -312,15 +357,8 @@ Engine(int RESAMPLE_POINTS, float MINIMUM_SCORE) {
 		if (library.load()) {
 			library.setSequenceType(GestureStore.SEQUENCE_SENSITIVE);
 			library.setOrientationStyle(GestureStore.ORIENTATION_SENSITIVE);
-			Set entryNames = library.getGestureEntries();
-			for (String name: entryNames) {
-				ArrayList gestures = library.getGestures(name);
-				for (Gesture gesture: gestures) {
-					List points = toPoints(gesture);
-					addTemplate(name, points);
-				}
-			}
-		}
+			reloadTemplates();
+		} 
 	}
 
 	loadLibrary(String libraryPath) {

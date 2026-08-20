@@ -65,7 +65,8 @@ Config(String handleName) {
 		helper.toNameSpace(handleSpace, handleJSON);
 		JSONObject livePathJSON = json.getJSONObject("livePath");
 		helper.toNameSpace(livePathSpace, livePathJSON);
-		getEngine();
+		if (engine == null) getEngine();
+		else engine.reloadTemplates();
 		onLoad();
 		actionRules = ActionRules(TOP);
 	}
@@ -186,9 +187,7 @@ Config(String handleName) {
 	deleteGesture(String gestureName) {
 		engine.library.load();
 		rules.remove(gestureName);
-		engine.library.removeEntry(gestureName);
-		engine.library.save();
-		engine.library.load();
+		engine.removeTemplate(gestureName);
 		save();
 		load();
 		return true;

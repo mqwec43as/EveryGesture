@@ -67,7 +67,8 @@ public This HelperModeManager() {
     }
 
     showInfo(This recognized) {
-		String message = "Gesture: " + recognized.name + "\nScore: " + recognized.score + "\nLength: " + recognized.length;
+		String message = "Templates: " + recognized.handle.config.library.getGestureEntries().size() + "\n";
+        message += "Gesture: " + recognized.name + "\nScore: " + recognized.score + "\nLength: " + recognized.length;
 		tasker.showToast(message, recognized.handleName);
     }
 

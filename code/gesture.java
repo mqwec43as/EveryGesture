@@ -99,7 +99,7 @@ everyGesture() {
 		3, // Max size
 		30, // Idle timeout
 		TimeUnit.SECONDS, // Timeout unit
-		new ArrayBlockingQueue(1), // Task wait-list
+		new ArrayBlockingQueue(10), // Task wait-list
 		customThreadFactory, // Thread factory
 		new ThreadPoolExecutor.DiscardOldestPolicy()
 	);

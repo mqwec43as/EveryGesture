@@ -560,9 +560,7 @@ DrawDialog(This handleCard) {
 		String gestureName = nameEdit.getText().toString();
 		int strokeCount = gesture.getStrokes().size();
 		if (gestureName.length() > 0 && strokeCount > 0) {
-			engine.library.addGesture(gestureName, gesture);
-			engine.library.save();
-			engine.library.load();
+			engine.addTemplate(gestureName, gesture, true);
 			handleCard.refreshGestureList();
 			nameEdit.setText("");
 			resetInfoChips();
