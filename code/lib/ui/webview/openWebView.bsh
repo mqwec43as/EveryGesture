@@ -19,7 +19,7 @@ import android.view.Gravity;
 openWebView(String targetUrl) {
 	Activity CONTEXT;
 	WebView webView;
-    This every = tasker.getJavaVariable("everyGesture");
+	This every = tasker.getJavaVariable("everyGesture");
 
 	/*───────────────────────────────────────────────────────────────
 	    Safely destroys the WebView to release resources and finishes
@@ -31,31 +31,33 @@ openWebView(String targetUrl) {
 	    Return:
 	───────────────────────────────────────────────────────────────*/
 	cleanupWebView() {
-        if (webView != null) {
-            // 1. Clear clients to prevent leaks
-            webView.setWebViewClient(null);
-            webView.setWebChromeClient(null);
+		if (webView != null) {
+			// 1. Clear clients to prevent leaks
+			webView.onPause();
+			webView.pauseTimers();
+			webView.setWebViewClient(null);
+			webView.setWebChromeClient(null);
 
-            // 2. Clear browser data
-            webView.clearCache(true);
-            webView.clearHistory();
-            webView.clearFormData();
-            webView.clearSslPreferences();
+			// 2. Clear browser data
+			webView.clearCache(true);
+			webView.clearHistory();
+			webView.clearFormData();
+			webView.clearSslPreferences();
 
-            // 3. Stop active operations
-            webView.stopLoading();
-            webView.loadUrl("about:blank");
+			// 3. Stop active operations
+			webView.stopLoading();
+			webView.loadUrl("about:blank");
 
-            // 4. Detach from UI layout hierarchy
-            if (webView.getParent() != null) {
-                ((ViewGroup) webView.getParent()).removeView(webView);
-            }
-            webView.removeAllViews();
-
-            // 5. Permanently destroy the instance
-            webView.destroy();
-            webView = null;
-        }
+			// 4. Detach from UI layout hierarchy
+			if (webView.getParent() != null) {
+				((ViewGroup) webView.getParent()).removeView(webView);
+			}
+			webView.removeAllViews();
+			webView.freeMemory();
+			// 5. Permanently destroy the instance
+			webView.destroy();
+			webView = null;
+		}
 	}
 
 	finish() {
@@ -70,9 +72,9 @@ openWebView(String targetUrl) {
 	Consumer webViewConsumer = new java.util.function.Consumer() {
 		accept(Object activityObj) {
 			CONTEXT = (Activity) activityObj;
-            This tm = ThemeManager(CONTEXT);
-            if (every.useDarkTheme) tm.setThemeDark();
-            else tm.setThemeLight();
+			This tm = ThemeManager(CONTEXT);
+			if (every.useDarkTheme) tm.setThemeDark();
+			else tm.setThemeLight();
 			/* Root layout holding toolbar and WebView. */
 			LinearLayout rootLayout = new LinearLayout(CONTEXT);
 			rootLayout.setOrientation(LinearLayout.VERTICAL);
@@ -87,11 +89,11 @@ openWebView(String targetUrl) {
 			toolbar.setBackgroundColor(tm.color("colorSurface"));
 			toolbar.setPadding(16, 16, 16, 16);
 
-            LinearLayout.LayoutParams toolbarParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            // params.gravity = Gravity.CENTER;
+			LinearLayout.LayoutParams toolbarParams = new LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT
+			);
+			// params.gravity = Gravity.CENTER;
 			toolbar.setLayoutParams(toolbarParams);
 
 			/* Close button for toolbar. */
@@ -99,9 +101,9 @@ openWebView(String targetUrl) {
 			closeButton.setText("Close");
 			closeButton.setTextColor(tm.color("colorOnSurface"));
 			closeButton.setBackgroundColor(Color.TRANSPARENT);
-            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-            buttonParams.gravity = Gravity.CENTER;
-			toolbar.addView(closeButton,buttonParams);
+			LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+			buttonParams.gravity = Gravity.CENTER;
+			toolbar.addView(closeButton, buttonParams);
 
 			/* Initialize WebView with standard settings. */
 			webView = new WebView(CONTEXT);
@@ -182,4 +184,3 @@ openWebView(String targetUrl) {
 
 
 }
-
