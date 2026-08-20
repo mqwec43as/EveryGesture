@@ -149,7 +149,6 @@ InputLayout(Context inputContext) {
 				inputLayout.setEndIconDrawable(result);
 			}
 			onFileNotExist() {
-				tasker.showToast(endIconPath + "not exist");
 			}
 			return this;
 		}

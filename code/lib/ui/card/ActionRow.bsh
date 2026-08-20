@@ -66,7 +66,7 @@ ActionRow(This templateCard, String actionType, Map actionMap) {
 			iconView.setImageDrawable(result);
 		}
 		onFileNotExist() {
-			log("SVG not found: " + actionSvgPath);
+			log("SVG not found: " + actionSvgPath, "ERROR");
 		}
 		return this;
 	}
