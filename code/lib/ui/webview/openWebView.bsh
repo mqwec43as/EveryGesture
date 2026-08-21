@@ -7,6 +7,7 @@ import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
+import android.webkit.RenderProcessGoneDetail;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.widget.LinearLayout;
@@ -33,8 +34,6 @@ openWebView(String targetUrl) {
 	cleanupWebView() {
 		if (webView != null) {
 			// 1. Clear clients to prevent leaks
-			webView.onPause();
-			webView.pauseTimers();
 			webView.setWebViewClient(null);
 			webView.setWebChromeClient(null);
 
@@ -112,7 +111,7 @@ openWebView(String targetUrl) {
 				0,
 				1.0f
 			));
-
+			
 			WebSettings settings = webView.getSettings();
 			settings.setJavaScriptEnabled(true);
 			settings.setDomStorageEnabled(true);
@@ -123,6 +122,13 @@ openWebView(String targetUrl) {
 			ClassImplementation clientHandler = new ClassImplementation() {
 				run(Callable superCaller, String methodName, Object[] args) {
 					switch (methodName) {
+						/*───────────────────────────────────────────────────────────────
+						* Intercepts renderer process termination to handle OOM kills or
+						* renderer crashes gracefully without crashing the main application.
+						───────────────────────────────────────────────────────────────*/
+						case "onRenderProcessGone":
+							cleanupWebView();
+							return true;
 						default:
 							return superCaller.call();
 					}

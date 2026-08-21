@@ -23,8 +23,8 @@ PopUpMenu(Activity activity, View anchorView) {
     
     Popup() {
         final int LEARN = (int) 201;
-        final String LEARN_TEXT = "Learn More";
-        final String LEARN_URL = REPO_URL + "#features";
+        final String LEARN_TEXT = "How to use";
+        final String LEARN_URL = REPO_URL + "/blob/main/readme/Learn%20how%20to%20use%20this%20project.md#how-to-create-a-handle";
 
         final int REFRESH_LIST = (int) 202;
         final String REFRESH_LIST_TEXT = "Refresh Action List";
