@@ -129,16 +129,17 @@ Handle(This config) {
 
 	create() {
 		CONTEXT = context;
-		WINDOW_MANAGER = (WindowManager) CONTEXT.getSystemService(Context.WINDOW_SERVICE);
 		overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
 		if (config.handle.useAccessibility) {
-			MyAccessibilityService accessibilityService = tasker.getAccessibilityService();
-			if (accessibilityService == null) break;
-			WINDOW_MANAGER = (WindowManager) accessibilityService.getSystemService(Context.WINDOW_SERVICE);
-			CONTEXT = accessibilityService;
-			overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+			Context accessibilityService = tasker.getAccessibilityService();
+			if (accessibilityService != null) {
+				CONTEXT = accessibilityService;
+				overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+			};
 		}
+
+		WINDOW_MANAGER = CONTEXT.getSystemService(Context.WINDOW_SERVICE);
 
 		initialPosition = new Point();
 		livePath = LivePath(config);

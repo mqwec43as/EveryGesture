@@ -64,8 +64,11 @@ LivePath(This config) {
 	List effect = config.livePath.effect;
 
 	if (config.handle.useAccessibility) {
-		overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-		CONTEXT = tasker.getAccessibilityService();
+		Context accessibilityService = tasker.getAccessibilityService();
+		if (accessibilityService != null) {
+			overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+			CONTEXT = tasker.getAccessibilityService();
+		};
 	}
 
 	WindowManager.LayoutParams params = new WindowManager.LayoutParams(

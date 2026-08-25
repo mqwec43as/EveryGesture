@@ -25,10 +25,6 @@ screenInfo() {
 
 	final This NameType = NameType();
 
-	getRoot() {
-		return tasker.getAccessibilityService().getRootInActiveWindow();
-	}
-
 	Map recent = getUsageEvents();
 	String packageName = recent { "packageName" };
 	This reader = every.uiReader;
@@ -94,11 +90,16 @@ screenInfo() {
 	}
 
 	fireDefault() {
-		if (read == null) read();
-		helper.toNameSpace(TOP.namespace, read.namespace, true);
+		try {
+			if (read == null) read();
+			helper.toNameSpace(TOP.namespace, read.namespace, true);
+			setVar(NameType.TEXT, read.text);
+			setVar(NameType.TEXT_RESOURCE, read.defaultText);
+		} catch (e) {
+			log(e.getMessage(), "ERROR");
+		}
+		
 		setVar(NameType.APP_ACTIVITY, className);
-		setVar(NameType.TEXT, read.text);
-		setVar(NameType.TEXT_RESOURCE, read.defaultText);
 		setVar(NameType.APP_PACKAGE, packageName);
 		setVar(NameType.APP_NAME, appName);
 

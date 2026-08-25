@@ -3,6 +3,7 @@ import bsh.This;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.accessibilityservice.AccessibilityService;
 
 public This HelperModeManager() {
     this.inHelperMode = true;
@@ -18,7 +19,9 @@ public This HelperModeManager() {
     }
 
     getRoot() {
-        return getService().getRootInActiveWindow();
+        AccessibilityService service = getService();
+        if (service == null) return null;
+        return service.getRootInActiveWindow();
     }
 
     findId(AccessibilityNodeInfo root, String id, int index) {
@@ -60,10 +63,15 @@ public This HelperModeManager() {
         }
         if (!isInEventEdit()) return;
         AccessibilityNodeInfo root = getRoot();
-        if (!isInCommandEvent(root)) return;
         String format = recognized.defaultCommand + "=:=*";
-        setText(root, EDIT_ID, 0, format);
-        setText(root, EDIT_ID, 1, VARIABLES_FORMAT);
+        if (root != null) {
+            if (!isInCommandEvent(root)) return;
+            setText(root, EDIT_ID, 0, format);
+            setText(root, EDIT_ID, 1, VARIABLES_FORMAT);
+        } else {
+            setClipboard(format);
+            tasker.showToast(format, "Command copied to clipboard");
+        }
     }
 
     showInfo(This recognized) {
