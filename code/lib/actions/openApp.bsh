@@ -39,7 +39,7 @@ openApp(String packageName) {
     }
 
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+    int displayId = 0;
     try {
         if (displayId != 0) {
             ActivityOptions options = ActivityOptions.makeBasic();
