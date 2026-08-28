@@ -83,6 +83,7 @@ everyGesture() {
 	This shizukuManager = ShizukuServiceManager();
 	This helperModeManager = HelperModeManager();
 	This uiReader = UiReader();
+	This latestAppsTray;
 	Map screenInfoEvents = new HashMap();
 	This rule;
 	int themeId;

@@ -1,7 +1,3 @@
-/*───────────────────────────────────────────────────────────────
-This code was generated using AI and refined with significant human oversight.
-───────────────────────────────────────────────────────────────*/
-
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.graphics.Color;
@@ -36,6 +32,8 @@ import android.graphics.Path;
 import android.graphics.PathMeasure;
 import android.gesture.GestureStroke;
 import bsh.This;
+import android.os.Build;
+import android.accessibilityservice.AccessibilityService;
 
 // Global helper configuration variables (Scoped properly)
 int dp(int value) {
@@ -50,7 +48,7 @@ int GRID_WIDTH = ICON_SIZE + ROOT_PADDING;
 float ICON_LABEL_SIZE = 12.0f;
 float TRAY_TITLE_SIZE = 16.0f;
 
-View createAppIcon(Context context, WindowManager windowManager, FrameLayout rootLayout, String packageName) {
+View createAppIcon(Context context, WindowManager windowManager, This appsTray, View cardView, String packageName) {
 	PackageManager packageManager = context.getPackageManager();
 	LinearLayout appItem = new LinearLayout(context);
 	appItem.setOrientation(LinearLayout.VERTICAL);
@@ -89,11 +87,11 @@ View createAppIcon(Context context, WindowManager windowManager, FrameLayout roo
 	appItem.addView(labelView);
 
 	appItem.setOnClickListener(new View.OnClickListener() {
-		public void onClick(View view) {
+		onClick(View view) {
 			Map resultMap = new HashMap();
 			resultMap.put("package", packageName);
 			openApp(packageName);
-			windowManager.removeView(rootLayout);
+			appsTray.remove();
 		}
 	});
 
@@ -101,17 +99,26 @@ View createAppIcon(Context context, WindowManager windowManager, FrameLayout roo
 }
 
 /*───────────────────────────────────────────────────────────────
-showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPosition)
+showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPositionPercent)
 **Displays a draggable app launcher overlay.**
 ───────────────────────────────────────────────────────────────*/
-void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPosition) {
-
+void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPositionPercent) {
+	This appsTray = this;
 	// --- OFF MAIN THREAD OPERATIONS ---
-	// Heavy calculations (filtering duplicates, resolving app names, sorting alphabetically) are completed first.
+// 	Context context = tasker.getAccessibilityService() != null ? tasker.getAccessibilityService() : context;
+	int overlayType = context instanceof AccessibilityService ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+	This every = tasker.getJavaVariable("everyGesture");
+	if (every.latestGesture != null) {
+		if (every.latestAppsTray != null) {
+			every.latestAppsTray.remove();
+			every.latestAppsTray = null;
+		}
+	}
 	LinkedHashSet uniquePackages = new LinkedHashSet(packageNames);
 	List clearPackageNames = new ArrayList(uniquePackages);
 	List sortedAppList = new ArrayList();
 	PackageManager packageManager = context.getPackageManager();
+	Handler mainHandler = new Handler(Looper.getMainLooper());
 
 	for (String packageName: clearPackageNames) {
 		try {
@@ -126,7 +133,7 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 	}
 
 	sortedAppList.sort(new Comparator() {
-		public int compare(Object a, Object b) {
+		compare(Object a, Object b) {
 			String label1 = (String)((Map) a).get("label");
 			String label2 = (String)((Map) b).get("label");
 			return label1.compareToIgnoreCase(label2);
@@ -134,6 +141,8 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 	});
 
 	WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+
+	// 1. RootLayout Overlay: Acts only as background and dismiss overlay
 	FrameLayout rootLayout = new FrameLayout(context);
 	rootLayout.setBackgroundColor(0x00000000);
 
@@ -146,9 +155,9 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 	// Process initial position percentage calculation safely on the Main Thread where display dimensions are ready
 	float targetX = 0.0f;
 	float targetY = 0.0f;
-	if (initialPosition != null) {
-		targetX = initialPosition.x;
-		targetY = initialPosition.y;
+	if (initialPositionPercent != null) {
+		targetX = initialPositionPercent.x;
+		targetY = initialPositionPercent.y;
 
 		// If coordinate is between 0 (exclusive) and 1 (inclusive), interpret it as a percentage of the screen dimension
 		if (targetX > 0.0f && targetX <= 1.0f) {
@@ -159,6 +168,7 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 		}
 	}
 
+	// 2. CardView: Added separately to WindowManager so it can move on its own
 	LinearLayout cardView = new LinearLayout(context);
 	cardView.setOrientation(LinearLayout.VERTICAL);
 	cardView.setPadding(ROOT_PADDING, ROOT_PADDING, ROOT_PADDING, ROOT_PADDING);
@@ -189,7 +199,7 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 		Map itemMap = (Map) sortedAppList.get(i);
 		String packageName = (String) itemMap.get("packageName");
 		try {
-			View appItem = createAppIcon(context, windowManager, rootLayout, packageName);
+			View appItem = createAppIcon(context, windowManager, appsTray, cardView, packageName);
 			gridLayout.addView(appItem);
 		} catch (Exception e) {
 			// Skip rendering on individual failure
@@ -199,16 +209,6 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 	scrollView.addView(gridLayout);
 	cardView.addView(scrollView);
 
-	FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(-2, -2);
-	if (initialPosition != null) {
-		cardParams.gravity = Gravity.TOP | Gravity.LEFT;
-		cardView.setX(targetX);
-		cardView.setY(targetY);
-	} else {
-		cardParams.gravity = Gravity.CENTER;
-	}
-	rootLayout.addView(cardView, cardParams);
-
 	cardView.setVisibility(View.GONE);
 	cardView.measure(
 		View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
@@ -217,53 +217,97 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 
 	int cardWidth = cardView.getMeasuredWidth();
 	int cardHeight = cardView.getMeasuredHeight();
-	targetX = targetX - (cardWidth * 0.5f);
-	if (initialPosition != null) {
+
+	if (initialPositionPercent != null) {
+		targetX = targetX - (cardWidth * 0.5f);
 		if (targetX < 0) targetX = 0;
 		if (targetX > screenWidth - cardWidth) targetX = screenWidth - cardWidth;
 		if (targetY < 0) targetY = 0;
 		if (targetY > screenHeight - cardHeight) targetY = screenHeight - cardHeight;
-		cardView.setX(targetX);
-		cardView.setY(targetY);
+	} else {
+		targetX = (screenWidth - cardWidth) / 2.0f;
+		targetY = (screenHeight - cardHeight) / 2.0f;
 	}
 
 	cardView.setVisibility(View.VISIBLE);
 
-	WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
+	// Layout params for root background overlay (fullscreen translucent)
+	WindowManager.LayoutParams rootLayoutParams = new WindowManager.LayoutParams(
 		WindowManager.LayoutParams.MATCH_PARENT,
 		WindowManager.LayoutParams.MATCH_PARENT,
-		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+		overlayType,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
 		PixelFormat.TRANSLUCENT
 	);
 
+	// Layout params for card view overlay (positioned floating window)
+	WindowManager.LayoutParams cardLayoutParams = new WindowManager.LayoutParams(
+		WindowManager.LayoutParams.WRAP_CONTENT,
+		WindowManager.LayoutParams.WRAP_CONTENT,
+		(int) targetX,
+		(int) targetY,
+		overlayType,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+		PixelFormat.TRANSLUCENT
+	);
+	cardLayoutParams.gravity = Gravity.TOP | Gravity.LEFT;
+
+	/* Cutout mode handling */
+	if (Build.VERSION.SDK_INT >= 28 && overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
+		rootLayoutParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+		cardLayoutParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+	}
+
+	remove() {
+		Runnable runnable = new Runnable() {
+			run() {
+				windowManager.removeView(cardView);
+				windowManager.removeView(rootLayout);
+				every.latestAppsTray = null;
+			}
+		};
+		mainHandler.post(runnable);
+	}
+
+	// Touch listener for root background to remove views when tapped outside
 	rootLayout.setOnTouchListener(new View.OnTouchListener() {
-		float deltaX;
-		float deltaY;
-		public boolean onTouch(View view, MotionEvent event) {
+		onTouch(View view, MotionEvent event) {
+			if (event.getAction() == MotionEvent.ACTION_DOWN) {
+				remove();
+				return true;
+			}
+			return false;
+		}
+	});
+
+	// Touch listener for cardView to enable independent dragging via WindowManager updates
+	cardView.setOnTouchListener(new View.OnTouchListener() {
+		float startRawX;
+		float startRawY;
+		int initialX;
+		int initialY;
+
+		onTouch(View view, MotionEvent event) {
 			switch (event.getAction()) {
 				case MotionEvent.ACTION_DOWN:
-					float touchX = event.getX();
-					float touchY = event.getY();
-					if (touchX < cardView.getX() || touchX > (cardView.getX() + cardView.getWidth()) ||
-						touchY < cardView.getY() || touchY > (cardView.getY() + cardView.getHeight())) {
-
-						windowManager.removeView(rootLayout);
-						return true;
-					}
-					deltaX = cardView.getX() - event.getRawX();
-					deltaY = cardView.getY() - event.getRawY();
+					startRawX = event.getRawX();
+					startRawY = event.getRawY();
+					initialX = cardLayoutParams.x;
+					initialY = cardLayoutParams.y;
 					return true;
 
 				case MotionEvent.ACTION_MOVE:
-					float newX = event.getRawX() + deltaX;
-					float newY = event.getRawY() + deltaY;
+					int newX = initialX + (int)(event.getRawX() - startRawX);
+					int newY = initialY + (int)(event.getRawY() - startRawY);
+
 					if (newX < 0) newX = 0;
 					if (newX > screenWidth - cardView.getWidth()) newX = screenWidth - cardView.getWidth();
 					if (newY < 0) newY = 0;
 					if (newY > screenHeight - cardView.getHeight()) newY = screenHeight - cardView.getHeight();
-					cardView.setX(newX);
-					cardView.setY(newY);
+
+					cardLayoutParams.x = newX;
+					cardLayoutParams.y = newY;
+					windowManager.updateViewLayout(cardView, cardLayoutParams);
 					return true;
 			}
 			return false;
@@ -271,12 +315,12 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 	});
 
 	// --- MAIN THREAD OPERATIONS ---
-	// Only elements dealing with UI initialization and drawing are pushed to the UI Loop.
-	Handler mainHandler = new Handler(Looper.getMainLooper());
 	mainHandler.post(new Runnable() {
-		public void run() {
+		run() {
 			try {
-				windowManager.addView(rootLayout, layoutParams);
+				windowManager.addView(rootLayout, rootLayoutParams);
+				windowManager.addView(cardView, cardLayoutParams);
+				every.latestAppsTray = appsTray;
 			} catch (Exception e) {
 				// Outer UI catch protection
 			}
@@ -285,7 +329,7 @@ void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF i
 }
 
 getInitialFromCache() {
-	PointF initialPosition = new PointF(0.5f, 0.5f);
+	PointF initialPositionPercent = new PointF(0.5f, 0.5f);
 	This every = tasker.getJavaVariable("everyGesture");
 	if (every.latestGesture != null) {
 		GestureStroke firstStroke = every.latestGesture.getStrokes().get(0);
@@ -293,20 +337,20 @@ getInitialFromCache() {
 		PathMeasure pm = new PathMeasure(path, false);
 		float[] coords = new float[] {0f,0f };
 		pm.getPosTan(pm.getLength(), coords, null);
-		initialPosition = new PointF(coords[0], coords[1]);
+		initialPositionPercent = new PointF(coords[0], coords[1]);
 	}
-	return initialPosition;
+	return initialPositionPercent;
 }
 
 /*───────────────────────────────────────────────────────────────
 Wrapper simulation logic for overloads using Explicit Types
 ───────────────────────────────────────────────────────────────*/
 void showAppsTray(String trayTitle, List packageNames, int columnCount) {
-	PointF initialPosition = getInitialFromCache();
-	showAppsTray(trayTitle, packageNames, columnCount, initialPosition);
+	PointF initialPositionPercent = getInitialFromCache();
+	showAppsTray(trayTitle, packageNames, columnCount, initialPositionPercent);
 }
 
 void showAppsTray(List packageNames) {
-	PointF initialPosition = getInitialFromCache();
-	showAppsTray("", packageNames, 3, initialPosition);
+	PointF initialPositionPercent = getInitialFromCache();
+	showAppsTray("", packageNames, 3, initialPositionPercent);
 }

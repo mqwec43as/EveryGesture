@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
 import bsh.BshMethod;
+import android.graphics.PointF;
 
 int TYPE_NONE = 0;
 int TYPE_STRING = 1 << 0;
@@ -125,6 +126,12 @@ Object[][] PARAMETER_OBJECT = new Object[][] {
 		"columnCount",
 		"Number of columns",
 		int.class,
+		TYPE_NUMBER
+	},
+	{
+		"initialPositionPercent",
+		"Initial Position Percentage",
+		PointF.class,
 		TYPE_NUMBER
 	}
 };
