@@ -105,7 +105,7 @@ showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initia
 void showAppsTray(String trayTitle, List packageNames, int columnCount, PointF initialPositionPercent) {
 	This appsTray = this;
 	// --- OFF MAIN THREAD OPERATIONS ---
-// 	Context context = tasker.getAccessibilityService() != null ? tasker.getAccessibilityService() : context;
+	Context context = tasker.getAccessibilityService() != null ? tasker.getAccessibilityService() : context;
 	int overlayType = context instanceof AccessibilityService ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 	This every = tasker.getJavaVariable("everyGesture");
 	if (every.latestGesture != null) {
