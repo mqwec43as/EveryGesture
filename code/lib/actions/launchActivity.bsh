@@ -1,11 +1,10 @@
-
 import android.content.Intent;
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import com.joaomgcd.taskerm.shell.CommandResult;
 import bsh.This;
 import android.Manifest;
-
+import android.os.Bundle;
 /*───────────────────────────────────────────────────────────────
  * launchActivity(ComponentName targetComponent)
  * Launch a specific activity.
@@ -14,105 +13,125 @@ import android.Manifest;
 launchActivity(String component) {
 
 	/* ───────────────────────────────────────────────────────────────
+	 * Launch the assistant via SearchManager
+	────────────────────────────────────────────────────────────────*/
+	launchAssist() {
+		Bundle bundle = new Bundle();
+		SearchManager sm = context.getSystemService("search");
+		sm.launchAssist(bundle);
+	}
+
+	/* ───────────────────────────────────────────────────────────────
      * launchAssistantPrivileged()
      * Triggers the assistant key event via Root, Shizuku, or ADB WiFi.
      * Fallback order: Root -> Shizuku -> ADB WiFi.
     ────────────────────────────────────────────────────────────────*/
-    boolean launchAssistantPrivileged() {
-        String cmd = "input keyevent 219"; /* KEYCODE_ASSIST */
-        CommandResult res = null;
+	boolean launchAssistantPrivileged() {
+		String cmd = "input keyevent 219"; /* KEYCODE_ASSIST */
+		CommandResult res = null;
 
-        if (tasker.isRootAvailable()) {
-            res = tasker.runShellRoot(cmd);
-            return res != null && res.getSuccess();
-        }
-        if (tasker.isShizukuAvailable()) {
-            res = tasker.runShellShizuku(cmd);
-            return res != null && res.getSuccess();
-        }
-        if (tasker.isAdbWifiAvailable()) {
-            res = tasker.runShellAdbWifi(cmd);
-            return res != null;
-        }
-        return false;
-    }
+		if (tasker.isRootAvailable()) {
+			res = tasker.runShellRoot(cmd);
+			return res != null && res.getSuccess();
+		}
+		if (tasker.isShizukuAvailable()) {
+			res = tasker.runShellShizuku(cmd);
+			return res != null && res.getSuccess();
+		}
+		if (tasker.isAdbWifiAvailable()) {
+			res = tasker.runShellAdbWifi(cmd);
+			return res != null;
+		}
+		return false;
+	}
 
-    /* ───────────────────────────────────────────────────────────────
-     * launchActivityStandard(String component)
-     * Standard intent launch fallback for unprivileged or missing secure settings.
-    ────────────────────────────────────────────────────────────────*/
-    void launchActivityStandard(String component) {
-        ComponentName targetComponent = ComponentName.unflattenFromString(component);
-        if (targetComponent == null) return;
+	/* ───────────────────────────────────────────────────────────────
+	 * launchActivityStandard(String component)
+	 * Standard intent launch fallback for unprivileged or missing secure settings.
+	────────────────────────────────────────────────────────────────*/
+	void launchActivityStandard(String component) {
+		ComponentName targetComponent = ComponentName.unflattenFromString(component);
+		if (targetComponent == null) return;
 
-        Intent intent = new Intent();
-        intent.setComponent(targetComponent);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		Intent intent = new Intent();
+		intent.setComponent(targetComponent);
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        try {
-            context.startActivity(intent);
-        } catch (Exception e) {
-            tasker.log("Failed standard activity launch for " + component + ": " + e.getMessage());
-        }
-    }
+		try {
+			context.startActivity(intent);
+		} catch (Exception e) {
+			tasker.log("Failed standard activity launch for " + component + ": " + e.getMessage());
+		}
+	}
+	/* ───────────────────────────────────────────────────────────────
+	 * Checks if WRITE_SECURE_SETTINGS permission is available.
+	────────────────────────────────────────────────────────────────*/
+	hasWriteSecureSettings() {
+		return context.checkCallingOrSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED;
+	}
 
-    /* ───────────────────────────────────────────────────────────────
-     * canLaunchAsAssistant()
-     * Checks if WRITE_SECURE_SETTINGS permission and a privileged shell is available.
-    ────────────────────────────────────────────────────────────────*/
-    canLaunchAsAssistant() {
-        boolean hasSecureSettings = context.checkCallingOrSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED;
-        /* Check if any privileged shell backend is available */
-        boolean hasPrivilege = tasker.isRootAvailable() || tasker.isShizukuAvailable() || tasker.isAdbWifiAvailable();
-        return !hasSecureSettings || !hasPrivilege;
-    }
+	/* ───────────────────────────────────────────────────────────────
+	 * Checks if any privileged shell backend is available
+	────────────────────────────────────────────────────────────────*/
+	hasPrivilegedShell() {
+		/* Check if any privileged shell backend is available */
+		boolean hasPrivilege = tasker.isRootAvailable() || tasker.isShizukuAvailable() || tasker.isAdbWifiAvailable();
+		return hasPrivilege;
+	}
 
-    /* ───────────────────────────────────────────────────────────────
-     * launchActivityPrivileged(String component)
-     * Launches non-exported activities via secure settings trick if 
-     * WRITE_SECURE_SETTINGS permission and a privileged shell are available,
-     * otherwise falls back to standard launch.
-     * 
-     * Arguments:
-     * - component -> Component string format (e.g. "pkg/pkg.Activity")
-    ────────────────────────────────────────────────────────────────*/
-    void launchActivityPrivileged(String component) {
-        if (component == null || component.length() == 0) return;
+	/* ───────────────────────────────────────────────────────────────
+	 * Launches non-exported activities via secure settings trick if 
+	 * WRITE_SECURE_SETTINGS permission and a privileged shell are available,
+	 * otherwise falls back to standard launch.
+	 * 
+	 * Arguments:
+	 * - component -> Component string format (e.g. "pkg/pkg.Activity")
+	────────────────────────────────────────────────────────────────*/
+	void launchActivityPrivileged(String component) {
+		if (component == null || component.length() == 0) return;
 
-        /* Fallback directly if secure settings permission or privileged shell is missing */
-        if (canLaunchAsAssistant()) {
-            launchActivityStandard(component);
-            return;
-        }
+		/* Fallback directly if secure settings permission */
+		if (!hasWriteSecureSettings()) {
+			launchActivityStandard(component);
+			return;
+		}
 
-        /* Save current assistant setting to restore in finally block */
-        String origAssistant = android.provider.Settings.Secure.getString(
-            context.getContentResolver(), "assistant"
-        );
+		/* Save current assistant setting to restore in finally block */
+		String origAssistant = android.provider.Settings.Secure.getString(
+			context.getContentResolver(), "assistant"
+		);
 
-        try {
-            /* Hijack secure setting with target component */
-            android.provider.Settings.Secure.putString(
-                context.getContentResolver(), "assistant", component
-            );
+		try {
+			/* Hijack secure setting with target component */
+			android.provider.Settings.Secure.putString(
+				context.getContentResolver(), "assistant", component
+			);
 
-            /* Trigger assistant using Root -> Shizuku -> ADB WiFi */
-            launchAssistantPrivileged();
-        } finally {
-            /* Restore original assistant setting */
-            if (origAssistant != null) {
-                android.provider.Settings.Secure.putString(
-                    context.getContentResolver(), "assistant", origAssistant
-                );
-            } else {
-                android.provider.Settings.Secure.putString(
-                    context.getContentResolver(), "assistant", ""
-                );
-            }
-        }
-    }
+			/* Trigger assistant using Root -> Shizuku -> ADB WiFi */
+			try {
+				launchAssist();
+			} catch (Exception e) {
+				if (hasPrivilegedShell()) {
+					launchAssistantPrivileged();
+				} else {
+					launchActivityStandard(component);
+				}
+			}
+
+		} finally {
+			/* Restore original assistant setting */
+			if (origAssistant != null) {
+				android.provider.Settings.Secure.putString(
+					context.getContentResolver(), "assistant", origAssistant
+				);
+			} else {
+				android.provider.Settings.Secure.putString(
+					context.getContentResolver(), "assistant", ""
+				);
+			}
+		}
+	}
 
 	launchActivityPrivileged(component);
 
 }
-
