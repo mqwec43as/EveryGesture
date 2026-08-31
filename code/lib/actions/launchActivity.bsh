@@ -5,6 +5,8 @@ import com.joaomgcd.taskerm.shell.CommandResult;
 import bsh.This;
 import android.Manifest;
 import android.os.Bundle;
+import android.app.SearchManager;
+
 /*───────────────────────────────────────────────────────────────
  * launchActivity(ComponentName targetComponent)
  * Launch a specific activity.
