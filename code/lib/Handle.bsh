@@ -74,7 +74,7 @@ Handle(This config) {
 				if (futureTask != null) futureTask.cancel(true);
 			}
 		};
-		
+
 		recognize(Gesture gesture, MotionEvent motionEvent, boolean isLongPress) {
 			if (gesture.getStrokesCount() > 0) {
 				recognized = config.engine.recognize(gesture);
@@ -96,7 +96,7 @@ Handle(This config) {
 					} else {
 						action.run();
 					}
-					
+
 				}
 			}
 		}
@@ -206,7 +206,7 @@ Handle(This config) {
 				if (stateListener != null) stateListener.onDetached();
 				every.register();
 			}
-		}); 
+		});
 	}
 
 	getPosition(int totalLength, double percentage, int handleSize) {
@@ -232,7 +232,7 @@ Handle(This config) {
 		}
 		return point;
 	}
-	
+
 	setListener() {
 		listener = new View.OnTouchListener() {
 			boolean onTouch(View view, MotionEvent motionEvent) {
@@ -241,7 +241,7 @@ Handle(This config) {
 		};
 		view.setOnTouchListener(listener);
 	}
-	
+
 
 	post(Runnable postRun) {
 		Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -283,11 +283,24 @@ Handle(This config) {
 
 	setInteractable(boolean interactable) {
 		if (interactable) {
+			params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
 			view.setClickable(true);
 			view.setFocusable(true);
+			unmute();
 		} else {
+			params.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
 			view.setClickable(false);
 			view.setFocusable(false);
+			mute();
+		}
+		if (isAdded()) {
+			post(new Runnable() {
+				run() {
+					try {
+						WINDOW_MANAGER.updateViewLayout(view, params);
+					} catch (Exception ignored) {}
+				}
+			});
 		}
 	}
 
@@ -344,7 +357,7 @@ Handle(This config) {
 		moveTo(new Point(params.x + (width / 2), params.y + (height / 2)));
 	}
 
-	
+
 	import android.content.res.Configuration;
 
 	isPotrait() {
@@ -384,8 +397,7 @@ Handle(This config) {
 			run() {
 				try {
 					WINDOW_MANAGER.updateViewLayout(view, params);
-				} catch (Exception ignored) {
-				}
+				} catch (Exception ignored) {}
 			}
 		});
 	}
@@ -421,4 +433,7 @@ Handle(This config) {
 	}
 
 	return this;
+
+
+
 }

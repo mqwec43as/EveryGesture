@@ -133,6 +133,18 @@ Object[][] PARAMETER_OBJECT = new Object[][] {
 		"Initial Position Percentage",
 		PointF.class,
 		TYPE_NUMBER
+	},
+	{
+		"displayName",
+		"Display name",
+		String.class,
+		TYPE_STRING
+	},
+	{
+		"command",
+		"Shell command",
+		String.class,
+		TYPE_STRING
 	}
 };
 

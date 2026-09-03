@@ -55,7 +55,6 @@ DemoController(This handle) {
 			onAttached() {
 				handle.setColorForAwhile(1500, highlightColor);
 				handle.setInteractable(false);
-				handle.mute();
 				handle.setStateListener(null);
 			}
 
@@ -67,7 +66,6 @@ DemoController(This handle) {
 			handle.show();
 		} else {
 			handle.setInteractable(false);
-			handle.mute();
 			handle.setColorForAwhile(1500, highlightColor);
 		}
 	}
@@ -89,7 +87,6 @@ DemoController(This handle) {
 			handle.setColor(handle.config.handle.color);
 			handle.WINDOW_MANAGER.updateViewLayout(handle.view, initialParams);
 			handle.setInteractable(true);
-			handle.unmute();
 		} catch (e) {
 			log("Error: " + e.getMessage(), "ERROR");
 		}
