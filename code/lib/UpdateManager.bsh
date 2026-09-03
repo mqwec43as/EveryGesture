@@ -34,7 +34,6 @@ import io.reactivex.subjects.SingleSubject;
 import android.view.KeyEvent;
 import org.json.JSONObject;
 import org.json.JSONArray;
-import android.app.Activity;
 
 UpdateManager() {
 	String repo = "EveryGesture";
@@ -74,7 +73,7 @@ UpdateManager() {
 			}
 			rd.close();
 		} catch (Exception e) {
-			throw new RuntimeException("HTTP GET Failed: " + e.getMessage());
+			throw new RuntimeException("HTTP GET Failed: " + e.toString());
 		}
 		return result.toString();
 	}
@@ -452,6 +451,11 @@ UpdateManager() {
 				latestUrls.add(url);
 			}
 		}
+
+		if (latestUrls.isEmpty()) {
+			throw new JavaCodeException("No valid asset named '" + targetFile + "' found.");
+		}
+
 		return latestUrls;
 	}
 
@@ -468,7 +472,7 @@ UpdateManager() {
 	}
 
 	/*───────────────────────────────────────────────────────────────
-	  importFirst()
+	  importDialog()
 	  High-level logic for importing resources from GitHub.
 	───────────────────────────────────────────────────────────────*/
 	importDialog() {
