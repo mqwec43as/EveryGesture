@@ -120,6 +120,12 @@ Actions() {
 			"Read screen and fire assigned events or commands with global variables",
 			"screenInfo",
 			"Trigger screen event"
+		},
+		{
+			"Run Shell",
+			"Run shell by priotizing privileged shell if available",
+			"runShell",
+			"Run shell {0}"
 		}
 	};
 
