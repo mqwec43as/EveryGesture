@@ -9,13 +9,15 @@ UpdateImportDialog() {
     This taskernet = Taskernet();
     
     restart() {
-        if (tasker.isShizukuAvailable() || tasker.isAdbWifiAvailable() || tasker.isRootAvailable()) {
-            String packageName = context.getPackageName();
-            String command = "am force-stop " + packageName;
-            runShell(command, 2000);
-        } else {
-            System.exit(0);
-        }
+        System.exit(0);
+        // ! Simplify this for now
+        // if (tasker.isShizukuAvailable() || tasker.isAdbWifiAvailable() || tasker.isRootAvailable()) {
+        //     String packageName = context.getPackageName();
+        //     String command = "am force-stop " + packageName;
+        //     runShell(command, 2000);
+        // } else {
+        //     System.exit(0);
+        // }
     }
 
     importProject() {

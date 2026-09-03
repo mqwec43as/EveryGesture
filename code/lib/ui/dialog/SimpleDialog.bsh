@@ -71,7 +71,7 @@ SimpleDialog(Object[][] mainAddOptions) {
 		if (tm.lastThemeId != 0) themeId = tm.lastThemeId;
 		onSuccess(Map selected) {
 			Runnable action = selected.get("action");
-			every.execute(action);
+			every.schedule(action, (long) 50);
 		}
 		return this;
 	}
