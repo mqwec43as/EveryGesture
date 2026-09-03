@@ -1,0 +1,62 @@
+importCommands("lib.ui.dialog");
+importCommands("lib.actions");
+
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+
+UpdateImportDialog() {
+    This every = every == void || every == null ? tasker.getJavaVariable("everyGesture") : every;
+    This taskernet = Taskernet();
+    
+    restart() {
+        if (tasker.isShizukuAvailable() || tasker.isAdbWifiAvailable() || tasker.isRootAvailable()) {
+            String packageName = context.getPackageName();
+            String command = "am force-stop " + packageName;
+            runShell(command, 2000);
+        } else {
+            System.exit(0);
+        }
+    }
+
+    importProject() {
+        browseUrl(taskernet.url);
+    }
+    
+    Object[][] options = new Object[][] {
+        {
+            "Update",
+            "Update and restart",
+            "update/update.svg",
+            new Runnable() {
+                run() {
+                    every.update();
+                    restart();
+                }
+            }
+        },
+        {
+            "Update Pre-Release",
+            "Update with pre-release and restart",
+            "update/update_pre.svg",
+            new Runnable() {
+                run() {
+                    every.updatePreRelease();
+                    restart();
+                }
+            }
+        },
+        {
+            "Re-Import",
+            "Import this project to Tasker again",
+            "update/import.svg",
+            new Runnable() {
+                run() {
+                    importProject();
+                }
+            }
+        }
+    };
+    
+    This dialog = SimpleDialog(options);
+	return dialog;
+}

@@ -1,0 +1,91 @@
+importCommands("lib.ui.add");
+importCommands("lib.ui");
+
+import bsh.This;
+import android.graphics.drawable.Drawable;
+import android.content.Context;
+import android.graphics.PorterDuff;
+
+/*───────────────────────────────────────────────────────────────
+    Constructs and shows a dialog with options based on an input matrix.
+
+    Arguments:
+    - mainAddOptions → Object[][] matrix containing title, description,
+                      icon path, and Runnable action per item.
+	  
+	  Object[][] mainAddOptions = new Object[][] {
+		  {
+			  Title,
+			  subtitle,
+			  Icon path stored in /res "main/new_handle.svg",
+			  Runnable when click
+		  }
+	  };
+
+    Return:
+    - This → Scripted dialog object exposing show() and remove() methods.
+
+    Example:
+    // Display the add options dialog
+    dialog = SimpleDialog(mainAddOptions);
+    dialog.show();
+───────────────────────────────────────────────────────────────*/
+SimpleDialog(Object[][] mainAddOptions) {
+	final This TOP = this;
+	This every = every == void || every == null ? tasker.getJavaVariable("everyGesture") : every;
+	This tm = ThemeManager(context);
+	tm.setTheme(every.themeId);
+
+	List items = new ArrayList();
+
+	for (int i = 0; i < mainAddOptions.length; i++) {
+		Object[] row = mainAddOptions[i];
+		Map item = new HashMap();
+		String title = row[0];
+		String description = row[1];
+		String iconPath = row[2];
+		Runnable action = row[3];
+		iconPath = every.MAIN_DIRECTORY + "/res/" + iconPath;
+		listener() {
+			onSuccess(Drawable result) {
+				result.setColorFilter(tm.color("colorPrimary"), PorterDuff.Mode.SRC_IN);
+				item.put("icon", result);
+			}
+			onFileNotExist() {}
+			return this;
+		}
+		loadSvgIcon(context, iconPath, listener());
+		item.put("title", title);
+		item.put("subtitle", description);
+		item.put("action", action);
+		items.add(item);
+	}
+
+	addMenuConfig() {
+		List itemList = items;
+		boolean showFilter = false;
+		float dimAmount = 0.5f;
+		int iconSize = 60;
+		boolean usePadding;
+		int themeId;
+		if (tm.lastThemeId != 0) themeId = tm.lastThemeId;
+		onSuccess(Map selected) {
+			Runnable action = selected.get("action");
+			action.run();
+		}
+		return this;
+	}
+
+	This config = addMenuConfig();
+	This dialog = ListDialog(config);
+
+	show() {
+		dialog.show();
+	}
+
+	remove() {
+		dialog.remove();
+	}
+
+	return this;
+}

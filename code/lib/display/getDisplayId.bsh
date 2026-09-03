@@ -1,0 +1,34 @@
+
+
+
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+
+/* ───────────────────────────────────────────────────────────────
+ * Finds Display by name and Returns ID
+ *
+ * Arguments:
+ * - targetDisplayName → The partial or complete targetDisplayName string of the display to find.
+───────────────────────────────────────────────────────────────*/
+public int getDisplayId(String targetDisplayName) {
+	if (targetDisplayName == null || targetDisplayName.length() == 0) {
+		return 0;
+	}
+    targetDisplayName = targetDisplayName.toLowerCase();
+	DisplayManager displayManager = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+	if (displayManager == null) {
+		return 0;
+	}
+
+	Display[] displays = displayManager.getDisplays();
+	for (int i = 0; i < displays.length; i++) {
+		Display display = displays[i];
+		String displayName = display.getName();
+		if (displayName != null &&  displayName.toLowerCase().equals(targetDisplayName)) {
+			int displayId = display.getDisplayId();
+			return displayId;
+		}
+	}
+	return 0;
+}

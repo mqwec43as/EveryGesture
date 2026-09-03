@@ -1,6 +1,7 @@
 importCommands("lib.actions");
 importCommands("lib.ui.misc");
 importCommands("lib.ui.webview");
+importCommands("lib.ui.update");
 
 import android.app.Activity;
 import android.view.Menu;
@@ -12,6 +13,7 @@ import android.content.res.ColorStateList;
 import com.google.android.material.appbar.MaterialToolbar;
 import bsh.This;
 import android.widget.PopupMenu;
+import java.util.Comparator;
 
 PopUpMenu(Activity activity, View anchorView) {
 	PopupMenu popup = new PopupMenu(activity, anchorView, Gravity.END);
@@ -42,6 +44,9 @@ PopUpMenu(Activity activity, View anchorView) {
         final int FAQ_AND_DOCUMENTATION = (int) 206;
         final String FAQ_AND_DOCUMENTATION_TEXT = "FAQ and Documentation";
         final String FAQ_AND_DOCUMENTATION_URL = REPO_URL + "#faq--documentation";
+
+        final int UPDATE_IMPORT = (int) 207;
+        final String UPDATE_TEXT = "Update & Import";
 
         return this;
     }
@@ -111,6 +116,16 @@ PopUpMenu(Activity activity, View anchorView) {
                     everyAction(every.Actions.OPEN_MAIN_ACTIVITY);
                 }
             }
+        },
+        {
+            Popup.UPDATE_IMPORT
+            , Popup.UPDATE_TEXT
+            , new Runnable() {
+                run() {
+                    This dialog = UpdateImportDialog();
+                    dialog.show();
+                }
+            }
         }
     };
 
@@ -121,8 +136,19 @@ PopUpMenu(Activity activity, View anchorView) {
         return this;
     }
 
-	for (int i = 0; i < menus.length; i++) {
-        This menu = item(menus[i]);
+    List menuList = new ArrayList();
+    for (int i = 0; i < menus.length; i++) {
+        menuList.add(item(menus[i]));
+    }
+
+    menuList.sort(new Comparator() {
+        public int compare(Object o1, Object o2) {
+            return ((This) o1).title.compareTo(((This) o2).title);
+        }
+    });
+
+    for (int i = 0; i < menuList.size(); i++) {
+        This menu = menuList.get(i);
         MenuItem menuItem = popupMenu.add(0, menu.id, i, menu.title);
         menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {

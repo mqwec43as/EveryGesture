@@ -1,0 +1,11 @@
+
+import bsh.This;
+
+Taskernet() {
+    final String userId = "AS35m8mzep6ZT53%2BqNrzeLiaw4Tx1L4o%2BrgzYDR5Rg4cuz25FIQvQrdsluWlrxmTqBfm";
+    final String name = "EveryGesture";
+    final String type = "Project";
+    final String projectId = type + ":" + name;
+    final String url = "https://taskernet.com/shares/?user=" + userId + "&id=" + projectId;
+    return this;
+}

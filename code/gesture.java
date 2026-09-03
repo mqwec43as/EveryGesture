@@ -64,6 +64,15 @@ everyGesture() {
 	// * Constant for event type
 	final This EventType = EventType();
 
+	Task() {
+		final String  INITIATE_VARIBLE = "📦 Initiate everyGesture Variable";
+		final String IMPORT = "⬇️ Import EveryGesture";
+		return this;
+	}
+
+	// * Constatn for task names
+	final This Task = Task();
+
 	/* ───────────────────────────────────────────────────────────────
 	 * Variables
 	 ! Don't delete!
