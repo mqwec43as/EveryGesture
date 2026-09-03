@@ -108,16 +108,17 @@ launchActivity(String component) {
 			android.provider.Settings.Secure.putString(
 				context.getContentResolver(), "assistant", component
 			);
-
+			
 			/* Trigger assistant using Root -> Shizuku -> ADB WiFi */
 			try {
-				launchAssist();
-			} catch (Exception e) {
 				if (hasPrivilegedShell()) {
 					launchAssistantPrivileged();
 				} else {
-					launchActivityStandard(component);
+					Thread.sleep(50);
+					launchAssist();
 				}
+			} catch (Exception e) {
+				launchActivityStandard(component);
 			}
 
 		} finally {
