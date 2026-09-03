@@ -1,3 +1,5 @@
+importCommands("lib.display");
+
 /*─────────────────────────────────────────────────────────────── 
 This content was generated using AI and refined with significant human oversight.
 ───────────────────────────────────────────────────────────────*/
@@ -17,9 +19,9 @@ import android.content.Context;
 
 /*───────────────────────────────────────────────────────────────
  * openApp(labelOrPackageName)
- * Opens app by exact package OR precise case-insensitive label,
+ * Opens app by exact package OR precise case-insensitive label on display.
  *──────────────────────────────────────────────────────────────*/
-openApp(String packageName) {
+openApp(String packageName, int displayId) {
     if (packageName == null) return;
 	This main = tasker.getJavaVariable("everyGesture");
 	This pm = main.packageManager;
@@ -39,7 +41,6 @@ openApp(String packageName) {
     }
 
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    int displayId = 0;
     try {
         if (displayId != 0) {
             ActivityOptions options = ActivityOptions.makeBasic();
@@ -51,4 +52,19 @@ openApp(String packageName) {
     } catch (Exception e) {
         log("openApp: Failed to launch main intent for package " + packageName + ": " + e.getMessage());
     }
+}
+
+/* ───────────────────────────────────────────────────────────────
+ * Opens app by exact package OR precise case-insensitive label on default display
+ *──────────────────────────────────────────────────────────────*/
+openApp(String packageName) {
+    openApp(packageName, 0);
+}
+
+/* ───────────────────────────────────────────────────────────────
+ * Opens app by exact package OR precise case-insensitive label on display by name
+ *──────────────────────────────────────────────────────────────*/
+openApp(String packageName, String displayName) {
+    int displayId = getDisplayId(displayName);
+    openApp(packageName, displayId);
 }
