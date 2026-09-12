@@ -262,7 +262,7 @@ DrawDialog(This handleCard) {
 		buttonChip.chip.setId(id);
 		buttonChip.setIcon(iconPath);
 		buttonChip.chip.setOnClickListener(new View.OnClickListener() {
-			onClick(View v) {
+			onClick(View view) {
 				post(action);
 			}
 		});
@@ -493,41 +493,54 @@ DrawDialog(This handleCard) {
 			}
 
 			gestureView.setOnTouchListener(new View.OnTouchListener() {
-				onTouch(View v, MotionEvent event) {
+				onTouch(View view, MotionEvent event) {
 					int action = event.getActionMasked();
 					int idx = event.getActionIndex();
 					int pId = event.getPointerId(idx);
 					float x = event.getX(idx);
 					float y = event.getY(idx);
 
-					if (action == MotionEvent.ACTION_DOWN && RESET_ON_NEW_TOUCH) {
-						clearCanvas();
-						nameInput.setHelperText(" ");
-					}
+					switch(action) {
+						case MotionEvent.ACTION_DOWN:
+						case MotionEvent.ACTION_POINTER_DOWN:
+							// * Prevent parent to intercept touch and scroll
+							view.getParent().requestDisallowInterceptTouchEvent(true);
+							if (RESET_ON_NEW_TOUCH) {
+								clearCanvas();
+								nameInput.setHelperText(" ");
+							}
 
-					if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-						Integer uId = new Integer(pathCounter++);
-						Path p = new Path();
-						p.moveTo(x, y);
-						userPath.put(uId, p);
-						pointerMap.put(new Integer(pId), uId);
+							Integer uId = new Integer(pathCounter++);
+							Path p = new Path();
+							p.moveTo(x, y);
+							userPath.put(uId, p);
+							pointerMap.put(new Integer(pId), uId);
 
-						/* Initialize point list for this stroke */
-						ArrayList strokePoints = new ArrayList();
-						strokePoints.add(new GesturePoint(x, y, event.getEventTime()));
-						activeGesture.put(new Integer(pId), strokePoints);
+							/* Initialize point list for this stroke */
+							ArrayList strokePoints = new ArrayList();
+							strokePoints.add(new GesturePoint(x, y, event.getEventTime()));
+							activeGesture.put(new Integer(pId), strokePoints);
+							break;
 
-					} else if (action == MotionEvent.ACTION_MOVE) {
-						addToPoints(event);
-					} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
-						addToPoints(event);
-						ArrayList gPoints = (ArrayList) activeGesture.remove(new Integer(pId));
-						if (gPoints != null && gPoints.size() > 1) {
-							gesture.addStroke(new GestureStroke(gPoints));
-						}
-						pointerMap.remove(new Integer(pId));
-						recognize();
-					}
+						case MotionEvent.ACTION_MOVE:
+							addToPoints(event);
+							break;
+
+						case MotionEvent.ACTION_UP:
+						case MotionEvent.ACTION_POINTER_UP:
+						case MotionEvent.ACTION_CANCEL:
+							addToPoints(event);
+							ArrayList gPoints = (ArrayList) activeGesture.remove(new Integer(pId));
+							if (gPoints != null && gPoints.size() > 1) {
+								gesture.addStroke(new GestureStroke(gPoints));
+							}
+							pointerMap.remove(new Integer(pId));
+							recognize();
+							// * Allow parent to intercept touch and then scroll
+							view.getParent().requestDisallowInterceptTouchEvent(false);
+							break;
+					};
+
 					gestureView.invalidate();
 					return true;
 				}
