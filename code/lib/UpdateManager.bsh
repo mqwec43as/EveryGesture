@@ -500,7 +500,9 @@ UpdateManager() {
 		directoryPath = pickDirectory(pickPath);
 		String updatePath = update();
 		if (updatePath != null) {
-			tasker.showToast("Download is finished");
+			String appName = context.getApplicationContext().getApplicationInfo().loadLabel(context.getPackageManager());
+			String packageName = context.getPackageName();
+			tasker.showToast("Restarting " + appName + " (" + packageName + ") is recommended ", "Download is finished");
 			return updatePath;
 		}
 		return null;

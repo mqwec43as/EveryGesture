@@ -27,8 +27,10 @@ import android.os.Looper;
 import bsh.This;
 import android.graphics.PointF;
 import android.graphics.Point;
+import android.accessibilityservice.AccessibilityService;
 
-LivePath(This config) {
+LivePath(This handle) {
+	This config = handle.config;
 	This TOP = this;
 	This every = tasker.getJavaVariable("everyGesture");
 	This engine = config.getEngine();
@@ -54,22 +56,14 @@ LivePath(This config) {
 	MotionEvent motionEvent;
 	View handleView;
 
-	int overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-	Context CONTEXT = context;
+	int overlayType = handle.overlayType;
+	Context CONTEXT = handle.CONTEXT;
 	Map paths = new HashMap();
 	int color = config.livePath.color;
 	float width = config.livePath.width;
 	float cornerRadius = config.livePath.cornerRadius;
 	List dashInterval = config.livePath.dashInterval;
 	List effect = config.livePath.effect;
-
-	if (config.handle.useAccessibility) {
-		Context accessibilityService = tasker.getAccessibilityService();
-		if (accessibilityService != null) {
-			overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-			CONTEXT = tasker.getAccessibilityService();
-		};
-	}
 
 	WindowManager.LayoutParams params = new WindowManager.LayoutParams(
 		WindowManager.LayoutParams.MATCH_PARENT,

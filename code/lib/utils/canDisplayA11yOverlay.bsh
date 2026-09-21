@@ -1,0 +1,77 @@
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.accessibilityservice.AccessibilityService;
+import io.reactivex.subjects.CompletableSubject;
+import android.os.Looper;
+
+/*───────────────────────────────────────────────────────────────
+  canDisplayA11yOverlay()
+  **Checks Accessibility Overlay Capabilities**
+  Determines if overlay drawing is permitted by attempting to add 
+  and immediately remove a temporary view on the main thread using 
+  a blocking CompletableSubject on background threads.
+
+  Returns:
+   - true if overlay was successfully created and removed.
+   - false if an error occurred or AccessibilityService is null.
+  ───────────────────────────────────────────────────────────────*/
+boolean canDisplayA11yOverlay() {
+	AccessibilityService service = tasker.getAccessibilityService();
+	if (service == null) {
+		return false;
+	}
+
+	boolean isMainThread = Looper.getMainLooper().isCurrentThread();
+	WindowManager windowManager = (WindowManager) service.getSystemService(Context.WINDOW_SERVICE);
+	WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+		1, 1,
+		WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+		PixelFormat.TRANSLUCENT
+	);
+	params.gravity = Gravity.CENTER;
+
+	View overlayView = new View(service);
+	overlayView.setBackgroundColor(Color.RED);
+	overlayView.setVisibility(View.VISIBLE);
+
+	Runnable check = new Runnable() {
+		run() {
+			windowManager.addView(overlayView, params);
+			windowManager.removeView(overlayView);
+		}
+	};
+
+	if (isMainThread) {
+		try {
+			check.run();
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	CompletableSubject signal = CompletableSubject.create();
+
+	service.getMainExecutor().execute(new Runnable() {
+		run() {
+			try {
+				check.run();
+				signal.onComplete();
+			} catch (Exception e) {
+				signal.onError(e);
+			}
+		}
+	});
+
+	try {
+		signal.blockingAwait();
+		return true;
+	} catch (Exception e) {
+		return false;
+	}
+}

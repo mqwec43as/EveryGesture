@@ -1,3 +1,5 @@
+importCommands("lib.utils");
+
 import java.io.File;
 import android.view.WindowManager;
 import android.view.View;
@@ -130,8 +132,7 @@ Handle(This config) {
 	create() {
 		CONTEXT = context;
 		overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-
-		if (config.handle.useAccessibility) {
+		if (config.handle.useAccessibility && canDisplayA11yOverlay()) {
 			Context accessibilityService = tasker.getAccessibilityService();
 			if (accessibilityService != null) {
 				CONTEXT = accessibilityService;
@@ -142,7 +143,7 @@ Handle(This config) {
 		WINDOW_MANAGER = CONTEXT.getSystemService(Context.WINDOW_SERVICE);
 
 		initialPosition = new Point();
-		livePath = LivePath(config);
+		livePath = LivePath(TOP);
 		livePathListener = getLivePathListener();
 		livePath.setLivePathListener(livePathListener);
 		baseWm = CONTEXT.getSystemService(Context.WINDOW_SERVICE);
@@ -190,6 +191,7 @@ Handle(This config) {
 		params.gravity = Gravity.TOP | Gravity.LEFT;
 		params.x = initialPosition.x;
 		params.y = initialPosition.y;
+		params.title = "EveryGesture: " + config.handleName;
 
 		/* Cutout only for accessibility overlay */
 		if (Build.VERSION.SDK_INT >= 28 && overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
@@ -251,8 +253,13 @@ Handle(This config) {
 	show() {
 		Runnable show = new Runnable() {
 			run() {
-				WINDOW_MANAGER.addView(livePath.view, livePath.params);
-				WINDOW_MANAGER.addView(view, params);
+				try {
+					WINDOW_MANAGER.addView(livePath.view, livePath.params);
+					WINDOW_MANAGER.addView(view, params);
+				} catch (e) {
+					log(e.getMessage(), "ERROR");
+					tasker.showToast(e.getMessage(), "Error showing " + config.handleName);
+				}
 			}
 		};
 		if (!isAdded()) {
