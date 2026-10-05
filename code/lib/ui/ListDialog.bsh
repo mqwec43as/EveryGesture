@@ -1,3 +1,4 @@
+importCommands("lib.ui");
 importCommands("lib.ui.helper");
 
 import android.app.Activity;
@@ -28,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import com.joaomgcd.taskerm.action.java.ClassImplementation;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
@@ -49,17 +52,17 @@ import android.graphics.PorterDuff;
 import java.util.Collections;
 import java.util.Comparator;
 import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
-/*───────────────────────────────────────────────────────────────
-  ListDialog Component
-  ───────────────────────────────────────────────────────────────*/
-ListDialog(This config) {
+import android.os.Handler;
+import android.os.Looper;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.BitmapDrawable;
+import android.view.inputmethod.InputMethodManager;
 
-	Activity activity;
-	Context activityContext;
-	boolean isRemoved = true;
-	boolean hasShown = false;
-	ArrayList selectedItems = new ArrayList();
-	This monitor;
+
+/*───────────────────────────────────────────────────────────────
+ListDialog Component
+───────────────────────────────────────────────────────────────*/
+ListDialog(This config) {
 
 	String title = config.title == void ? null : config.title;
 	boolean showFilter = config.showFilter == void ? false : config.showFilter;
@@ -67,9 +70,14 @@ ListDialog(This config) {
 	List preSelect = config.preSelect == void ? new ArrayList() : config.preSelect;
 	long timeout = config.timeout == void ? 0 : config.timeout;
 	int iconSize = config.iconSize == void ? 40 : config.iconSize;
-	float dimAmount = config.dimAmount == void ? 0.0f : config.dimAmount;
+	float dimAmount = config.dimAmount == void ? 0.0f: config.dimAmount;
+	float maxWidth = config.maxWidth == void ? 0.5f : config.maxWidth;
 	int themeId = config.themeId == void ? 0 : config.themeId;
 	boolean sort = config.sort == void ? false : config.sort;
+	boolean useOverlay = config.useOverlay == void ? false : config.useOverlay;
+	boolean useAccessibility = config.useAccessibility == void ? false : config.useAccessibility;
+	int displayId = config.displayId == void ? 0 : config.displayId;
+	String text = config.text == void ? null : config.text;
 
 	/* Height Logic Setup */
 	Object rawMaxH = config.maxHeight == void ? 0.8 : config.maxHeight;
@@ -77,6 +85,25 @@ ListDialog(This config) {
 
 	final Map iconCache = new HashMap();
 	FloatingToolbarLayout root;
+	Activity activity;
+	Context activityContext;
+	Context layoutContext;
+	ArrayList selectedItems = new ArrayList();
+	List filteredList = new ArrayList();
+	ListView listView;
+	TextInputEditText filterInput;
+	TextInputLayout filterWrapper;
+	MaterialToolbar toolbar;
+	MaterialTextView textView;
+	LinearLayout mainContainer;
+	BaseAdapter adapter;
+	LinearLayout buttonsContainer;
+	MaterialButton cBtn;
+	MaterialButton okButton;
+	This tm;
+	This monitor;
+	WindowManager windowManager;
+	PackageManager pm;
 
 	List originalList = config.itemList;
 	if (originalList == null) originalList = new ArrayList();
@@ -119,18 +146,33 @@ ListDialog(This config) {
 		onStopped(ActivityLifecycleEvent event) {
 			event.activity.finish();
 		}
-		
+
 		return this;
 	}
 
 	CompletableSubject waitTimeout = CompletableSubject.create();
 
+	getContext() {
+		return layoutContext;
+	}
+
+	isActivityContext() {
+		return getContext() instanceof Activity;
+	}
+
+	isAccessibilityContext() {
+		return getContext() instanceof android.accessibilityservice.AccessibilityService;
+	}
+
 	remove() {
-		if (activity != null) {
+		if (isActivityContext() && activity != null) {
 			activity.finish();
+		} else if (useOverlay && isAdded()) {
+			try {
+				windowManager.removeView(root);
+			} catch (Exception e) {}
 		}
 
-		isRemoved = true;
 		if (timeout != 0 && !waitTimeout.hasComplete()) waitTimeout.onComplete();
 	}
 
@@ -146,46 +188,97 @@ ListDialog(This config) {
 		}
 	}
 
-	layout(Activity act) {
-		activity = act;
-		monitor = SimpleActivityMonitor(activity, activityListener());
-		activityContext = activity;
+	attachStateListener() {
+		View.OnAttachStateChangeListener stateListener = new View.OnAttachStateChangeListener() {
+			onViewAttachedToWindow(View v) {
+				if (hasAttach) config.onAttach();
+			}
+			onViewDetachedFromWindow(View v) {
+				remove();
+				if (hasDetach) config.onDetach();
+			}
+		};
 
-		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
-		// Commented since Tasker doens'title support running on target display
-		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);
-		// if (dm != null) {
-		// 	Display targetDisplay = dm.getDisplay(displayId);
-		// 	if (targetDisplay != null) {
-		// 		activityContext = activity.createDisplayContext(targetDisplay);
-		// 	}
-		// }
-
-		android.content.pm.PackageManager pm = activity.getPackageManager();
-
-		Window window = activity.getWindow();
-		window.requestFeature(Window.FEATURE_NO_TITLE);
-		window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-		window.setBackgroundDrawableResource(android.R.color.transparent);
-		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-
-		WindowManager.LayoutParams lp = window.getAttributes();
-		lp.gravity = Gravity.BOTTOM;
-		if (dimAmount != 0.0f) {
-			window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-			lp.dimAmount = dimAmount;
+		if (isActivityContext() && activity != null) {
+			View decorView = activity.getWindow().getDecorView();
+			decorView.addOnAttachStateChangeListener(stateListener);
+		} else {
+			root.addOnAttachStateChangeListener(stateListener);
 		}
-		
-		window.setAttributes(lp);
+	}
 
-		This tm = ThemeManager(activityContext);
+	isIconRecycled(Drawable iconDrawable) {
+		if (iconDrawable == null) return false;
+		if (iconDrawable instanceof BitmapDrawable) {
+			return ((BitmapDrawable) iconDrawable).getBitmap().isRecycled();
+		} else {
+			return false;
+		}
+	}
+
+	layout(Context layoutContext) {
+		super.layoutContext = layoutContext;
+		if (isActivityContext()) {
+			activity = (Activity) layoutContext;
+			monitor = SimpleActivityMonitor(getContext(), activityListener());
+		}
+
+		if (!isActivityContext() && displayId != 0) {
+			DisplayManager dm = getContext().getSystemService(Context.DISPLAY_SERVICE);
+			if (dm != null) {
+				Display targetDisplay = dm.getDisplay(displayId);
+				if (targetDisplay != null) {
+					layoutContext = getContext().createDisplayContext(targetDisplay);
+					super.layoutContext = layoutContext;
+				}
+			}
+		}
+
+		pm = getContext().getPackageManager();
+
+		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
+		int screenW = metrics.widthPixels;
+		int screenH = metrics.heightPixels;
+		int dialogWidth = WindowManager.LayoutParams.MATCH_PARENT;
+
+		if (screenW > screenH) {
+			dialogWidth = (int) (screenW * maxWidth);
+			if (dialogWidth > screenW) {
+				dialogWidth = WindowManager.LayoutParams.MATCH_PARENT;
+			}
+		}
+
+		if (isActivityContext()) {
+			Window window = getContext().getWindow();
+			window.requestFeature(Window.FEATURE_NO_TITLE);
+			window.setLayout(dialogWidth, WindowManager.LayoutParams.WRAP_CONTENT);
+			window.setBackgroundDrawableResource(android.R.color.transparent);
+			window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+			window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
+				WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+
+			WindowManager.LayoutParams lp = window.getAttributes();
+			lp.gravity = Gravity.BOTTOM;
+			if (dimAmount != 0.0f) {
+				window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+				lp.dimAmount = dimAmount;
+			}
+
+			window.setAttributes(lp);
+		}
+
+		tm = ThemeManager(getContext());
 		if (themeId == 0) tm.setThemeDark();
-		else activity.setTheme(themeId);
+		else getContext().setTheme(themeId);
 
-		root = new FloatingToolbarLayout(activityContext);
+		dp(int dp) {
+			return tm.dp(dp);
+		}
+
+		root = new FloatingToolbarLayout(getContext());
 		root.setBackgroundColor(Color.TRANSPARENT);
 
-		LinearLayout mainContainer = new LinearLayout(activityContext);
+		mainContainer = new LinearLayout(getContext());
 		mainContainer.setOrientation(LinearLayout.VERTICAL);
 
 		LinearLayout.LayoutParams mainLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -199,31 +292,49 @@ ListDialog(This config) {
 		mainContainer.setBackground(shape);
 		mainContainer.setClipToOutline(true);
 
-		if (title != null) {
-			MaterialToolbar toolbar = new MaterialToolbar(activityContext);
+		if (title != null && !title.isEmpty()) {
+			toolbar = new MaterialToolbar(getContext());
 			toolbar.setTitle(title);
 			toolbar.setTitleCentered(true);
 			mainContainer.addView(toolbar);
 		}
 
-		TextInputEditText filterInput = null;
+		if (text != null && !text.isEmpty()) {
+			textView = new MaterialTextView(getContext());
+			textView.setTextSize(14);
+			textView.setText(text);
+			textView.setPadding(0, 0, 0, dp(4));
+			textView.setMaxLines(3);
+			textView.setEllipsize(TextUtils.TruncateAt.END);
+			mainContainer.addView(textView);
+		}
+
 		if (showFilter) {
-			TextInputLayout filterWrapper = new TextInputLayout(activityContext);
+			filterWrapper = new TextInputLayout(getContext());
 			filterWrapper.setHint("Search...");
 			filterWrapper.setBoxBackgroundMode(2);
 			filterInput = new TextInputEditText(filterWrapper.getContext());
 			filterWrapper.addView(filterInput);
 			mainContainer.addView(filterWrapper);
+			filterWrapper.setEndIconMode(-1);
+			filterWrapper.setEndIconOnClickListener(new View.OnClickListener() {
+				onClick(View view) {
+					InputMethodManager imm = getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+					imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+				}
+			});
+			Drawable hideIcon = tm.attr("mw_hardware_keyboard_hide");
+			filterWrapper.setEndIconDrawable(hideIcon);
 		}
 
-		ListView listView = new ListView(activityContext);
+		listView = new ListView(getContext());
 		listView.setDivider(null);
 		listView.setDividerHeight(0);
 
 		LinearLayout.LayoutParams listLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
 		listView.setLayoutParams(listLp);
 
-		ArrayList filteredList = new ArrayList(originalList);
+		filteredList = new ArrayList(originalList);
 
 		if (isMulti && !preSelect.isEmpty()) {
 			for (int i = 0; i < originalList.size(); i++) {
@@ -235,10 +346,10 @@ ListDialog(This config) {
 					boolean hasSubtitle = item.containsKey("subtitle");
 					boolean isTitleMatch = item.get("title").equals(pre.get("title"));
 					boolean isSubtitleMatch;
-					
+
 					if (hasSubtitle) isSubtitleMatch = item.get("subtitle").equals(pre.get("subtitle"));
 					if (!isTitleMatch && !isSubtitleMatch) continue;
-					
+
 					boolean isMatch;
 
 					if (hasTitle && hasSubtitle && isTitleMatch && isSubtitleMatch) {
@@ -246,7 +357,7 @@ ListDialog(This config) {
 					} else if (hasTitle && !hasSubtitle && isTitleMatch) {
 						isMatch = true;
 					}
-					
+
 					if (!selectedItems.contains(item) && isMatch) {
 						selectedItems.add(item);
 						break;
@@ -271,25 +382,28 @@ ListDialog(This config) {
 					TextView titleTextView, subtitleTextView;
 					Drawable iconDrawable = itemData.get("icon");
 					String iconPath = itemData.get("iconPath");
+					This iconThis = itemData.get("iconThis");
+					Object getIconObj = itemData.get("getIcon");
+					boolean hasGetIcon = getIconObj != null && getIconObj != void && (getIconObj instanceof Callable);
 					boolean hasIcon = iconDrawable != null && iconDrawable != void;
 					boolean hasIconPath = iconPath != null && !iconPath.equals("");
 
 					if (adapterView == null) {
-						row = new LinearLayout(activityContext);
+						row = new LinearLayout(getContext());
 						row.setOrientation(0);
 						row.setGravity(Gravity.CENTER_VERTICAL);
 						row.setPadding(dp(0), dp(12), dp(0), dp(12));
 
-						iconView = new ImageView(activityContext);
+						iconView = new ImageView(getContext());
 						iconView.setLayoutParams(new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize)));
 						iconView.setPadding(0, 0, dp(16), 0);
 						row.addView(iconView);
 
-						LinearLayout itemLayout = new LinearLayout(activityContext);
+						LinearLayout itemLayout = new LinearLayout(getContext());
 						itemLayout.setOrientation(1);
 						itemLayout.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
 
-						titleTextView = new MaterialTextView(activityContext);
+						titleTextView = new MaterialTextView(getContext());
 						titleTextView.setTextSize(16);
 						if (hasSub) {
 							Typeface currentTypeface = titleTextView.getTypeface();
@@ -298,14 +412,14 @@ ListDialog(This config) {
 						titleTextView.setEllipsize(TextUtils.TruncateAt.END);
 						itemLayout.addView(titleTextView);
 
-						subtitleTextView = new MaterialTextView(activityContext);
+						subtitleTextView = new MaterialTextView(getContext());
 						subtitleTextView.setTextSize(14);
 						subtitleTextView.setTextColor(subtitleTextView.getTextColors().withAlpha(190));
 						itemLayout.addView(subtitleTextView);
 						row.addView(itemLayout);
 
 						if (isMulti) {
-							CheckBox checkBox = new CheckBox(activityContext);
+							CheckBox checkBox = new CheckBox(getContext());
 							checkBox.setFocusable(false);
 							checkBox.setClickable(false);
 							row.addView(checkBox);
@@ -318,6 +432,8 @@ ListDialog(This config) {
 						subtitleTextView = (TextView) itemLayout.getChildAt(1);
 					}
 
+					iconView.setTag(itemData);
+
 					titleTextView.setText((String) itemData.get("title"));
 					subtitleTextView.setText(hasSub ? sub.toString() : "");
 					subtitleTextView.setVisibility(hasSub ? View.VISIBLE : View.GONE);
@@ -325,7 +441,6 @@ ListDialog(This config) {
 					if (isMulti) {
 						CheckBox checkBox = (CheckBox) row.getChildAt(row.getChildCount() - 1);
 						boolean found = false;
-						/* FIX: Use object identity to handle items with duplicate titles correctly */
 						for (int k = 0; k < selectedItems.size(); k++) {
 							if (selectedItems.get(k).equals(itemData)) {
 								found = true;
@@ -337,10 +452,42 @@ ListDialog(This config) {
 
 					if (hasIcon) {
 						try {
-							iconView.setImageDrawable((Drawable) iconDrawable);
+							if (isIconRecycled(iconDrawable)) {
+								itemData.put("icon", null);
+								iconView.setVisibility(View.GONE);
+							} else {
+								iconView.setImageDrawable((Drawable) iconDrawable);
+								iconView.setVisibility(View.VISIBLE);
+							}
 						} catch (Exception e) {
-							// iconView.setImageDrawable(null);
 							iconView.setVisibility(View.GONE);
+						}
+					} else if (hasGetIcon) {
+						iconView.setVisibility(View.VISIBLE);
+						Boolean isLoading = itemData.get("isLoadingIcon");
+						if (isLoading == null || !isLoading.booleanValue()) {
+							try {
+								itemData.put("isLoadingIcon", true);
+								final Callable iconCallable = (Callable) getIconObj;
+								try {
+									final Drawable loadedIcon = iconCallable.call();
+									if (loadedIcon != null) {
+										itemData.put("icon", loadedIcon);
+										itemData.remove("getIcon");
+										if (iconView.getTag() == itemData) {
+											iconView.setImageDrawable(loadedIcon);
+											iconView.setVisibility(View.VISIBLE);
+										}
+									}
+								} catch (Exception e) {
+									/* Ignore icon retrieval errors */
+								} finally {
+									itemData.put("isLoadingIcon", false);
+								}
+							} catch (e) {
+								log(e.getMessage(), "ERROR", TOP);
+								itemData.put("isLoadingIcon", false);
+							}
 						}
 					} else if (hasIconPath) {
 						listener() {
@@ -351,9 +498,8 @@ ListDialog(This config) {
 							}
 							return this;
 						}
-						loadSvgIcon(activityContext, iconPath, listener());
-					}
-					else if ("app".equals(itemData.get("type")) && sub != null) {
+						loadSvgIcon(getContext(), iconPath, listener());
+					} else if ("app".equals(itemData.get("type")) && sub != null) {
 						iconView.setVisibility(0);
 						Drawable dr = (Drawable) iconCache.get(sub.toString());
 						if (dr == null) {
@@ -372,18 +518,17 @@ ListDialog(This config) {
 			}
 		};
 
-		BaseAdapter adapter = (BaseAdapter) tasker.implementClass(BaseAdapter.class, adapterHandler);
+		adapter = (BaseAdapter) tasker.implementClass(BaseAdapter.class, adapterHandler);
 		listView.setAdapter(adapter);
 
 		mainContainer.addView(listView);
 
-		/* Button Container */
-		LinearLayout buttonsContainer = new LinearLayout(activityContext);
+		buttonsContainer = new LinearLayout(getContext());
 		buttonsContainer.setOrientation(0);
 		buttonsContainer.setGravity(Gravity.END);
 		buttonsContainer.setPadding(0, dp(8), 0, 0);
 
-		MaterialButton cBtn = new MaterialButton(activityContext);
+		cBtn = new MaterialButton(getContext());
 		cBtn.setText("CANCEL");
 		cBtn.setOnClickListener(new View.OnClickListener() {
 			onClick(View v) {
@@ -391,10 +536,11 @@ ListDialog(This config) {
 				remove();
 			}
 		});
+
 		buttonsContainer.addView(cBtn);
 
 		if (isMulti) {
-			MaterialButton okButton = new MaterialButton(activityContext);
+			okButton = new MaterialButton(getContext());
 			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
 			ol.leftMargin = dp(12);
 			okButton.setLayoutParams(ol);
@@ -416,7 +562,6 @@ ListDialog(This config) {
 				clicked.put("index", pos);
 				if (isMulti) {
 					int index = -1;
-					/* FIX: Use object identity to handle items with duplicate titles correctly */
 					for (int i = 0; i < selectedItems.size(); i++) {
 						if (selectedItems.get(i) == clicked) {
 							index = i;
@@ -428,10 +573,24 @@ ListDialog(This config) {
 					adapter.notifyDataSetChanged();
 				} else {
 					remove();
+					clicked.put("longClick", false);
 					if (hasSuccess) config.onSuccess(clicked);
 				}
 			}
 		});
+
+		if (!isMulti) {
+			listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+				onItemLongClick(AdapterView p, View v, int pos, long id) {
+					remove();
+					Map clicked = filteredList.get(pos);
+					clicked.put("index", pos);
+					clicked.put("longClick", true);
+					if (hasSuccess) config.onSuccess(clicked);
+					return true;
+				}
+			});
+		}
 
 		if (filterInput != null) {
 			filterInput.addTextChangedListener(new TextWatcher() {
@@ -454,31 +613,57 @@ ListDialog(This config) {
 			});
 		}
 
+		attachStateListener();
 		root.addView(mainContainer);
-		activity.setContentView(root);
 
-		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-			onViewAttachedToWindow(View v) {
-				hasShown = true;
-				isRemoved = false;
-				if (hasAttach) config.onAttach();
-			}
-			onViewDetachedFromWindow(View v) {
-				remove();
-				if (hasDetach) config.onDetach();
-			}
-		});
+		if (isActivityContext()) {
+			activity.setContentView(root);
+		} else {
+			windowManager = getContext().getSystemService(Context.WINDOW_SERVICE);
+			int overlayType = isAccessibilityContext() ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+			
+			int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
+					| WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH 
+					| WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+			
+			if (!showFilter) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+			
+			WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+				dialogWidth,
+				WindowManager.LayoutParams.WRAP_CONTENT,
+				overlayType,
+				flags,
+				android.graphics.PixelFormat.TRANSLUCENT
+			);
+			params.gravity = Gravity.BOTTOM;
 
+			if (dimAmount != 0.0f) {
+				params.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
+				params.dimAmount = dimAmount;
+			}
+			windowManager.addView(root, params);
+		}
 
 	}
 
 	show() {
 		if (!isAdded()) {
-			isRemoved = false;
-			hasShown = true;
-			tasker.doWithActivity(new java.util.function.Consumer() {
-				accept(Object activity) { layout((Activity) activity); }
-			});
+			if (!useOverlay) {
+				tasker.doWithActivity(new java.util.function.Consumer() {
+					accept(Object act) { layout((Activity) act); }
+				});
+			} else {
+				if (useAccessibility) {
+					android.accessibilityservice.AccessibilityService a11yService = tasker.getAccessibilityService();
+					if (a11yService == null) {
+						throw new com.joaomgcd.taskerm.action.java.JavaCodeException("Accessibility Service is not running.");
+					}
+					layout(a11yService);
+				} else {
+					layout(context);
+				}
+			}
+
 			if (timeout != 0) {
 				boolean isSuccess = waitTimeout.blockingAwait(timeout, TimeUnit.MILLISECONDS);
 				if (hasTimeout && !isSuccess) config.onTimeout();
@@ -503,7 +688,7 @@ ListDialog(This config) {
 		return root.getVisibility() == View.GONE && isAdded();
 	}
 
-	isShown() {
+	isShowing() {
 		if (root == null) return false;
 		return root.getVisibility() == View.VISIBLE && isAdded();
 	}
@@ -514,4 +699,5 @@ ListDialog(This config) {
 	}
 
 	return this;
+
 }
