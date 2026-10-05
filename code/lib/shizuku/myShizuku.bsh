@@ -1,0 +1,235 @@
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import java.util.concurrent.ConcurrentHashMap;
+import android.content.Context;
+import android.os.IBinder;
+import android.os.IBinder.DeathRecipient;
+import java.lang.reflect.Method;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+myShizuku Scripted Object Constructor
+Organizes system services and their hidden API checks into
+logically structured groups.
+───────────────────────────────────────────────────────────────*/
+myShizuku() {
+	if (tasker.getJavaVariable(this.namespace.name) != null) {
+		return tasker.getJavaVariable(this.namespace.name);
+	}
+
+	final String SHELL_PACKAGE_NAME = "com.android.shell";
+	final String SHELL_USER = "shell";
+	final Map services = new ConcurrentHashMap();
+	final Map ibinders = new ConcurrentHashMap();
+	final Map deathRecipients = new ConcurrentHashMap();
+	final Map listeners = new ConcurrentHashMap();
+	final Map globalListeners = new ConcurrentHashMap();
+
+	/*───────────────────────────────────────────────────────────────
+	  Common Helper Methods
+	───────────────────────────────────────────────────────────────*/
+
+	/* Retrieves binder for a system service from Shizuku. */
+	IBinder getIBinder(String serviceName) {
+		IBinder binder;
+
+		if (ibinders.containsKey(serviceName)) {
+			binder = (IBinder) ibinders.get(serviceName);
+		} else {
+			try {
+				binder = tasker.getShizukuService(serviceName);
+				if (binder != null) {
+					ibinders.put(serviceName, binder);
+				}
+			} catch (Object e) {
+				throw new JavaCodeException(e.getMessage());
+			}
+		}
+
+		return binder;
+	}
+
+	fireGlobalListeners(String event, String serviceName) {
+		Iterator iterator = globalListeners.keySet().iterator();
+		while (iterator.hasNext()) {
+			This listener = globalListeners.get(iterator.next());
+			switch(event) {
+				case "onBinderDiedString":
+					if (listener.hasOnBinderDiedString) listener.onBinderDied(serviceName);
+					break;
+				case "onServiceAvailable":
+					if (listener.hasOnServiceAvailable) listener.onServiceAvailable(serviceName);
+					break;
+			};
+		}
+	}
+	
+	DeathRecipient getDeathRecipient(String serviceName) {
+		
+		if (deathRecipients.containsKey(serviceName)) {
+			return (DeathRecipient) deathRecipients.get(serviceName);
+		} else if (!services.containsKey(serviceName)) {
+			return null;
+		}
+
+		IBinder binder = getIBinder(serviceName);
+		DeathRecipient deathRecipient;
+
+		deathRecipient = new IBinder.DeathRecipient() {
+			public void binderDied() {
+				ibinders.remove(serviceName);
+				services.remove(serviceName);
+				binder.unlinkToDeath(deathRecipient, 0);
+				deathRecipients.remove(serviceName);
+				if (listeners.containsKey(serviceName)) {
+					This listener = listeners.get(serviceName);
+					if (listener.hasOnBinderDied) listener.onBinderDied();
+					listeners.remove(serviceName);
+					fireGlobalListeners("onBinderDiedString", serviceName);
+				}
+			}
+		};
+
+		deathRecipients.put(serviceName, deathRecipient);
+		return deathRecipient;
+	}
+
+	/* Retrieves service for a system service from Shizuku. */
+	Object getService(String serviceName) {
+		IBinder binder = getIBinder(serviceName);
+		Object service;	
+			
+		try {
+			String descriptor = binder.getInterfaceDescriptor();
+			if (descriptor == null || descriptor.length() == 0) {
+				throw new JavaCodeException("Binder returned empty descriptor for service: " + serviceName);
+			}
+			Class stubClass = Class.forName(descriptor + "$Stub");
+			Method asInterfaceMethod;
+			try {
+				asInterfaceMethod = stubClass.getMethod("asInterface", new Class[] { IBinder.class });
+			} catch (NoSuchMethodException e) {
+				throw new JavaCodeException("Unable to use service: " + serviceName + " Because of missing method: " + e.getMessage() 
+				+ ".\nTry disabling hidden api restrictions. https://developer.android.com/guide/app-compatibility/restrictions-non-sdk-interfaces#how_can_i_enable_access_to_non-sdk_interfaces");
+			}
+			service = asInterfaceMethod.invoke(null, new Object[] { binder });
+			getDeathRecipient(serviceName);
+			fireGlobalListeners("onServiceAvailable", serviceName);
+		} catch (Object e) {
+			throw new JavaCodeException("Failed to obtain service " + serviceName + ". " + e.getMessage());
+		}
+
+		services.put(serviceName, service);
+		return service;
+	}
+
+	/* Checks if a system service exists from Shizuku. */
+	hasService(String serviceName) {
+		try {
+			getService(serviceName);
+			return true;
+		} catch (Object e) {
+			return false;
+		}
+	}
+
+	/* Checks if a system service binder exists from Shizuku. */
+	isBinderAlive(String serviceName) {
+		IBinder binder = (IBinder) ibinders.get(serviceName);
+		if (binder == null) return false;
+		return binder.isBinderAlive();
+	}
+
+	/*───────────────────────────────────────────────────────────────
+	  Register methods and variables to the caller namespace
+	───────────────────────────────────────────────────────────────*/
+	set() {
+		setNameSpace(this.caller.namespace);
+
+		import android.os.IBinder;
+		import android.content.Context;
+		import bsh.This;
+		// setTypedVariable(java.lang.String name, java.lang.Class type, java.lang.Object value, boolean isFinal)
+		if (myShizuku == void) {
+			this.namespace.setTypedVariable("myShizuku", This.class, tasker.getJavaVariable("myShizuku"), true);
+		}
+
+		if (SHELL_PACKAGE_NAME == void) {
+			this.namespace.setTypedVariable("SHELL_PACKAGE_NAME", String.class, myShizuku.SHELL_PACKAGE_NAME, true);
+		}
+
+		if (SHELL_USER == void) {
+			this.namespace.setTypedVariable("SHELL_USER", String.class, myShizuku.SHELL_USER, true);
+		}
+
+		Object getService(String serviceName) {
+			return myShizuku.getService(serviceName);
+		}
+
+		boolean isBinderAlive(String serviceName) {
+			return myShizuku.isBinderAlive(serviceName);
+		}
+
+		IBinder getServiceBinder(String serviceName) {
+			return myShizuku.getIBinder(serviceName);
+		}
+
+	}
+
+	flagListeners(This listener) {
+		String callerName = this.caller.namespace.name;
+		listener.hasOnBinderDied = listener.namespace.getMethod("binderDied", new Class[] {}) != null;
+		listener.hasOnBinderDiedString = listener.namespace.getMethod("binderDied", new Class[] { String.class }) != null;
+		listener.hasOnServiceAvailable = listener.namespace.getMethod("onServiceAvailable", new Class[] { String.class }) != null;
+		switch(callerName) {
+			case "addListener":
+				if (!listener.hasOnBinderDied) {
+					throw new JavaCodeException("Missing binderDied() method in listener: " + listener.namespace.name);
+				}
+				break;
+			case "addGlobalListener":
+				if (!listener.hasOnBinderDiedString) {
+					throw new JavaCodeException("Missing binderDied(String) method in listener: " + listener.namespace.name);
+				}
+				break;
+		}
+	}
+
+	/* ──────────────────────────────────────────────────────────────	
+	 * Register listeners for binder death events
+	 * The listener will be override for the same service name
+	 * ────────────────────────────────────────────────────────────── */
+	addListener(String serviceName, This listener) {
+		flagListeners(listener);
+		if (!listener.hasOnBinderDiedString) {
+			throw new JavaCodeException("Missing binderDied(String) method in listener: " + listener.namespace.name);
+		}
+		listeners.put(serviceName, listener);
+		return this;
+	}
+
+	// * Removes listener for binder death events
+	removeListener(String serviceName) {
+		listeners.remove(serviceName);
+	}
+
+	// * Removes listener for binder death events
+	removeListener(This listener) {
+		listeners.remove(listener.namespace.name);
+	}
+
+	// * Register global listeners for binder death events
+	addGlobalListener(This listener) {
+		flagListeners(listener);
+		globalListeners.put(listener.namespace.name, listener);
+	}
+
+	// * Removes listener for binder death events
+	removeGlobalListener(This listener) {
+		globalListeners.remove(listener.namespace.name);
+	}
+
+	tasker.setJavaVariable(this.namespace.name, this);
+	tasker.sendCommand(this.namespace.name + "=:=start");
+	return this;
+
+}

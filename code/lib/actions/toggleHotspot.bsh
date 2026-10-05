@@ -24,14 +24,14 @@ import bsh.This;
    - boolean status for CHECK_STATUS.
   ───────────────────────────────────────────────────────────────*/
 int toggleHotspot(String toggleAction) {
-    This shizukuManager = every.shizukuManager;
+    This myShizuku = every.myShizuku;
 
     getTetherCon() {
-        return shizukuManager.getService(Context.TETHERING_SERVICE);
+        return myShizuku.getService(Context.TETHERING_SERVICE);
     }
 
     getIWifiManager() {
-        return shizukuManager.getService(Context.WIFI_SERVICE);
+        return myShizuku.getService(Context.WIFI_SERVICE);
     }
 
     /*───────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ int toggleHotspot(String toggleAction) {
             TetheringRequest request = builder.build();
             getTetherCon().startTethering(
                 request.parcel,
-                shizukuManager.SHELL_PACKAGE_NAME,
+                myShizuku.SHELL_PACKAGE_NAME,
                 null,
                 getTetheringListener(subject)
             );
@@ -92,7 +92,7 @@ int toggleHotspot(String toggleAction) {
         try {
             getTetherCon().stopTethering(
                 TetheringManager.TETHERING_WIFI,
-                shizukuManager.SHELL_PACKAGE_NAME,
+                myShizuku.SHELL_PACKAGE_NAME,
                 null,
                 getTetheringListener(subject)
             );
