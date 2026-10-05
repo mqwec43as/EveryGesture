@@ -46,8 +46,6 @@ SheetMenu(This config) {
 
 	Activity activity;
 	LinearLayout container;
-	boolean isRemoved = true;
-	boolean hasShown = false;
 	FloatingToolbarLayout root;
 	CompletableSubject waitTimeout = CompletableSubject.create();
 	This monitor;
@@ -305,9 +303,6 @@ SheetMenu(This config) {
 		sheetMenu.startAnimation(slideUp);
 		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
 			onViewAttachedToWindow(View v) {
-				// ! It won't trigger at the first time
-				hasShown = true;
-				isRemoved = false;
 			}
 			onViewDetachedFromWindow(View v) {
 				remove();
@@ -323,7 +318,6 @@ SheetMenu(This config) {
 		if (activity != null) {
 			activity.finish();
 		}
-		isRemoved = true;
 		if (timeout != 0 && !waitTimeout.hasComplete()) {
 			waitTimeout.onComplete();
 		}
@@ -337,13 +331,9 @@ SheetMenu(This config) {
 
 	show() {
 		if (!isAdded()) {
-			isRemoved = false;
-			hasShown = true;
 			tasker.doWithActivity(new java.util.function.Consumer() {
 				accept(Object act) { 
 					layout((Activity) act);
-					hasShown = true;
-					isRemoved = false;
 					if (hasAttach) config.onAttach();
 				}
 			});
@@ -371,7 +361,7 @@ SheetMenu(This config) {
 		return root.getVisibility() == View.GONE && isAdded();
 	}
 
-	isShown() {
+	isShowing() {
 		if (root == null) return false;
 		return root.getVisibility() == View.VISIBLE && isAdded();
 	}

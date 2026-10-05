@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 
 TemplateCardHelper(This templateCard) {
+	// * This will inherit variables and methods from TemplateCard
 	setNameSpace(templateCard.namespace);
 	TextView defaultActionTV;
 	// tranverse the view hierarchy to find the other views and set the variable accrodingly
@@ -70,7 +71,7 @@ TemplateCardHelper(This templateCard) {
 
 	addDefaultAction() {
 		if (defaultActionTV == null) {
-			defaultActionTV = new TextView(CONTEXT);
+			defaultActionTV = new TextView(getContext());
 			defaultActionTV.setText("Default actions");
 			defaultActionTV.setTextSize(14);
 			defaultActionTV.setTextColor(handleCard.Res.Card.Template.SUBTITLE_COLOR);

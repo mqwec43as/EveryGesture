@@ -66,6 +66,14 @@ Main() {
 	This TOP = this;
 	This every = tasker.getJavaVariable("everyGesture");
 	This monitor;
+
+	if (every.Main != null) {
+		tasker.showToast("Cleaning old instance");
+		every.Main.finish();
+	}
+
+	every.Main = this;
+	
 	if (every == null || every == void) {
 		tasker.showToast("No everyGesture data found");
 		return;
@@ -89,20 +97,35 @@ Main() {
 	BottomNavigationView navigationBar;
 	FloatingActionButton addButton;
 	View lastSpacer;
+
+	getContext() {
+		return activity;
+	}
 	
 	activityListener() {
 		onStopped(Object event) {
-			event.activity.finish();
+			// event.activity.finish();
+		}
+		
+		onDestroyed(Object event) {
+			finish();
 		}
 		
 		return this;
+	}
+
+	finish() {
+		if (getContext() != null) {
+			getContext().finish();
+			every.Main = null;
+		}
 	}
 
 	addNavbar() {
 		if (navigationBar != null) return;
 		int iconSizePx = 32;
 		int textSizePx = 36;
-		navigationBar = new BottomNavigationView(activity);
+		navigationBar = new BottomNavigationView(getContext());
 		navigationBar.setItemIconSize(tm.dp(iconSizePx));
 		Menu menu = navigationBar.getMenu();
 
@@ -113,7 +136,7 @@ Main() {
 			}
 			return this;
 		}
-		loadSvgIcon(activity, every.MAIN_DIRECTORY + "/res/main/handle.svg", handleIcon());
+		loadSvgIcon(getContext(), every.MAIN_DIRECTORY + "/res/main/handle.svg", handleIcon());
 		handleButton.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
 			public boolean onMenuItemClick(MenuItem item) {
 				item.setChecked(true);
@@ -142,7 +165,7 @@ Main() {
 
 	public addSpacer(View container, int spacing) {
 		int spacerHeight = tm.dp(spacing);
-		View spacer = new View(activity);
+		View spacer = new View(getContext());
 		LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, spacerHeight);
 		spacer.setLayoutParams(params);
 		container.addView(spacer);
@@ -183,14 +206,14 @@ Main() {
 	/* Dynamic calculation of the system navigation bar height using framework Resource identifiers */
 	addNavbarSpacer() {
 		int navBarHeight = 0;
-		int resourceId = activity.getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+		int resourceId = getContext().getResources().getIdentifier("navigation_bar_height", "dimen", "android");
 		if (resourceId > 0) {
-			navBarHeight = activity.getResources().getDimensionPixelSize(resourceId);
+			navBarHeight = getContext().getResources().getDimensionPixelSize(resourceId);
 		}
 
 		/* Create a dedicated transparent placeholder View exactly matching the system navbar height if potrait */
 		if (isPotrait()) {
-			View navBarSpacer = new View(activity);
+			View navBarSpacer = new View(getContext());
 			LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				navBarHeight
@@ -201,15 +224,16 @@ Main() {
 	}
 
 	java.util.function.Consumer activityConsumer = new java.util.function.Consumer() {
-		accept(Activity activityContext) {
-			activity = activityContext;
-			monitor = SimpleActivityMonitor(activity, activityListener());
-			tm = ThemeManager((Context) activity);
+		accept(Activity activity) {
+			super.activity = activity;
+			monitor = SimpleActivityMonitor(getContext(), activityListener());
+			getContext().setTitle("EveryGesture Main");
+			tm = ThemeManager(getContext());
 			if (every.useDarkTheme) tm.setThemeDark();
 			else tm.setThemeLight();
 			every.themeId = tm.lastThemeId;
 			addMenu = AddMenu(TOP);
-			window = activity.getWindow();
+			window = getContext().getWindow();
 			window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
 			window.setBackgroundDrawableResource(android.R.color.transparent);
 			window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
@@ -222,7 +246,7 @@ Main() {
 			winParams.dimAmount = 0.5f;
 			window.setAttributes(winParams);
 
-			root = new LinearLayout(activity);
+			root = new LinearLayout(getContext());
 			root.setOrientation(LinearLayout.VERTICAL);
 			root.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 			root.setBackgroundColor(tm.color("colorSurfaceDim"));
@@ -238,16 +262,16 @@ Main() {
 			);
 
 			/* FrameLayout container to layer the FloatingActionButton over the ScrollView */
-			container = new FrameLayout(activity);
+			container = new FrameLayout(getContext());
 			LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
 			container.setLayoutParams(containerParams);
 
-			ScrollView scroll = new ScrollView(activity);
+			ScrollView scroll = new ScrollView(getContext());
 			FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
 			scroll.setLayoutParams(scrollParams);
 
-			cardContainer = new LinearLayout(activity);
+			cardContainer = new LinearLayout(getContext());
 			cardContainer.setOrientation(LinearLayout.VERTICAL);
 			cardContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 			int p = tm.dp(16);
@@ -262,7 +286,7 @@ Main() {
 			container.addView(scroll);
 
 			/* Original Floating Save Button left exactly where it belongs */
-			addButton = new FloatingActionButton(activity);
+			addButton = new FloatingActionButton(getContext());
 
 			addIcon() {
 				onSuccess(Drawable iconDrawable) {
@@ -270,7 +294,7 @@ Main() {
 				}
 				return this;
 			}
-			loadSvgIcon(activity, every.MAIN_DIRECTORY + "/res/main/add.svg", addIcon());
+			loadSvgIcon(getContext(), every.MAIN_DIRECTORY + "/res/main/add.svg", addIcon());
 			FrameLayout.LayoutParams addButtonParams = new FrameLayout.LayoutParams(
 				FrameLayout.LayoutParams.WRAP_CONTENT,
 				FrameLayout.LayoutParams.WRAP_CONTENT
@@ -293,24 +317,14 @@ Main() {
 			root.addView(container);
 			addNavbarSpacer();
 
-			activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-				onViewAttachedToWindow(View v) {
-
-				}
-
-				onViewDetachedFromWindow(View v) {
-					tasker.showToast("Cleaning");
-					activity.finish();
-				}
-			});
-
-			activity.setContentView(root);
+			getContext().setContentView(root);
 		}
 	};
 
 	post(Runnable action) {
-		activity.runOnUiThread(action);
+		getContext().runOnUiThread(action);
 	}
 
-	tasker.doWithActivity(activityConsumer);
+	tasker.doWithActivity(activityConsumer, true);
+	
 }

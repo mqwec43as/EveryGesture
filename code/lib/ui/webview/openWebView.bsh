@@ -1,4 +1,5 @@
 importCommands("lib.ui");
+importCommands("lib.ui.helper");
 
 import com.joaomgcd.taskerm.action.java.ClassImplementation;
 import android.app.Activity;
@@ -16,11 +17,18 @@ import android.graphics.Color;
 import java.util.function.Consumer;
 import java.util.concurrent.Callable;
 import android.view.Gravity;
+import bsh.This;
+import android.content.Context;
 
 openWebView(String targetUrl) {
 	Activity CONTEXT;
 	WebView webView;
 	This every = tasker.getJavaVariable("everyGesture");
+	This monitor;
+
+	getContext() {
+		return CONTEXT;
+	}
 
 	/*───────────────────────────────────────────────────────────────
 	    Safely destroys the WebView to release resources and finishes
@@ -61,21 +69,34 @@ openWebView(String targetUrl) {
 
 	finish() {
 		cleanupWebView();
-		if (CONTEXT != null) {
-			CONTEXT.finish();
+		if (getContext() != null) {
+			getContext().finish();
 		}
 		tasker.showToast("Close WebView");
+	}
+
+	activityListener() {
+		onStopped(Object event) {
+			finish();
+		}
+
+		onDestroyed(Object event) {
+			finish();
+		}
+		
+		return this;
 	}
 
 	final String finalUrl = targetUrl;
 	Consumer webViewConsumer = new java.util.function.Consumer() {
 		accept(Object activityObj) {
 			CONTEXT = (Activity) activityObj;
-			This tm = ThemeManager(CONTEXT);
+			This tm = ThemeManager(getContext());
+			monitor = SimpleActivityMonitor(getContext(), activityListener());
 			if (every.useDarkTheme) tm.setThemeDark();
 			else tm.setThemeLight();
 			/* Root layout holding toolbar and WebView. */
-			LinearLayout rootLayout = new LinearLayout(CONTEXT);
+			LinearLayout rootLayout = new LinearLayout(getContext());
 			rootLayout.setOrientation(LinearLayout.VERTICAL);
 			rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
@@ -83,7 +104,7 @@ openWebView(String targetUrl) {
 			));
 
 			/* Top toolbar layout. */
-			LinearLayout toolbar = new LinearLayout(CONTEXT);
+			LinearLayout toolbar = new LinearLayout(getContext());
 			toolbar.setOrientation(LinearLayout.HORIZONTAL);
 			toolbar.setBackgroundColor(tm.color("colorSurface"));
 			toolbar.setPadding(16, 16, 16, 16);
@@ -96,7 +117,7 @@ openWebView(String targetUrl) {
 			toolbar.setLayoutParams(toolbarParams);
 
 			/* Close button for toolbar. */
-			Button closeButton = new Button(CONTEXT);
+			Button closeButton = new Button(getContext());
 			closeButton.setText("Close");
 			closeButton.setTextColor(tm.color("colorOnSurface"));
 			closeButton.setBackgroundColor(Color.TRANSPARENT);
@@ -105,7 +126,7 @@ openWebView(String targetUrl) {
 			toolbar.addView(closeButton, buttonParams);
 
 			/* Initialize WebView with standard settings. */
-			webView = new WebView(CONTEXT);
+			webView = new WebView(getContext());
 			webView.setLayoutParams(new LinearLayout.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				0,
@@ -143,8 +164,8 @@ openWebView(String targetUrl) {
 			rootLayout.addView(toolbar);
 
 			/* Implement Dialog using tasker.implementClass to handle back navigation. */
-			Class[] dialogTypes = new Class[] { android.content.Context.class, int.class };
-			Object[] dialogArgs = new Object[] { CONTEXT, android.R.style.Theme_Black_NoTitleBar_Fullscreen };
+			Class[] dialogTypes = new Class[] { Context.class, int.class };
+			Object[] dialogArgs = new Object[] { getContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen };
 
 			ClassImplementation dialogHandler = new ClassImplementation() {
 				run(Callable superCaller, String methodName, Object[] args) {
@@ -186,7 +207,5 @@ openWebView(String targetUrl) {
 
 	/* Launch temporary activity and block until user closes the screen. */
 	tasker.doWithActivity(webViewConsumer);
-
-
 
 }

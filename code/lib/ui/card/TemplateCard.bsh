@@ -41,7 +41,6 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 
 TemplateCard(This handleCard, String gestureName) {
-	Context CONTEXT = handleCard.CONTEXT;
 	final This TOP = this;
 	This tm = handleCard.tm;
 	This every = handleCard.every;
@@ -94,14 +93,17 @@ TemplateCard(This handleCard, String gestureName) {
 			new Runnable() { run() { TOP.showOptionBar(); } }
 		}
 	};
-
+	
+	getContext() {
+		return handleCard.getContext();
+	}
 		
 	build() {
 		if (gestureCard != null) {
 			return gestureCard;
 		}
 
-		gestureCard = new LinearLayout(CONTEXT);
+		gestureCard = new LinearLayout(getContext());
 		gestureCard.setOrientation(1);
 		gestureBackground = new GradientDrawable();
 		gestureBackground.setColor(handleCard.Res.Card.Template.BACKGROUND_COLOR);
@@ -111,12 +113,12 @@ TemplateCard(This handleCard, String gestureName) {
 		gestureCard.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		gestureCard.setTag(TOP);
 
-		templateDetails = new LinearLayout(CONTEXT);
+		templateDetails = new LinearLayout(getContext());
 		templateDetails.setId(TEMPLATE_DETAILS);
 		templateDetails.setOrientation(0);
 		templateDetails.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		snapshotView = new ImageView(CONTEXT);
+		snapshotView = new ImageView(getContext());
 		snapshotView.setId(SNAPSHOT);
 		snapshotBackground = new GradientDrawable();
 		snapshotBackground.setColor(handleCard.Res.Card.Snapshot.BACKGROUND_COLOR);
@@ -127,19 +129,19 @@ TemplateCard(This handleCard, String gestureName) {
 		snapshotView.setBackground(snapshotBackground);
 		snapshotView.setClipToOutline(true);
 
-		details = new LinearLayout(CONTEXT);
+		details = new LinearLayout(getContext());
 		details.setId(DETAILS);
 		details.setOrientation(1);
 		details.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		gestureNameTV = new TextView(CONTEXT);
+		gestureNameTV = new TextView(getContext());
 		gestureNameTV.setId(GESTURE_NAME);
 		gestureNameTV.setText(gestureName);
 		gestureNameTV.setTextSize(18);
 		gestureNameTV.setTypeface(null, Typeface.BOLD);
 		gestureNameTV.setTextColor(handleCard.Res.Card.Template.TITLE_COLOR);
 
-		actionContainer = new LinearLayout(CONTEXT);
+		actionContainer = new LinearLayout(getContext());
 		actionContainer.setId(ACTIONS_CONTAINER);
 		actionContainer.setOrientation(1);
 		actionContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -150,7 +152,7 @@ TemplateCard(This handleCard, String gestureName) {
 		templateDetails.addView(details);
 		gestureCard.addView(templateDetails);
 
-		templateActions = new MaterialToolbar(CONTEXT);
+		templateActions = new MaterialToolbar(getContext());
 		templateActions.setId(TEMPLATE_ACTIONS);
 		templateActions.setContentInsetsAbsolute(0, 0);
 		templateActions.setContentInsetsRelative(0, 0);
@@ -179,7 +181,7 @@ TemplateCard(This handleCard, String gestureName) {
 				}
 				return this;
 			}
-			loadSvgIcon(CONTEXT, every.MAIN_DIRECTORY + "/res/main/" + iconPath, iconSet());
+			loadSvgIcon(getContext(), every.MAIN_DIRECTORY + "/res/main/" + iconPath, iconSet());
 		}
 
 
@@ -200,6 +202,12 @@ TemplateCard(This handleCard, String gestureName) {
 			build();
 		}
 		return gestureCard;
+	}
+
+	hide() {
+		if (gestureCard != null) {
+			gestureCard.setVisibility(View.GONE);
+		}
 	}
 
 	TemplateCardHelper(this);

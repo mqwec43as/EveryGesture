@@ -285,7 +285,7 @@ Handle(This config) {
 	}
 
 	setColor(int color) {
-		if (isShown()) visualShape.setColor(color);
+		if (isShowing()) visualShape.setColor(color);
 	}
 
 	setInteractable(boolean interactable) {
@@ -326,7 +326,7 @@ Handle(This config) {
 		return view.getVisibility() == View.VISIBLE;
 	}
 
-	isShown() {
+	isShowing() {
 		if (view == null) return false;
 		return isAdded() && isVisible();
 	}

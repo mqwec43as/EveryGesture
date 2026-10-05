@@ -39,7 +39,7 @@ import android.util.DisplayMetrics;
 DemoController(This handle) {
 	This listener;
 	This tm = ThemeManager(context);
-	boolean isShownAlready = handle.isShown();
+	boolean isShownAlready = handle.isShowing();
 	boolean isAddedAlready = handle.isAdded();
 	WindowManager.LayoutParams initialParams;
 	if (isShownAlready) {

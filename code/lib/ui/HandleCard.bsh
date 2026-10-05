@@ -45,10 +45,14 @@ import android.content.res.ColorStateList;
 
 HandleCard(This main, This handle) {
 
+	getContext() {
+		return main.getContext();
+	}
+
 	Context CONTEXT = main.activity;
 	final This TOP = this;
 	This every = main.every;
-	This tm = ThemeManager(CONTEXT);
+	This tm = ThemeManager(getContext());
 	tm.setTheme(every.themeId);
 
 	Res.Card.Template.BACKGROUND_COLOR = tm.color("colorSurfaceContainerHigh");
@@ -80,7 +84,7 @@ HandleCard(This main, This handle) {
 	This handleTemplatesActivity;
 
 	dp(int value) {
-		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, CONTEXT.getResources().getDisplayMetrics());
+		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, getContext().getResources().getDisplayMetrics());
 	}
 
 	This Actions = every.Actions != null ? every.Actions : Actions();
@@ -115,7 +119,7 @@ HandleCard(This main, This handle) {
 
 	every.executor.execute(runnable);
 
-	MaterialCardView cardRoot = new MaterialCardView(CONTEXT);
+	MaterialCardView cardRoot = new MaterialCardView(getContext());
 	cardRoot.setStrokeWidth(0);
 	GradientDrawable cardBgRoot = new GradientDrawable();
 	cardBgRoot.setCornerRadius(Res.Card.HANDLE_RADIUS);
@@ -123,12 +127,12 @@ HandleCard(This main, This handle) {
 	LinearLayout.LayoutParams cardRootLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	cardRoot.setLayoutParams(cardRootLp);
 
-	LinearLayout cardContent = new LinearLayout(CONTEXT);
+	LinearLayout cardContent = new LinearLayout(getContext());
 	cardContent.setOrientation(LinearLayout.VERTICAL);
 	cardContent.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 	/* Top row: title + switch and action chips. */
-	LinearLayout topRow = new LinearLayout(CONTEXT);
+	LinearLayout topRow = new LinearLayout(getContext());
 	topRow.setOrientation(LinearLayout.VERTICAL);
 	LinearLayout.LayoutParams topLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	topRow.setLayoutParams(topLp);
@@ -164,11 +168,11 @@ HandleCard(This main, This handle) {
 	topGesture = SimpleGesture(topRow, topListener());
 	topGesture.listen();
 
-	RelativeLayout titleRow = new RelativeLayout(CONTEXT);
+	RelativeLayout titleRow = new RelativeLayout(getContext());
 	titleRow.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 	/* Handle name. */
-	TextView handleTV = new TextView(CONTEXT);
+	TextView handleTV = new TextView(getContext());
 	handleTV.setText(config.handleName);
 	handleTV.setTextSize(Res.Card.HANDLE_NAME_TEXT_SIZE);
 	handleTV.setTypeface(null, Typeface.BOLD);
@@ -179,7 +183,7 @@ HandleCard(This main, This handle) {
 	titleRow.addView(handleTV, handleParams);
 
 	/* Handle switch. */
-	handleSwitch = new MaterialSwitch(CONTEXT);
+	handleSwitch = new MaterialSwitch(getContext());
 	handleSwitch.setText("");
 	int switchPadding = 12;
 	handleSwitch.setPadding(switchPadding, switchPadding, switchPadding, switchPadding);
@@ -200,14 +204,14 @@ HandleCard(This main, This handle) {
 	handleSwitchParams.addRule(RelativeLayout.CENTER_VERTICAL);
 	titleRow.addView(handleSwitch, handleSwitchParams);
 
-	LinearLayout chipRow = new LinearLayout(CONTEXT);
+	LinearLayout chipRow = new LinearLayout(getContext());
 	// chipRow.setOrientation(LinearLayout.VERTICAL);
 	LinearLayout.LayoutParams chipRowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	chipRowParams.topMargin = dp(4);
 	chipRow.setLayoutParams(chipRowParams);
 	chipRow.setPadding(0, dp(4), 0, 0);
 
-	ChipGroup handleActionChips = new ChipGroup(CONTEXT);
+	ChipGroup handleActionChips = new ChipGroup(getContext());
 	LinearLayout.LayoutParams chipGroupParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	handleActionChips.setLayoutParams(chipGroupParams);
 	handleActionChips.setSingleLine(false);
@@ -215,7 +219,7 @@ HandleCard(This main, This handle) {
 	chipRow.addView(handleActionChips);
 
 	createActionChip(String label, String startIconPath, Runnable action) {
-		Chip chip = new Chip(CONTEXT);
+		Chip chip = new Chip(getContext());
 		chip.setText(label);
 		chip.setChipIconVisible(true);
 		chip.setClickable(true);
@@ -237,7 +241,7 @@ HandleCard(This main, This handle) {
 			}
 			return this;
 		}
-		loadSvgIcon(CONTEXT, editIconPath, startIcon());
+		loadSvgIcon(getContext(), editIconPath, startIcon());
 
 		endIcon() {
 			onSuccess(Drawable result) {
@@ -246,7 +250,7 @@ HandleCard(This main, This handle) {
 			}
 			return this;
 		}
-		loadSvgIcon(CONTEXT, startIconPath, endIcon());
+		loadSvgIcon(getContext(), startIconPath, endIcon());
 
 		return chip;
 	}
@@ -296,7 +300,7 @@ HandleCard(This main, This handle) {
 	cardRoot.addView(cardContent);
 
 	addSpacer(View target) {
-		View spacer = new View(CONTEXT);
+		View spacer = new View(getContext());
 		spacer.setBackgroundColor(Color.TRANSPARENT);
 		spacer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Res.Card.Template.SPACE_HEIGHT));
 		target.addView(spacer);

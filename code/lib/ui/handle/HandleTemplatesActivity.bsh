@@ -210,9 +210,9 @@ HandleTemplatesActivity(This handleCard) {
 		return !sheetMenu.isAdded();
 	}
 
-	isShown() {
+	isShowing() {
 		if (sheetMenu == null) return false;
-		return sheetMenu.isShown();
+		return sheetMenu.isShowing();
 	}
 
 	isRemoved() {

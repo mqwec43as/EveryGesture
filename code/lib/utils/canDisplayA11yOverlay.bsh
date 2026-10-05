@@ -8,16 +8,19 @@ import android.accessibilityservice.AccessibilityService;
 import io.reactivex.subjects.CompletableSubject;
 import android.os.Looper;
 
-/*───────────────────────────────────────────────────────────────
-  canDisplayA11yOverlay()
-  **Checks Accessibility Overlay Capabilities**
-  Determines if overlay drawing is permitted by attempting to add 
-  and immediately remove a temporary view on the main thread using 
-  a blocking CompletableSubject on background threads.
+/* ───────────────────────────────────────────────────────────────
+ * Determines if accessibility service properly running by attempting to add 
+ * and immediately remove a temporary view.
+ * 
+ * It will throw Unable to add window -- token null is not valid
+ * when accessibility service is not working properly. 
+ * 
+ * Usually can be checked in the accessibility dashboard, the service is labeled
+ * with "Not Working".
 
-  Returns:
-   - true if overlay was successfully created and removed.
-   - false if an error occurred or AccessibilityService is null.
+ * Returns:
+ *  - true if overlay was successfully created and removed.
+ *  - false if an error occurred or AccessibilityService is null.
   ───────────────────────────────────────────────────────────────*/
 boolean canDisplayA11yOverlay() {
 	AccessibilityService service = tasker.getAccessibilityService();

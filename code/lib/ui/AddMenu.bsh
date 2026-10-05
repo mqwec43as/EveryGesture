@@ -5,9 +5,13 @@ import android.graphics.drawable.Drawable;
 import android.content.Context;
 import android.graphics.PorterDuff;
 
-AddMenu(This Main) {
+AddMenu(This main) {
 	final This TOP = this;
-    This tm = Main.tm;
+    This tm = main.tm;
+
+    getContext() {
+        return main.getContext();
+    }
 
     Object[][] mainAddOptions = new Object[][] {
         {
@@ -16,7 +20,7 @@ AddMenu(This Main) {
             "main/new_handle.svg",
             new Runnable() {
                 run() {
-                   newHandleDialog(Main); 
+                   newHandleDialog(main); 
                 }
             }
         },
@@ -26,7 +30,7 @@ AddMenu(This Main) {
             "main/gesture.svg",
             new Runnable() {
                 run() {
-                   drawSelectDialog(Main); 
+                   drawSelectDialog(main); 
                 }
             }
         },
@@ -36,7 +40,7 @@ AddMenu(This Main) {
             "main/tasks.svg",
             new Runnable() {
                 run() {
-                   editAction(Main); 
+                   editAction(main); 
                 }
             }
         }
@@ -61,7 +65,7 @@ AddMenu(This Main) {
             }
             return this;
         }
-        loadSvgIcon(context, iconPath, listener() );
+        loadSvgIcon(getContext(), iconPath, listener() );
         item.put("title", title);
         item.put("subtitle", description);
         item.put("action", action);

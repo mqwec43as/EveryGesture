@@ -70,7 +70,11 @@ HandleEdit(This handleCard) {
 	List handleInputs = new ArrayList();
 	List livePathInputs = new ArrayList();
 	List inputList = new ArrayList();
-	boolean isShownAlready = handle.isShown();
+	boolean isShownAlready = handle.isShowing();
+
+	getContext() {
+		return activity;
+	}
 
 	createInput(Context activity, Object initialtext, String hint, String iconType, This argPresetDialog, Class type) {
 		This input = InputLayout(activity);

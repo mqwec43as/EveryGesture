@@ -19,14 +19,18 @@ AppBar(This main) {
 	This tm = main.tm;
 	This every = main.every;
 
-	AppBarLayout appBarLayout = new AppBarLayout(activity);
+	getContext() {
+		return main.getContext();
+	}
+
+	AppBarLayout appBarLayout = new AppBarLayout(getContext());
 	AppBarLayout.LayoutParams appBarParams = new AppBarLayout.LayoutParams(
 		ViewGroup.LayoutParams.MATCH_PARENT,
 		ViewGroup.LayoutParams.WRAP_CONTENT
 	);
 	appBarLayout.setLayoutParams(appBarParams);
 
-	MaterialToolbar toolbar = new MaterialToolbar(activity);
+	MaterialToolbar toolbar = new MaterialToolbar(getContext());
 	toolbar.setTitle("Every Gesture");
 	toolbar.setBackgroundColor(tm.color("colorSurfaceContainer"));
 	toolbar.setTitleTextColor(tm.color("colorOnSurface"));
@@ -54,12 +58,12 @@ AppBar(This main) {
 			, "main/dots-vertical"
             , new Runnable() {
                 run() {
-                	View anchorView = activity.findViewById(ACTION);
+                	View anchorView = getContext().findViewById(ACTION);
 					if (anchorView == null) {
 						anchorView = toolbar;
 					}
 
-					if (popup == null) popup = PopUpMenu(activity, anchorView);
+					if (popup == null) popup = PopUpMenu(getContext(), anchorView);
 					popup.show();
 					return true;
                 }
@@ -76,7 +80,7 @@ AppBar(This main) {
 			return this;
 		}
 		String actionIconPath = every.MAIN_DIRECTORY + "/res/" + path + ".svg";
-		loadSvgIcon(activity, actionIconPath, listen());
+		loadSvgIcon(getContext(), actionIconPath, listen());
 	}
 
 
@@ -90,7 +94,7 @@ AppBar(This main) {
 		setIcon(menuItem, iconPath);
 		menuItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
 			public boolean onMenuItemClick(MenuItem item) {
-				activity.runOnUiThread(onClick);
+				getContext().runOnUiThread(onClick);
 				return true;
 			}
 		});

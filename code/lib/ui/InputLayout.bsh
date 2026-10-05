@@ -51,7 +51,11 @@ InputLayout(Context inputContext) {
 	Class inputClass = String.class;
 	String parameterName;
 
-	TextInputLayout inputLayout = new TextInputLayout(inputContext);
+	getContext() {
+		return inputContext;
+	}
+
+	TextInputLayout inputLayout = new TextInputLayout(getContext());
 	TextInputEditText editText = new TextInputEditText(inputLayout.getContext());
 	inputLayout.setBoxBackgroundMode(2);
 	inputLayout.addView(editText);
@@ -62,7 +66,7 @@ InputLayout(Context inputContext) {
 		return (int) TypedValue.applyDimension(
 			TypedValue.COMPLEX_UNIT_DIP,
 			value,
-			inputContext.getResources().getDisplayMetrics()
+			getContext().getResources().getDisplayMetrics()
 		);
 	}
 	
@@ -138,7 +142,7 @@ InputLayout(Context inputContext) {
 			}
 			return this;
 		}
-		loadSvgIcon(inputContext, startIconPath, listener());
+		loadSvgIcon(getContext(), startIconPath, listener());
 	}
 
 	setEndIcon(String endIconPath) {
@@ -153,7 +157,7 @@ InputLayout(Context inputContext) {
 			return this;
 		}
 		inputLayout.setEndIconMode(-1);
-		loadSvgIcon(inputContext, endIconPath, listener());
+		loadSvgIcon(getContext(), endIconPath, listener());
 	}
 
 	setEditable(boolean editAble) {

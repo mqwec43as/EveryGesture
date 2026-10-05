@@ -39,6 +39,25 @@ import com.joaomgcd.taskerm.action.java.JavaCodeSceneV2Helper;
 
 everyGesture() {
 
+	// Retrieve the previous instance from Tasker's memory
+	This old = tasker.getJavaVariable(this.namespace.name);
+	if (old != null) {
+		try {
+			boolean hasClean = old.namespace.getMethod("cleanResources", new Class[] {}) != null;
+			if (hasClean) old.cleanResources();
+			else {
+				throw new JavaCodeException("Could not find cleanResources method");
+			}
+		} catch (Exception e) {
+			log(e.getMessage(), "ERROR");
+			String appName = context.getApplicationContext().getApplicationInfo().loadLabel(context.getPackageManager());
+			String packageName = context.getPackageName();
+			tasker.showToast("Unable to clear existing " + old.namespace.name + " instance:\n in package " + packageName + "\n" + e.getMessage(), "Please Restart " + appName);
+			throw e;
+			return;
+		}
+	}
+
 	/* ───────────────────────────────────────────────────────────────
 	 * Constants
 	───────────────────────────────────────────────────────────────*/
@@ -88,8 +107,9 @@ everyGesture() {
 	This thisManager;
 	This packageManager = PackageManager();
 	This updateManager = UpdateManager();
+	This Main;
 	updateManager.directoryPath = MAIN_DIRECTORY;
-	This shizukuManager = ShizukuServiceManager();
+	This myShizuku = myShizuku();
 	This helperModeManager = HelperModeManager();
 	This uiReader = UiReader();
 	This latestAppsTray;
@@ -209,7 +229,7 @@ everyGesture() {
 	hasShowingHandle() {
 		if (handles.isEmpty()) return false;
 		for (This handle: handles.values()) {
-			if (handle.isShown()) return true;
+			if (handle.isShowing()) return true;
 		}
 		return false;
 	}
@@ -362,6 +382,7 @@ everyGesture() {
 		unregister();
 		scheduledExecutor.shutdownNow();
 		executor.shutdownNow();
+		tasker.setJavaVariable(super.namespace.name, null);
 	}
 
 	inspectVariables(This targetThis) {
@@ -387,27 +408,10 @@ if (!handle.exists() || !handle.isDirectory()) handle.mkdirs();
 File script = new File(MAIN_DIRECTORY + "/scripts");
 if (!script.exists() || !script.isDirectory()) script.mkdirs();
 
-String varName = "everyGesture";
-
-if (tasker.getJavaVariable(varName) != null) {
-	This old = tasker.getJavaVariable(varName);
-	try {
-		boolean hasClean = old.namespace.getMethod("cleanResources", new Class[] {});
-		if (!hasClean) throw new Exception("err");
-		old.cleanResources();
-		tasker.setJavaVariable(varName, null);
-	} catch (e) {
-		old.removeAll();
-		old.unregister();
-		old.scheduledExecutor.shutdownNow();
-		old.executor.shutdownNow();
-		tasker.setJavaVariable(varName, null);
-	}
-}
-
 This every = everyGesture();
-tasker.setJavaVariable(varName, every);
+tasker.setJavaVariable(every.namespace.name, every);
 every.auto(true);
+
 setVar(String name, Object value) {
 	every.namespace.setVariable(name, value, false);
 }

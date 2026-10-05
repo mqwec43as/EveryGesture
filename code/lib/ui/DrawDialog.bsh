@@ -251,7 +251,7 @@ DrawDialog(This handleCard) {
 				}
 				return this;
 			}
-			loadSvgIcon(context, path, action());
+			loadSvgIcon(getContext(), path, action());
 		}
 		targetGroup.addView(chip);
 		return this;
@@ -321,7 +321,9 @@ DrawDialog(This handleCard) {
 		updateInfoChips(object());
 	}
 
-
+	getContext() {
+		return activity;
+	}
 
 	sheetConfig() {
 		boolean isScrollable = true;
@@ -332,11 +334,11 @@ DrawDialog(This handleCard) {
 		int edgeSpacingDp = dp(18);
 		int themeId = every.themeId;
 		String saveButtonName = "Close";
-		getViews(Object activityObj) {
-			activity = (Activity) activityObj;
-			tm = ThemeManager(activity);
+		getViews(Context activity) {
+			super.activity = activity;
+			tm = ThemeManager(getContext());
 			tm.setTheme(themeId);
-			float density = activity.getResources().getDisplayMetrics().density;
+			float density = getContext().getResources().getDisplayMetrics().density;
 			dp(val) { return (int)(val * density + 0.5f); }
 
 			List viewList = new ArrayList();
@@ -404,10 +406,10 @@ DrawDialog(This handleCard) {
 					return superCaller.call();
 				}
 			});
-			gestureView = new ImageView(activity);
+			gestureView = new ImageView(getContext());
 			gestureView.setImageDrawable(canvasDrawable);
 
-			FrameLayout canvasFrame = new FrameLayout(activity);
+			FrameLayout canvasFrame = new FrameLayout(getContext());
 			GradientDrawable gd = new GradientDrawable();
 			gd.setColor(Color.BLACK);
 			gd.setCornerRadius(dp(20));
@@ -416,18 +418,18 @@ DrawDialog(This handleCard) {
 			canvasFrame.setLayoutParams(cfParams);
 			canvasFrame.addView(gestureView);
 
-			utilGroup = new ChipGroup(activity);
+			utilGroup = new ChipGroup(getContext());
 			utilGroup.setSingleLine(true);
-			infoGroup = new ChipGroup(activity);
+			infoGroup = new ChipGroup(getContext());
 			infoGroup.setSingleLine(true);
-			toggleGroup = new ChipGroup(activity);
+			toggleGroup = new ChipGroup(getContext());
 			toggleGroup.setSingleLine(true);
 
 
 			/*
 			 * Gesture Name Input
 			 */
-			gestureNameInput = InputLayout(activity);
+			gestureNameInput = InputLayout(getContext());
 			nameInput = gestureNameInput.inputLayout;
 			nameInput.setPadding(0, 0, 0, 0);
 			nameEdit = gestureNameInput.editText;
@@ -550,7 +552,7 @@ DrawDialog(This handleCard) {
 		}
 
 		onSave() {
-			if (activity != null) activity.finish();
+			if (getContext() != null) getContext().finish();
 		}
 
 		return this;
@@ -568,7 +570,7 @@ DrawDialog(This handleCard) {
 	}
 
 	addGesture() {
-		closeKeyboard(activity);
+		closeKeyboard(getContext());
 		engine.library.load();
 		String gestureName = nameEdit.getText().toString();
 		int strokeCount = gesture.getStrokes().size();
