@@ -6,6 +6,7 @@ import bsh.This;
 import android.Manifest;
 import android.os.Bundle;
 import android.app.SearchManager;
+import android.provider.Settings.Secure;
 
 /*───────────────────────────────────────────────────────────────
  * launchActivity(ComponentName targetComponent)
@@ -99,36 +100,36 @@ launchActivity(String component) {
 		}
 
 		/* Save current assistant setting to restore in finally block */
-		String origAssistant = android.provider.Settings.Secure.getString(
+		String origAssistant = Secure.getString(
 			context.getContentResolver(), "assistant"
 		);
 
 		try {
 			/* Hijack secure setting with target component */
-			android.provider.Settings.Secure.putString(
+			Secure.putString(
 				context.getContentResolver(), "assistant", component
 			);
-			
+
 			/* Trigger assistant using Root -> Shizuku -> ADB WiFi */
 			try {
+				launchAssist();
+			} catch (Exception e) {
 				if (hasPrivilegedShell()) {
 					launchAssistantPrivileged();
 				} else {
-					Thread.sleep(50);
-					launchAssist();
+					launchActivityStandard(component);
 				}
-			} catch (Exception e) {
-				launchActivityStandard(component);
 			}
 
 		} finally {
+			Thread.sleep(100);
 			/* Restore original assistant setting */
 			if (origAssistant != null) {
-				android.provider.Settings.Secure.putString(
+				Secure.putString(
 					context.getContentResolver(), "assistant", origAssistant
 				);
 			} else {
-				android.provider.Settings.Secure.putString(
+				Secure.putString(
 					context.getContentResolver(), "assistant", ""
 				);
 			}
