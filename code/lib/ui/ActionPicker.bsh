@@ -141,6 +141,7 @@ ActionPicker(Map targetActionMap, This listener) {
 			List presetList = new ArrayList();
 			int iconSize = 48;
 			int themeId = every.themeId;
+			boolean useTags = true;
 
 			onSuccess(Map selected) {
 				String text = Actions.getParameterTextFromMap(selected);
@@ -246,6 +247,7 @@ ActionPicker(Map targetActionMap, This listener) {
 			int iconSize = 48;
 			int themeId = every.themeId;
 			boolean showFilter = true;
+			boolean useTags = true;
 
 			onSuccess(Map selected) {
 				String command = selected.get("command");

@@ -14,6 +14,7 @@ import android.gesture.GestureLibrary;
 import android.gesture.GestureLibraries;
 import android.gesture.GestureStroke;
 import bsh.NameSpace;
+import android.view.Display;
 
 /*───────────────────────────────────────────────────────────────
   Config(String handleName)
@@ -40,6 +41,7 @@ Config(String handleName) {
 	GestureLibrary library = GestureLibraries.fromFile(libraryFile);
 	library.load();
 	Map listeners = new HashMap();
+	int displayId = Display.DEFAULT_DISPLAY;
 
 	This handle = helper.config("Handle");
 	NameSpace handleSpace = handle.namespace;

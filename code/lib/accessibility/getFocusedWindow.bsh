@@ -1,0 +1,46 @@
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
+import android.accessibilityservice.AccessibilityService;
+import android.util.SparseArray;
+import java.util.Iterator;
+import android.view.Display;
+
+getFocusedWindow(int displayId) {
+	SparseArray allDisplaysWindows = getService().getWindowsOnAllDisplays();
+	if (allDisplaysWindows == null) {
+		return null;
+	}
+	List windows = (List) allDisplaysWindows.get(displayId);
+	if (windows == null) {
+		return null;
+	}
+	Iterator iterator = windows.iterator();
+	AccessibilityWindowInfo focusedWindow;
+	List applications = new ArrayList();
+	while (iterator.hasNext()) {
+		AccessibilityWindowInfo window = (AccessibilityWindowInfo) iterator.next();
+		if (window == null) {
+			continue;
+		}
+		if (window.isFocused()) {
+			return window;
+		} else if (window.type == AccessibilityWindowInfo.TYPE_APPLICATION) {
+			applications.add(window);
+		}
+	}
+
+	// When there is no focused window, return the first application
+	// Usually when another display was interacted prior
+	if (focusedWindow == null && !applications.isEmpty()) {
+		focusedWindow = (AccessibilityWindowInfo) applications.get(0);
+	}
+	return focusedWindow;
+}
+
+getFocusedWindow(Display display) {
+	return getFocusedWindow(display.getDisplayId());
+}
+
+getFocusedWindow() {
+	return getFocusedWindow(0);
+}

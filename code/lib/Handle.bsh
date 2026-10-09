@@ -37,6 +37,7 @@ import android.os.Looper;
 
 import android.util.DisplayMetrics;
 import java.util.concurrent.ScheduledThreadPoolExecutor.ScheduledFutureTask;
+import android.content.res.Configuration;
 
 importCommands("lib.misc");
 importCommands("lib");
@@ -64,6 +65,7 @@ Handle(This config) {
 	WindowManager.LayoutParams params;
 	View.OnTouchListener listener;
 	This stateListener;
+	This contextCompat = ContextCompat(config);
 
 	getLivePathListener() {
 		This recognized;
@@ -129,19 +131,24 @@ Handle(This config) {
 		return this;
 	}
 
-	create() {
-		CONTEXT = context;
-		overlayType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-		if (config.handle.useAccessibility && canDisplayA11yOverlay()) {
-			Context accessibilityService = tasker.getAccessibilityService();
-			if (accessibilityService != null) {
-				CONTEXT = accessibilityService;
-				overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-			};
+	getContext() {
+		if (CONTEXT == null || !isAdded()) {
+			CONTEXT = contextCompat.getContext(config.displayId);
+			overlayType = contextCompat.getOverlayType();
+			WINDOW_MANAGER = null;
 		}
+		return CONTEXT;
+	}
 
-		WINDOW_MANAGER = CONTEXT.getSystemService(Context.WINDOW_SERVICE);
+	getWindowManager() {
+		if (WINDOW_MANAGER == null) {
+			WINDOW_MANAGER = getContext().getSystemService(Context.WINDOW_SERVICE);
+		}
+		return WINDOW_MANAGER;
+	}
 
+	create() {
+		getContext();
 		initialPosition = new Point();
 		livePath = LivePath(TOP);
 		livePathListener = getLivePathListener();
@@ -254,8 +261,8 @@ Handle(This config) {
 		Runnable show = new Runnable() {
 			run() {
 				try {
-					WINDOW_MANAGER.addView(livePath.view, livePath.params);
-					WINDOW_MANAGER.addView(view, params);
+					getWindowManager().addView(livePath.view, livePath.params);
+					getWindowManager().addView(view, params);
 				} catch (e) {
 					log(e.getMessage(), "ERROR");
 					tasker.showToast(e.getMessage(), "Error showing " + config.handleName);
@@ -271,8 +278,8 @@ Handle(This config) {
 
 	remove() {
 		if (isAdded()) {
-			WINDOW_MANAGER.removeView(livePath.view);
-			WINDOW_MANAGER.removeView(view);
+			getWindowManager().removeView(livePath.view);
+			getWindowManager().removeView(view);
 		}
 	}
 
@@ -304,7 +311,7 @@ Handle(This config) {
 			post(new Runnable() {
 				run() {
 					try {
-						WINDOW_MANAGER.updateViewLayout(view, params);
+						getWindowManager().updateViewLayout(view, params);
 					} catch (Exception ignored) {}
 				}
 			});
@@ -339,7 +346,7 @@ Handle(This config) {
 		params.y = Math.max(0, Math.min(targetY, screenHeight - params.height));
 		post(new Runnable() {
 			run() {
-				WINDOW_MANAGER.updateViewLayout(view, params);
+				getWindowManager().updateViewLayout(view, params);
 			}
 		});
 	}
@@ -363,9 +370,6 @@ Handle(This config) {
 		params.height = height;
 		moveTo(new Point(params.x + (width / 2), params.y + (height / 2)));
 	}
-
-
-	import android.content.res.Configuration;
 
 	isPotrait() {
 		return CONTEXT.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
@@ -403,7 +407,7 @@ Handle(This config) {
 		post(new Runnable() {
 			run() {
 				try {
-					WINDOW_MANAGER.updateViewLayout(view, params);
+					getWindowManager().updateViewLayout(view, params);
 				} catch (Exception ignored) {}
 			}
 		});

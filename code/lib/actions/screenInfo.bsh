@@ -31,6 +31,7 @@ screenInfo() {
 	String className = recent { "className" };
 	String appName = every.packageManager.getLabel(packageName);
 	This helper = handle.config.helper;
+	int displayId = handle.config.displayId;
 	String text;
 	This read;
 

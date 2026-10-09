@@ -1,0 +1,42 @@
+/*────────────────────────────────────────────────────────────────
+This code was primarily generated using AI with minimal human editing.
+──────────────────────────────────────────────────────────────── */
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+import android.view.WindowManager;
+import bsh.This;
+import android.accessibilityservice.AccessibilityService;
+
+ContextCompat(This config) {
+    boolean canDisplayA11yOverlay;
+
+    getContext(int displayId) {
+        Context myContext;
+        canDisplayA11yOverlay = canDisplayA11yOverlay();
+        if (config.handle.useAccessibility && canDisplayA11yOverlay) {
+            myContext = tasker.getAccessibilityService();
+        } else {
+            myContext = context;
+        }
+
+        DisplayManager dm = myContext.getSystemService(Context.DISPLAY_SERVICE);
+        if (dm != null) {
+            Display targetDisplay = dm.getDisplay(displayId);
+            if (targetDisplay != null) {
+                myContext = myContext.createDisplayContext(targetDisplay);
+            }
+        }
+        return myContext;
+    }
+
+    getOverlayType() {
+        if (config.handle.useAccessibility && canDisplayA11yOverlay) {
+            return WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        } else {
+            return WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        }
+    }
+
+    return this;
+}

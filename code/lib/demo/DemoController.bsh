@@ -85,7 +85,7 @@ DemoController(This handle) {
 	reset() {
 		try {
 			handle.setColor(handle.config.handle.color);
-			handle.WINDOW_MANAGER.updateViewLayout(handle.view, initialParams);
+			handle.getWindowManager().updateViewLayout(handle.view, initialParams);
 			handle.setInteractable(true);
 		} catch (e) {
 			log("Error: " + e.getMessage(), "ERROR");

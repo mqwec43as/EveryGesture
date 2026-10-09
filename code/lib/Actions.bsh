@@ -10,6 +10,11 @@ import org.json.JSONArray;
 Actions() {
 	final String TOGGLE_HELPER_MODE = "helper";
 	final String OPEN_MAIN_ACTIVITY = "activity";
+	final String TYPE_SHIZUKU_ACTION = "Shizuku";
+	final String TYPE_HIDDEN_API_ACTION = "Hidden api";
+	final String TYPE_ACCESSIBILITY_ACTION = "Accessibility";
+	final String TYPE_REGULAR_ACTION = "Regular";
+	final String TYPE_PRIVILEGED_ACTION = "Privileged";
 
 	This every = tasker.getJavaVariable("everyGesture");
 	static final Object[][] mainActions = new Object[][] {
@@ -17,115 +22,134 @@ Actions() {
 			"Open App",
 			"Launches an application",
 			"openApp",
-			"Launch {0}"
+			"Launch {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Launch Activity",
 			"Launches an application activity",
 			"launchActivity",
-			"Launch {0}"
+			"Launch {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Apps Tray Menu",
 			"Opens selected apps on tray menu",
 			"showAppsTray",
-			"Open tray {0}"
+			"Open tray {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Run Task",
 			"Executes a Tasker task",
 			"runTask",
-			"Perform {0} task"
+			"Perform {0} task",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Global Action",
 			"Perform accessibility actions like Back or Home",
 			"globalAction",
-			"{0}"
+			"{0}",
+			new String[] { TYPE_ACCESSIBILITY_ACTION }
 		},
 		{
 			"Media Key",
 			"Send media control command",
 			"sendMediaKey",
-			"{0}"
+			"{0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Execute Script",
 			"Execute java code stored in /script folder or a file",
 			"runScript",
-			"Execute {0}"
+			"Execute {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Tasker Command",
 			"Send a Tasker command",
 			"sendCommand",
-			"Tasker command"
+			"Tasker command",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Evaluate String",
 			"Run eval() on a string.",
 			"evaluateString",
-			"Evaluate String {0}"
+			"Evaluate String {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Open URL",
 			"Opens a web link",
 			"browseUrl",
-			"Open {0}"
+			"Open {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Every Action",
 			"Run Every Gesture features",
 			"everyAction",
-			"{0}"
+			"{0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Launch Assistant",
 			"Launch phone's assistant",
 			"launchAssistant",
-			"Launch Assistant"
+			"Launch Assistant",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Circle To Search",
 			"Trigger circle to search",
 			"circleToSearch",
-			"Circle to search"
+			"Circle to search",
+			new String[] { TYPE_HIDDEN_API_ACTION }
 		},
 		{
 			"Control Volume",
 			"Adjust volume by percentage",
 			"setVolume",
-			"Set volume {0}%"
+			"Set volume {0}%",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Recent App",
 			"Open recent app with Shizuku.",
 			"openRecentApp",
-			"Open recent app #{0}"
+			"Open recent app #{0}",
+			new String[] { TYPE_SHIZUKU_ACTION }
 		},
 		{
 			"Toggle Hotspot",
 			"Controls Hotspot with Shizuku.",
 			"toggleHotspot",
-			"{0} Hotspot"
+			"{0} Hotspot",
+			new String[] { TYPE_SHIZUKU_ACTION }
 		},
 		{
 			"Toggle Wifi",
 			"Controls Wifi with Shizuku.",
 			"toggleWifi",
-			"{0} Wifi"
+			"{0} Wifi",
+			new String[] { TYPE_SHIZUKU_ACTION }
 		},
 		{
 			"Screen Event",
 			"Read screen and fire assigned events or commands with global variables",
 			"screenInfo",
-			"Trigger screen event"
+			"Trigger screen event",
+			new String[] { TYPE_REGULAR_ACTION }
 		},
 		{
 			"Run Shell",
 			"Run shell by priotizing privileged shell if available",
 			"runShell",
-			"Run shell {0}"
+			"Run shell {0}",
+			new String[] { TYPE_REGULAR_ACTION }
 		}
 	};
 
@@ -310,7 +334,7 @@ Actions() {
 		},
 		{
 			"Toggle",
-			"Toggle",
+			"Toggle state on or off",
 			every.ToggleAction.TOGGLE,
 			"Toggle"
 		}
@@ -399,13 +423,16 @@ Actions() {
 
 			Map itemMap = new HashMap();
 			String label = pkgInfo.applicationInfo.loadLabel(pm).toString();
+			boolean isSystem = (pkgInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+			String type = isSystem ? "System" : "User";
+			String[] tags = { type };
 			itemMap.put("title", label);
 			itemMap.put("subtitle", pkgInfo.packageName);
 			itemMap.put("args", pkgInfo.packageName);
 			itemMap.put("replacer", label);
 			itemMap.put("iconResId", pkgInfo.applicationInfo.icon);
 			itemMap.put("type", "app");
-
+			itemMap.put("tags", tags);
 			items.add(itemMap);
 		}
 		return items;
@@ -516,7 +543,7 @@ Actions() {
 	}
 
 	final This TOP = this;
-	List list = toList("command", mainActions, new String[] { "title", "subtitle", "command", "displayText" });
+	List list = toList("command", mainActions, new String[] { "title", "subtitle", "command", "displayText", "tags" });
 	sort(list, "title");
 	
 	Map actionMenu = new HashMap();

@@ -51,18 +51,26 @@ import bsh.BshMethod;
 import android.graphics.PorterDuff;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import com.joaomgcd.taskerm.genericaction.ActivityLifecycleEvent;
 import android.os.Handler;
 import android.os.Looper;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.BitmapDrawable;
 import android.view.inputmethod.InputMethodManager;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import android.widget.CompoundButton;
+import android.accessibilityservice.AccessibilityService;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import android.widget.HorizontalScrollView;
 
 
-/*───────────────────────────────────────────────────────────────
-ListDialog Component
-───────────────────────────────────────────────────────────────*/
-ListDialog(This config) {
+/* ───────────────────────────────────────────────────────────────
+ * Create list dialog by passing config
+ * Requires Tasker v6.7.8 or higher
+ ─────────────────────────────────────────────────────────────── */
+This ListDialog(This config) {
 
 	String title = config.title == void ? null : config.title;
 	boolean showFilter = config.showFilter == void ? false : config.showFilter;
@@ -71,13 +79,16 @@ ListDialog(This config) {
 	long timeout = config.timeout == void ? 0 : config.timeout;
 	int iconSize = config.iconSize == void ? 40 : config.iconSize;
 	float dimAmount = config.dimAmount == void ? 0.0f: config.dimAmount;
-	float maxWidth = config.maxWidth == void ? 0.5f : config.maxWidth;
+	float maxWidth = config.maxWidth == void ? 0.5f: config.maxWidth;
 	int themeId = config.themeId == void ? 0 : config.themeId;
 	boolean sort = config.sort == void ? false : config.sort;
 	boolean useOverlay = config.useOverlay == void ? false : config.useOverlay;
 	boolean useAccessibility = config.useAccessibility == void ? false : config.useAccessibility;
 	int displayId = config.displayId == void ? 0 : config.displayId;
 	String text = config.text == void ? null : config.text;
+	boolean useTags = config.useTags == void ? false : config.useTags;
+	boolean multiTags = config.multiTags == void ? false : config.multiTags;
+	boolean removeManually = config.removeManually == void ? false : config.removeManually;
 
 	/* Height Logic Setup */
 	Object rawMaxH = config.maxHeight == void ? 0.8 : config.maxHeight;
@@ -102,8 +113,13 @@ ListDialog(This config) {
 	MaterialButton okButton;
 	This tm;
 	This monitor;
-	WindowManager windowManager;
+	WindowManager getWindowManager();
 	PackageManager pm;
+	List tagsList;
+	List tagsChips = new ArrayList();
+	ChipGroup tagsGroup;
+
+	WindowManager.LayoutParams params;
 
 	List originalList = config.itemList;
 	if (originalList == null) originalList = new ArrayList();
@@ -139,6 +155,11 @@ ListDialog(This config) {
 
 		onDestroyed(ActivityLifecycleEvent event) {
 			if (hasDestroyed) config.onDestroyed();
+			filterWrapper = null;
+			filterInput = null;
+			toolbar = null;
+			textView = null;
+			tagsGroup = null;
 		}
 
 		// ! Might need to remove later if Tasker allows Activity to not be excluded in recents
@@ -152,49 +173,44 @@ ListDialog(This config) {
 
 	CompletableSubject waitTimeout = CompletableSubject.create();
 
-	getContext() {
+	Context getContext() {
 		return layoutContext;
 	}
 
-	isActivityContext() {
+	WindowManager getWindowManager() {
+		if (getWindowManager() == null) {
+			getWindowManager() = getContext().getSystemService(Context.WINDOW_SERVICE);
+		}
+		return getWindowManager();
+	}
+
+	boolean isActivityContext() {
 		return getContext() instanceof Activity;
 	}
 
-	isAccessibilityContext() {
+	boolean isAccessibilityContext() {
 		return getContext() instanceof android.accessibilityservice.AccessibilityService;
 	}
 
-	remove() {
+	void remove() {
 		if (isActivityContext() && activity != null) {
 			activity.finish();
 		} else if (useOverlay && isAdded()) {
 			try {
-				windowManager.removeView(root);
+				getWindowManager().removeView(root);
 			} catch (Exception e) {}
 		}
 
 		if (timeout != 0 && !waitTimeout.hasComplete()) waitTimeout.onComplete();
 	}
 
-	setPreSelectedItems(List list) {
-		if (isMulti) {
-			preSelect = list;
-		}
-	}
-
-	clearPreSelectedItems() {
-		if (isMulti) {
-			preSelect = new ArrayList();
-		}
-	}
-
-	attachStateListener() {
+	void attachStateListener() {
 		View.OnAttachStateChangeListener stateListener = new View.OnAttachStateChangeListener() {
 			onViewAttachedToWindow(View v) {
 				if (hasAttach) config.onAttach();
 			}
 			onViewDetachedFromWindow(View v) {
-				remove();
+				if (!removeManually) remove();
 				if (hasDetach) config.onDetach();
 			}
 		};
@@ -207,7 +223,7 @@ ListDialog(This config) {
 		}
 	}
 
-	isIconRecycled(Drawable iconDrawable) {
+	boolean isIconRecycled(Drawable iconDrawable) {
 		if (iconDrawable == null) return false;
 		if (iconDrawable instanceof BitmapDrawable) {
 			return ((BitmapDrawable) iconDrawable).getBitmap().isRecycled();
@@ -216,8 +232,318 @@ ListDialog(This config) {
 		}
 	}
 
-	layout(Context layoutContext) {
+	/*
+	 * Tags are stored in "tags" as String[] array in itemlist
+	 */
+	List getTagsList() {
+		if (tagsList == null) {
+			tagsList = new ArrayList();
+
+			if (originalList == null || originalList.isEmpty() || !useTags) return tagsList;
+
+			for (Map item: originalList) {
+				if (item.containsKey("tags")) {
+					Object itemTags = item.get("tags");
+					if (itemTags instanceof String[]) {
+						if (!multiTags) multiTags = itemTags.length > 1;
+						tagsList.addAll(Arrays.asList(itemTags));
+					}
+				}
+			}
+
+			// Remove duplicates and sort order
+			Set set = new LinkedHashSet(tagsList);
+			tagsList.clear();
+			tagsList.addAll(set);
+			Collections.sort(tagsList, String.CASE_INSENSITIVE_ORDER);
+		}
+
+		return tagsList;
+	}
+
+	/* ───────────────────────────────────────────────────────────────
+	 * Methods to filter and control tags
+	 ─────────────────────────────────────────────────────────────── */
+
+	/*
+	 * Get checked tags from chip list
+	 * The list is written by attachChipTags()
+	 */
+	List getCheckedTags() {
+		List checkedTags = new ArrayList();
+		if (tagsChips == null || tagsChips.isEmpty()) return checkedTags;
+
+		for (Chip chip: tagsChips) {
+			if (chip.isChecked()) checkedTags.add(chip.getText());
+		}
+
+		return checkedTags;
+	}
+
+	// * Check if tags array contains targetTag
+	boolean containsTag(String[] tags, String targetTag) {
+		for (String tag: tags) {
+			if (targetTag.equals(tag)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/*
+	 * Check if item has all checked tags
+	 * All tags means that all checked tags must be present in the item
+	 * For example {"tags": ["tag1", "tag2", "tag3"]} and checkedTags=["tag1", "tag2"]
+	 * will return true
+	 */
+	boolean itemHasTags(Map item, List checkedTags, boolean hasAllTags) {
+		if (item == null || checkedTags == null || checkedTags.isEmpty()) {
+			return false;
+		}
+		if (!item.containsKey("tags")) {
+			return false;
+		}
+		Object itemTagsObj = item.get("tags");
+		if (!(itemTagsObj instanceof String[])) {
+			return false;
+		}
+		String[] tags = (String[]) itemTagsObj;
+		if (hasAllTags) {
+			for (String requiredTag: checkedTags) {
+				if (requiredTag == null) {
+					continue;
+				}
+				if (!containsTag(tags, requiredTag)) {
+					return false;
+				}
+			}
+			return true;
+		} else {
+			for (String tag: tags) {
+				if (tag != null && checkedTags.contains(tag)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
+	/* 
+	 * Helper method to check if item title or subtitle contains text
+	 * Used by the updateList()
+	 */
+	boolean itemHasText(Map item, String text) {
+		String title = item.get("title").toString().toLowerCase();
+		String subTitle = item.get("subtitle") != null ? item.get("subtitle").toString().toLowerCase() : "";
+		return title.contains(text) || subTitle.contains(text);
+	}
+
+	/*
+	 * Update the filtered list
+	 * This method is called when filterInput or tagsChips are changed
+	 */
+	void updateList() {
+		String filterQuery = filterInput != null ? filterInput.getText().toString().toLowerCase() : "";
+		List checkedTags = getCheckedTags();
+		boolean hasCheckedTags = !checkedTags.isEmpty();
+		filteredList.clear();
+		if (filterQuery.isEmpty() && (!useTags || !hasCheckedTags)) {
+			filteredList.addAll(originalList);
+		} else {
+			for (Map itemMap: originalList) {
+				boolean included = true;
+
+				if (hasCheckedTags && useTags) {
+					included = itemHasTags(itemMap, checkedTags, true);
+				}
+
+				if (included && !filterQuery.isEmpty()) {
+					included = itemHasText(itemMap, filterQuery);
+				}
+
+				if (included) filteredList.add(itemMap);
+			}
+		}
+		adapter.notifyDataSetChanged();
+	}
+
+	/* ───────────────────────────────────────────────────────────────
+	 * Methods to attach and set views
+	 ─────────────────────────────────────────────────────────────── */
+
+	/*
+	 * Add chip tags if getTagsList() is not empty
+	 */
+	void attachChipTags() {
+		if (tagsGroup == null) {
+			tagsGroup = new ChipGroup(getContext());
+			tagsGroup.setSingleLine(true);
+			int spacing = tm.dp(-4);
+			tagsGroup.setChipSpacingVertical(spacing);
+			tagsGroup.setLayoutParams(new LinearLayout.LayoutParams(
+					LinearLayout.LayoutParams.WRAP_CONTENT,
+					LinearLayout.LayoutParams.WRAP_CONTENT
+			));
+
+			HorizontalScrollView chipScrollView = new HorizontalScrollView(getContext());
+			FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(
+					FrameLayout.LayoutParams.WRAP_CONTENT, 
+					FrameLayout.LayoutParams.MATCH_PARENT
+			);
+			chipScrollView.setLayoutParams(scrollParams);
+			chipScrollView.setHorizontalScrollBarEnabled(false); 
+			chipScrollView.addView(tagsGroup);
+			
+			mainContainer.addView(chipScrollView);
+		}
+
+		getTagsList();
+		if (tagsList.isEmpty()) return;
+		
+		tagsGroup.setSingleSelection(!multiTags);
+		for (String tag: tagsList) {
+			Chip tagChip = new Chip(getContext());
+			tagChip.setText(tag);
+			tagChip.setCheckable(true);
+			tagChip.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					updateList();
+				}
+			});
+			tagsGroup.addView(tagChip);
+			tagsChips.add(tagChip);
+		}
+	}
+
+	/*
+	 * Set title if titleText is not empty
+	 * Will hide toolbar if the title text is empty or null
+	 */
+	void setTitle(String titleText) {
+		if (toolbar == null) {
+			toolbar = new MaterialToolbar(getContext());
+			toolbar.setTitleCentered(true);
+			mainContainer.addView(toolbar);
+		}
+
+		if (titleText != null && !titleText.isEmpty()) {
+			toolbar.setTitle(titleText);
+			toolbar.setVisibility(View.VISIBLE);
+		} else {
+			toolbar.setVisibility(View.GONE);
+		}
+	}
+
+	/*
+	 * Set text if subtext is not empty
+	 * Will hide text if subtext is empty or null
+	 */
+	void setText(String subtext) {
+		if (textView == null) {
+			textView = new MaterialTextView(getContext());
+			textView.setTextSize(14);
+			textView.setPadding(0, 0, 0, dp(4));
+			textView.setMaxLines(3);
+			textView.setEllipsize(TextUtils.TruncateAt.END);
+			mainContainer.addView(textView);
+		}
+		if (text != null && !text.isEmpty()) {
+			textView.setText(text);
+			textView.setVisibility(View.VISIBLE);
+		} else {
+			textView.setVisibility(View.GONE);
+		}
+	}
+
+	/*
+	 * Show filter input
+	 * See updateList() on how it updates the list based on the filter 
+	 */
+	void showFilterInput(boolean isVisible) {
+		if (filterWrapper == null) {
+			filterWrapper = new TextInputLayout(getContext());
+			filterWrapper.setHint("Search...");
+			filterWrapper.setBoxBackgroundMode(2);
+			mainContainer.addView(filterWrapper);
+			filterWrapper.setEndIconMode(-1);
+			filterWrapper.setEndIconOnClickListener(new View.OnClickListener() {
+				onClick(View view) {
+					InputMethodManager imm = getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+					imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+				}
+			});
+
+			Drawable hideIcon = tm.attr("mw_hardware_keyboard_hide");
+			filterWrapper.setEndIconDrawable(hideIcon);
+
+			filterInput = new TextInputEditText(filterWrapper.getContext());
+			filterWrapper.addView(filterInput);
+			filterInput.addTextChangedListener(new TextWatcher() {
+				beforeTextChanged(CharSequence sequence, int start, int count, int after) {}
+				onTextChanged(CharSequence sequence, int start, int b, int c) {
+					updateList();
+				}
+				afterTextChanged(Editable sequence) {}
+			});
+		}
+
+		if (isVisible) {
+			filterWrapper.setVisibility(View.VISIBLE);
+		} else {
+			filterWrapper.setVisibility(View.GONE);
+		}
+	}
+
+
+	/*
+	 * Attach item click listener
+	 * Long click is only available for single selection
+	 */
+	void attachItemListener() {
+		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+			onItemClick(AdapterView p, View v, int pos, long id) {
+				Map clicked = (Map) filteredList.get(pos);
+				clicked.put("index", pos);
+				if (isMulti) {
+					int index = -1;
+					for (int i = 0; i < selectedItems.size(); i++) {
+						if (selectedItems.get(i) == clicked) {
+							index = i;
+							break;
+						}
+					}
+					if (index != -1) selectedItems.remove(index);
+					else selectedItems.add(clicked);
+					adapter.notifyDataSetChanged();
+				} else {
+					if (!removeManually) remove();
+					clicked.put("longClick", false);
+					if (hasSuccess) config.onSuccess(clicked);
+				}
+			}
+		});
+
+		if (!isMulti) {
+			listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+				onItemLongClick(AdapterView p, View v, int pos, long id) {
+					if (!removeManually) remove();
+					Map clicked = filteredList.get(pos);
+					clicked.put("index", pos);
+					clicked.put("longClick", true);
+					if (hasSuccess) config.onSuccess(clicked);
+					return true;
+				}
+			});
+		}
+
+	}
+
+	/*
+	 * Create the layout from the context passed from show()
+	 */
+	void createLayout(Context layoutContext) {
 		super.layoutContext = layoutContext;
+
 		if (isActivityContext()) {
 			activity = (Activity) layoutContext;
 			monitor = SimpleActivityMonitor(getContext(), activityListener());
@@ -242,7 +568,7 @@ ListDialog(This config) {
 		int dialogWidth = WindowManager.LayoutParams.MATCH_PARENT;
 
 		if (screenW > screenH) {
-			dialogWidth = (int) (screenW * maxWidth);
+			dialogWidth = (int)(screenW * maxWidth);
 			if (dialogWidth > screenW) {
 				dialogWidth = WindowManager.LayoutParams.MATCH_PARENT;
 			}
@@ -257,14 +583,36 @@ ListDialog(This config) {
 			window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
 				WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
-			WindowManager.LayoutParams lp = window.getAttributes();
-			lp.gravity = Gravity.BOTTOM;
+			params = window.getAttributes();
+			params.gravity = Gravity.BOTTOM;
 			if (dimAmount != 0.0f) {
 				window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-				lp.dimAmount = dimAmount;
+				params.dimAmount = dimAmount;
 			}
 
-			window.setAttributes(lp);
+			window.setAttributes(params);
+		} else {
+			getWindowManager() = getContext().getSystemService(Context.WINDOW_SERVICE);
+			int overlayType = isAccessibilityContext() ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+
+			int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+				WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH |
+				WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+
+			if (!showFilter) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+
+			params = new WindowManager.LayoutParams(
+				dialogWidth,
+				WindowManager.LayoutParams.WRAP_CONTENT,
+				overlayType,
+				flags,
+				android.graphics.PixelFormat.TRANSLUCENT
+			);
+			params.gravity = Gravity.BOTTOM;
+			if (dimAmount != 0.0f) {
+				params.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
+				params.dimAmount = dimAmount;
+			}
 		}
 
 		tm = ThemeManager(getContext());
@@ -292,42 +640,13 @@ ListDialog(This config) {
 		mainContainer.setBackground(shape);
 		mainContainer.setClipToOutline(true);
 
-		if (title != null && !title.isEmpty()) {
-			toolbar = new MaterialToolbar(getContext());
-			toolbar.setTitle(title);
-			toolbar.setTitleCentered(true);
-			mainContainer.addView(toolbar);
-		}
-
-		if (text != null && !text.isEmpty()) {
-			textView = new MaterialTextView(getContext());
-			textView.setTextSize(14);
-			textView.setText(text);
-			textView.setPadding(0, 0, 0, dp(4));
-			textView.setMaxLines(3);
-			textView.setEllipsize(TextUtils.TruncateAt.END);
-			mainContainer.addView(textView);
-		}
-
-		if (showFilter) {
-			filterWrapper = new TextInputLayout(getContext());
-			filterWrapper.setHint("Search...");
-			filterWrapper.setBoxBackgroundMode(2);
-			filterInput = new TextInputEditText(filterWrapper.getContext());
-			filterWrapper.addView(filterInput);
-			mainContainer.addView(filterWrapper);
-			filterWrapper.setEndIconMode(-1);
-			filterWrapper.setEndIconOnClickListener(new View.OnClickListener() {
-				onClick(View view) {
-					InputMethodManager imm = getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-					imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-				}
-			});
-			Drawable hideIcon = tm.attr("mw_hardware_keyboard_hide");
-			filterWrapper.setEndIconDrawable(hideIcon);
-		}
+		setTitle(title);
+		setText(text);
+		showFilterInput(showFilter);
+		attachChipTags();
 
 		listView = new ListView(getContext());
+		mainContainer.addView(listView);
 		listView.setDivider(null);
 		listView.setDividerHeight(0);
 
@@ -518,15 +837,14 @@ ListDialog(This config) {
 			}
 		};
 
-		adapter = (BaseAdapter) tasker.implementClass(BaseAdapter.class, adapterHandler);
+		adapter = tasker.implementClass(BaseAdapter.class, adapterHandler);
 		listView.setAdapter(adapter);
-
-		mainContainer.addView(listView);
 
 		buttonsContainer = new LinearLayout(getContext());
 		buttonsContainer.setOrientation(0);
 		buttonsContainer.setGravity(Gravity.END);
 		buttonsContainer.setPadding(0, dp(8), 0, 0);
+		mainContainer.addView(buttonsContainer);
 
 		cBtn = new MaterialButton(getContext());
 		cBtn.setText("CANCEL");
@@ -538,7 +856,6 @@ ListDialog(This config) {
 		});
 
 		buttonsContainer.addView(cBtn);
-
 		if (isMulti) {
 			okButton = new MaterialButton(getContext());
 			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
@@ -547,120 +864,41 @@ ListDialog(This config) {
 			okButton.setText("OK");
 			okButton.setOnClickListener(new View.OnClickListener() {
 				onClick(View v) {
-					remove();
+					if (!removeManually) remove();
 					if (hasSuccessMulti) config.onSuccess(selectedItems);
 				}
 			});
 			buttonsContainer.addView(okButton);
 		}
 
-		mainContainer.addView(buttonsContainer);
-
-		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-			onItemClick(AdapterView p, View v, int pos, long id) {
-				Map clicked = (Map) filteredList.get(pos);
-				clicked.put("index", pos);
-				if (isMulti) {
-					int index = -1;
-					for (int i = 0; i < selectedItems.size(); i++) {
-						if (selectedItems.get(i) == clicked) {
-							index = i;
-							break;
-						}
-					}
-					if (index != -1) selectedItems.remove(index);
-					else selectedItems.add(clicked);
-					adapter.notifyDataSetChanged();
-				} else {
-					remove();
-					clicked.put("longClick", false);
-					if (hasSuccess) config.onSuccess(clicked);
-				}
-			}
-		});
-
-		if (!isMulti) {
-			listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-				onItemLongClick(AdapterView p, View v, int pos, long id) {
-					remove();
-					Map clicked = filteredList.get(pos);
-					clicked.put("index", pos);
-					clicked.put("longClick", true);
-					if (hasSuccess) config.onSuccess(clicked);
-					return true;
-				}
-			});
-		}
-
-		if (filterInput != null) {
-			filterInput.addTextChangedListener(new TextWatcher() {
-				beforeTextChanged(CharSequence sequence, int start, int count, int after) {}
-				onTextChanged(CharSequence sequence, int start, int b, int c) {
-					String filterQuery = sequence.toString().toLowerCase();
-					filteredList.clear();
-					if (filterQuery.isEmpty()) filteredList.addAll(originalList);
-					else {
-						for (int i = 0; i < originalList.size(); i++) {
-							Map itemMap = (Map) originalList.get(i);
-							String title = itemMap.get("title").toString().toLowerCase();
-							String subTitle = itemMap.get("subtitle") != null ? itemMap.get("subtitle").toString().toLowerCase() : "";
-							if (title.contains(filterQuery) || subTitle.contains(filterQuery)) filteredList.add(itemMap);
-						}
-					}
-					adapter.notifyDataSetChanged();
-				}
-				afterTextChanged(Editable sequence) {}
-			});
-		}
-
+		attachItemListener();
 		attachStateListener();
-		root.addView(mainContainer);
 
+		root.addView(mainContainer);
 		if (isActivityContext()) {
 			activity.setContentView(root);
 		} else {
-			windowManager = getContext().getSystemService(Context.WINDOW_SERVICE);
-			int overlayType = isAccessibilityContext() ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-			
-			int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
-					| WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH 
-					| WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-			
-			if (!showFilter) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-			
-			WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-				dialogWidth,
-				WindowManager.LayoutParams.WRAP_CONTENT,
-				overlayType,
-				flags,
-				android.graphics.PixelFormat.TRANSLUCENT
-			);
-			params.gravity = Gravity.BOTTOM;
-
-			if (dimAmount != 0.0f) {
-				params.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
-				params.dimAmount = dimAmount;
-			}
-			windowManager.addView(root, params);
+			getWindowManager().addView(root, params);
 		}
-
 	}
 
-	show() {
+	void show() {
 		if (!isAdded()) {
 			if (!useOverlay) {
 				tasker.doWithActivity(new java.util.function.Consumer() {
-					accept(Object act) { layout((Activity) act); }
+					accept(Activity activity) {
+						createLayout(activity);
+					}
 				});
 			} else {
 				if (useAccessibility) {
-					android.accessibilityservice.AccessibilityService a11yService = tasker.getAccessibilityService();
+					AccessibilityService a11yService = tasker.getAccessibilityService();
 					if (a11yService == null) {
-						throw new com.joaomgcd.taskerm.action.java.JavaCodeException("Accessibility Service is not running.");
+						throw new JavaCodeException("Accessibility Service is not running.");
 					}
-					layout(a11yService);
+					createLayout(a11yService);
 				} else {
-					layout(context);
+					createLayout(context);
 				}
 			}
 
@@ -673,29 +911,45 @@ ListDialog(This config) {
 		}
 	}
 
-	toggle() {
+	void toggle() {
 		if (isRemoved()) show();
 		else remove();
 	}
 
-	isAdded() {
+	boolean isAdded() {
 		if (root == null) return false;
 		return root.getParent() != null && root.isAttachedToWindow();
 	}
 
-	isHidden() {
+	boolean isHidden() {
 		if (root == null) return false;
 		return root.getVisibility() == View.GONE && isAdded();
 	}
 
-	isShowing() {
+	boolean isShowing() {
 		if (root == null) return false;
 		return root.getVisibility() == View.VISIBLE && isAdded();
 	}
 
-	isRemoved() {
+	boolean isRemoved() {
 		if (root == null) return false;
 		return !isAdded();
+	}
+
+	void hide() {
+		if (useOverlay) {
+			if (isShowing()) root.setVisibility(View.GONE);
+		} else {
+			throw new JavaCodeException("Dialog is not created as overlay.");
+		}
+	}
+
+	void unhide() {
+		if (useOverlay) {
+			if (isAdded()) root.setVisibility(View.VISIBLE);
+		} else {
+			throw new JavaCodeException("Dialog is not created as overlay.");
+		}
 	}
 
 	return this;

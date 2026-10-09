@@ -1,0 +1,40 @@
+import android.content.Context;
+import android.view.accessibility.AccessibilityWindowInfo;
+import android.accessibilityservice.AccessibilityService;
+import android.util.SparseArray;
+import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import java.util.List;
+import java.util.Iterator;
+
+/*───────────────────────────────────────────────────────────────
+getRoot()
+**Get Root Node by Display ID**
+Retrieves the root UI node of the first active application window
+found on the specified display ID. Falls back to the standard
+active window if the display ID is invalid or not found.
+
+Arguments:
+
+* (None)
+
+Example:
+AccessibilityNodeInfo root = getRoot();
+───────────────────────────────────────────────────────────────*/
+AccessibilityNodeInfo getRoot(int displayId) {
+	if (displayId == 0) {
+		return getService().getRootInActiveWindow();
+	} else {
+		AccessibilityWindowInfo focusedWindow = getFocusedWindow(displayId);
+		if (focusedWindow != null) return focusedWindow.getRoot();
+		return null;
+	}
+}
+
+AccessibilityNodeInfo getRoot() {
+	int displayId = A11yConfig == void ? 0 : A11yConfig.displayId;
+	return getRoot(displayId);
+}
+
+AccessibilityNodeInfo getRoot(AccessibilityWindowInfo window) {
+	return window.getRoot();
+}
