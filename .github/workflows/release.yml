@@ -30,27 +30,32 @@ jobs:
           
           # 2. Create the zip
           zip -r EveryGesture.zip . \
-          -x "**/*.sync-conflict*" \
-          "**/~syncthing~*" \
-          "**/log.txt" \
-          "*.db" \
-          "*.mp4" \
-          "*.java.cache" \
-          "*.disk" \
-          "**/.demo/*" \
-          "**/handles/*" \
-          "**/scripts/*" \
-          "**/.dev/*" \
-          "**/cache/*" \
-          "**/.git/*" \
-          "**/.github/*" \
-          "**/.*" 
+            -x "**/*.sync-conflict*" \
+            "**/~syncthing~*" \
+            "**/log.txt" \
+            "*.db" \
+            "*.mp4" \
+            "*.java.cache" \
+            "*.disk" \
+            "**/.demo/*" \
+            "**/handles/*" \
+            "**/scripts/*" \
+            "**/.dev/*" \
+            "**/cache/*" \
+            "**/.git/*" \
+            "**/.github/*" \
+            "**/.*"
+
+          # 3. Add all .nomedia files back to the archive if any exist
+          if [ -n "$(find . -name ".nomedia" -print -quit)" ]; then
+            find . -name ".nomedia" | zip EveryGesture.zip -@
+          fi
 
           if [ -d "lib/.preset" ]; then
             zip -r EveryGesture.zip lib/.preset
           fi
 
-          # 3. MOVE the zip to the root workspace
+          # 4. MOVE the zip to the root workspace
           mv EveryGesture.zip ../EveryGesture.zip
 
       - name: Create Release and Upload Asset
