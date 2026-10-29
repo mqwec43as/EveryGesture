@@ -1,0 +1,684 @@
+<TaskerData sr="" dvi="1" tv="6.7.7-rc">
+	<Profile sr="prof120" ve="2">
+		<cdate>1787635635628</cdate>
+		<clp>true</clp>
+		<edate>1791596578046</edate>
+		<flags>8</flags>
+		<id>120</id>
+		<mid0>338</mid0>
+		<nme>📦 Restart On Accessibility InActive</nme>
+		<Event sr="con0" ve="2">
+			<code>2098</code>
+			<pri>0</pri>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%asc_running_services()
+Running Accessibility Services
+The accessibility services that are running after this event is triggered&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%asc_running_services_app_names()
+Running Accessibility Services App Names
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%asc_running_services_service_names()
+Running Accessibility Services Names
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%asc_running_services_app_names()</lhs>
+					<op>3</op>
+					<rhs>*tasker*</rhs>
+				</Condition>
+			</ConditionList>
+		</Event>
+	</Profile>
+	<Profile sr="prof20" ve="2">
+		<cdate>1786754682126</cdate>
+		<clp>true</clp>
+		<edate>1792826882034</edate>
+		<flags>8</flags>
+		<id>20</id>
+		<limit>true</limit>
+		<mid0>303</mid0>
+		<nme>📦 Sample To Intercept Default/Screen Event</nme>
+		<Event sr="con0" ve="2">
+			<code>2091</code>
+			<pri>0</pri>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%gesture
+%gesture
+%gesture will be set to parameter number 2&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%handle
+%handle
+%handle will be set to parameter number 1&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%info
+%info
+%info will be set to parameter number 4&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;%longpress
+%longpress
+%longpress will be set to parameter number 3&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES4&gt;%command_parameter
+Command Parameter
+First part on the right of =:=&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES4&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES5&gt;%command_parameters()
+Command Parameters
+List of parts on the right of =:=&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES5&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES6&gt;%command_prefix
+Prefix
+The part of the command on the left of =:= or the whole command if =:= is not present&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES6&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES7&gt;%command_text
+The full command
+The full command&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES7&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Str sr="arg1" ve="3">every=:=*</Str>
+			<Str sr="arg2" ve="3">%handle,%gesture,%longpress,%info</Str>
+			<Int sr="arg3" val="0"/>
+			<Int sr="arg4" val="1"/>
+		</Event>
+	</Profile>
+	<Profile sr="prof340" ve="2">
+		<cdate>1783937632811</cdate>
+		<edate>1793248887155</edate>
+		<flags>8</flags>
+		<id>340</id>
+		<mid0>341</mid0>
+		<nme>☀️ EveryGesture Safety switch</nme>
+		<Event sr="con0" ve="2">
+			<code>210</code>
+		</Event>
+	</Profile>
+	<Profile sr="prof349" ve="2">
+		<cdate>1783937901544</cdate>
+		<clp>true</clp>
+		<edate>1792826893684</edate>
+		<flags>8</flags>
+		<id>349</id>
+		<limit>true</limit>
+		<mid0>354</mid0>
+		<nme>📦 When EveryGesture Starts</nme>
+		<Event sr="con0" ve="2">
+			<code>2091</code>
+			<pri>0</pri>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%command_parameter
+Command Parameter
+First part on the right of =:=&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%command_parameters()
+Command Parameters
+List of parts on the right of =:=&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%command_prefix
+Prefix
+The part of the command on the left of =:= or the whole command if =:= is not present&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;%command_text
+The full command
+The full command&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Str sr="arg1" ve="3">everyGesture=:=start</Str>
+			<Str sr="arg2" ve="3"/>
+			<Int sr="arg3" val="0"/>
+			<Int sr="arg4" val="1"/>
+		</Event>
+	</Profile>
+	<Profile sr="prof376" ve="2">
+		<_arrlst_tagIds0>0a2f080f-9ee3-43b9-a683-fd693e5f5539</_arrlst_tagIds0>
+		<cdate>1766621437861</cdate>
+		<clp>true</clp>
+		<edate>1791596577618</edate>
+		<flags>8</flags>
+		<id>376</id>
+		<mid0>338</mid0>
+		<nme>☀️ Restart Everywhere Gesture</nme>
+		<Event sr="con0" ve="2">
+			<code>307</code>
+			<pri>0</pri>
+		</Event>
+	</Profile>
+	<Profile sr="prof57" ve="2">
+		<cdate>1787635635628</cdate>
+		<clp>true</clp>
+		<edate>1791596578620</edate>
+		<flags>8</flags>
+		<id>57</id>
+		<mid0>338</mid0>
+		<nme>📦 Restart On Accessibility Started</nme>
+		<Event sr="con0" ve="2">
+			<code>2098</code>
+			<pri>0</pri>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%asc_running_services()
+Running Accessibility Services
+The accessibility services that are running after this event is triggered&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%asc_running_services_app_names()
+Running Accessibility Services App Names
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%asc_running_services_service_names()
+Running Accessibility Services Names
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%asc_running_services_app_names()</lhs>
+					<op>2</op>
+					<rhs>*tasker*</rhs>
+				</Condition>
+			</ConditionList>
+		</Event>
+	</Profile>
+	<Profile sr="prof702" ve="2">
+		<cdate>1786845348872</cdate>
+		<clp>true</clp>
+		<edate>1786845519678</edate>
+		<flags>8</flags>
+		<id>702</id>
+		<mid0>704</mid0>
+		<nme>☀️ Every Screen Event Bridge</nme>
+		<pri>50</pri>
+		<Event sr="con0" ve="2">
+			<code>3050</code>
+			<pri>0</pri>
+			<Str sr="arg0" ve="3">%EG_EventBridge</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="0"/>
+		</Event>
+	</Profile>
+	<Project sr="proj0" ve="2">
+		<cdate>1783437517220</cdate>
+		<id>df6be81e-742b-44ad-80ba-f43b745c2aaf</id>
+		<name>EveryGesture</name>
+		<pids>376,340,349,20,702,120,57</pids>
+		<psort>Alpha</psort>
+		<tids>309,329,336,338,339,304,341,704,354,303</tids>
+		<Share sr="Share">
+			<b>false</b>
+			<d>&lt;div align="center"&gt;
+
+Draw any gesture and do something. 
+&lt;p&gt;
+&lt;h4&gt;&lt;b&gt;This project was developed with the assistance of generative AI tools and the owner doesn't have android dev experience.&lt;/b&gt;&lt;/h4&gt;
+&lt;p&gt;
+https://github.com/mqwec43as/EveryGesture
+&lt;p&gt;
+&lt;img src="https://i.imgur.com/xTD2Lni.gif" alt="Demo" height="480"&gt;</d>
+			<g>Accessibility,Apps,Utility</g>
+			<p>true</p>
+			<t>⬇️ Import EveryGesture</t>
+		</Share>
+		<Img sr="icon" ve="2">
+			<sym>thread_unread</sym>
+		</Img>
+	</Project>
+	<Task sr="task303">
+		<cdate>1786754688022</cdate>
+		<edate>1790592529771</edate>
+		<id>303</id>
+		<pri>6</pri>
+		<rty>1</rty>
+		<Action sr="act0" ve="7">
+			<code>549</code>
+			<Str sr="arg0" ve="3">*evtprm*/*command*</Str>
+			<Int sr="arg1" val="1"/>
+			<Int sr="arg2" val="1"/>
+			<Int sr="arg3" val="0"/>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>396</code>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%profile_name
+0. Profile name
+Can also be accessed as an array&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%mt_groups()
+Groups
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%mt_match_found
+Is Match
+true if there was a match, false otherwise&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;%mt_match
+Match
+Can also be accessed as an array&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Int sr="arg1" val="1"/>
+			<Str sr="arg2" ve="3">%caller()</Str>
+			<Str sr="arg3" ve="3">profile=enter:(?&lt;profile_name&gt;.*)</Str>
+			<Str sr="arg4" ve="3"/>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>548</code>
+			<Str sr="arg0" ve="3">Handle: %handle 
+Gesture: %gesture
+Is long press: %longpress
+
+Disable this profile after import.
+
+%profile_name</Str>
+			<Int sr="arg1" val="0"/>
+			<Str sr="arg10" ve="3"/>
+			<Int sr="arg11" val="1"/>
+			<Int sr="arg12" val="0"/>
+			<Str sr="arg13" ve="3">Top</Str>
+			<Int sr="arg14" val="0"/>
+			<Str sr="arg15" ve="3">%profile_name</Str>
+			<Int sr="arg2" val="1"/>
+			<Str sr="arg3" ve="3">Click to inspect commands</Str>
+			<Str sr="arg4" ve="3"/>
+			<Str sr="arg5" ve="3"/>
+			<Str sr="arg6" ve="3"/>
+			<Str sr="arg7" ve="3">📦 Inspect Variables</Str>
+			<Str sr="arg8" ve="3">3000</Str>
+			<Int sr="arg9" val="1"/>
+		</Action>
+	</Task>
+	<Task sr="task304">
+		<cdate>1786771621655</cdate>
+		<edate>1793248899311</edate>
+		<id>304</id>
+		<nme>📦 Inspect Variables</nme>
+		<pri>1000</pri>
+		<Action sr="act0" ve="7">
+			<code>474</code>
+			<Str sr="arg0" ve="3">everyGesture.inspectVariables(tasker);</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+	</Task>
+	<Task sr="task309">
+		<cdate>1783437736965</cdate>
+		<edate>1787553389023</edate>
+		<id>309</id>
+		<nme>🫟 Open EveryGesture Main Activity</nme>
+		<pri>100</pri>
+		<Action sr="act0" ve="7">
+			<code>474</code>
+			<Str sr="arg0" ve="3">addClassPath(everyGesture.MAIN_DIRECTORY);
+everyGesture.openMainActivity();</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+	</Task>
+	<Task sr="task329">
+		<_arrlst_tagIds0>b5650df9-040a-40e0-9f2f-d2ad9a264fe4</_arrlst_tagIds0>
+		<_arrlst_tagIds1>3b829350-4b2d-4ab9-b1a1-318b7fdb97f2</_arrlst_tagIds1>
+		<cdate>1767621529284</cdate>
+		<edate>1788416962021</edate>
+		<id>329</id>
+		<nme>⬇️ Import EveryGesture</nme>
+		<pri>100</pri>
+		<Action sr="act0" ve="7">
+			<code>474</code>
+			<se>false</se>
+			<Str sr="arg0" ve="3">import bsh.This;
+
+try {
+
+String varName = "everyGesture";
+if (tasker.getJavaVariable(varName) != null ) {
+	This old = tasker.getJavaVariable(varName);
+	old.removeAll();
+	old.unregister(); 
+	if (old.scheduledExecutor != void) old.scheduledExecutor.shutdownNow();
+	if (old.executor != void) old.executor.shutdownNow();
+}
+} catch(e) {}
+
+try {
+tasker.setJavaVariable("everyGesture", null );
+} catch(e) {}</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>474</code>
+			<Str sr="arg0" ve="3">importManager = "https://raw.githubusercontent.com/mqwec43as/EveryGesture/refs/heads/main/code/lib/UpdateManager.bsh";
+source(new URL(importManager));
+
+updateManager = UpdateManager();
+String targetPath;
+
+targetPath = updateManager.importDialog();
+if (targetPath != null) tasker.setVariable("everygesture_path", targetPath);</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>37</code>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%everygesture_path</lhs>
+					<op>13</op>
+					<rhs></rhs>
+				</Condition>
+			</ConditionList>
+		</Action>
+		<Action sr="act3" ve="7">
+			<code>137</code>
+			<Int sr="arg0" val="0"/>
+			<Str sr="arg1" ve="3"/>
+		</Action>
+		<Action sr="act4" ve="7">
+			<code>38</code>
+		</Action>
+		<Action sr="act5" ve="7">
+			<code>130</code>
+			<Str sr="arg0" ve="3">📦 Initiate everyGesture Variable</Str>
+			<Int sr="arg1">
+				<var>%priority</var>
+			</Int>
+			<Int sr="arg10" val="1"/>
+			<Str sr="arg2" ve="3">%everygesture_path</Str>
+			<Str sr="arg3" ve="3"/>
+			<Str sr="arg4" ve="3"/>
+			<Int sr="arg5" val="0"/>
+			<Int sr="arg6" val="0"/>
+			<Str sr="arg7" ve="3">%target_path</Str>
+			<Int sr="arg8" val="0"/>
+			<Int sr="arg9" val="0"/>
+		</Action>
+		<Action sr="act6" ve="7">
+			<code>130</code>
+			<Str sr="arg0" ve="3">📒 EveryGesture Quick Actions</Str>
+			<Int sr="arg1">
+				<var>%priority</var>
+			</Int>
+			<Int sr="arg10" val="0"/>
+			<Str sr="arg2" ve="3"/>
+			<Str sr="arg3" ve="3"/>
+			<Str sr="arg4" ve="3"/>
+			<Int sr="arg5" val="0"/>
+			<Int sr="arg6" val="1"/>
+			<Str sr="arg7" ve="3"/>
+			<Int sr="arg8" val="0"/>
+			<Int sr="arg9" val="0"/>
+		</Action>
+	</Task>
+	<Task sr="task336">
+		<_arrlst_tagIds0>b5650df9-040a-40e0-9f2f-d2ad9a264fe4</_arrlst_tagIds0>
+		<cdate>1776589226382</cdate>
+		<edate>1788417008164</edate>
+		<id>336</id>
+		<nme>⬇️ Silent Update With everyGesture</nme>
+		<pri>100</pri>
+		<Action sr="act0" ve="7">
+			<code>474</code>
+			<label>Redownload the latest release</label>
+			<Str sr="arg0" ve="3">everyGesture.update();</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>137</code>
+			<Int sr="arg0" val="0"/>
+			<Str sr="arg1" ve="3"/>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>474</code>
+			<label>Redownload the latest release including pre release</label>
+			<Str sr="arg0" ve="3">everyGesture.updatePreRelease();</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+		<Action sr="act3" ve="7">
+			<code>137</code>
+			<Int sr="arg0" val="0"/>
+			<Str sr="arg1" ve="3"/>
+		</Action>
+		<Action sr="act4" ve="7">
+			<code>430</code>
+			<label>Restart is advised</label>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""/&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Int sr="arg1" val="0"/>
+		</Action>
+		<Action sr="act5" ve="7">
+			<code>137</code>
+			<Int sr="arg0" val="0"/>
+			<Str sr="arg1" ve="3"/>
+		</Action>
+	</Task>
+	<Task sr="task338">
+		<_arrlst_tagIds0>0a2f080f-9ee3-43b9-a683-fd693e5f5539</_arrlst_tagIds0>
+		<cdate>1774959381007</cdate>
+		<edate>1788416983434</edate>
+		<id>338</id>
+		<nme>📦 Initiate everyGesture Variable</nme>
+		<pri>6</pri>
+		<Action sr="act0" ve="7">
+			<code>547</code>
+			<label>Use a custom every gesture path in the task configuration or here.
+
+Every new import will overwrite existing files with the same name.</label>
+			<on>false</on>
+			<Str sr="arg0" ve="3">%everygesture_path</Str>
+			<Str sr="arg1" ve="3">Custom accessibility path</Str>
+			<Int sr="arg2" val="0"/>
+			<Int sr="arg3" val="0"/>
+			<Int sr="arg4" val="0"/>
+			<Int sr="arg5" val="3"/>
+			<Int sr="arg6" val="1"/>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>547</code>
+			<label>Delete if you set accessibility path manually</label>
+			<Str sr="arg0" ve="3">%everygesture_path</Str>
+			<Str sr="arg1" ve="3">%par1</Str>
+			<Int sr="arg2" val="0"/>
+			<Int sr="arg3" val="0"/>
+			<Int sr="arg4" val="0"/>
+			<Int sr="arg5" val="3"/>
+			<Int sr="arg6" val="1"/>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%par1</lhs>
+					<op>12</op>
+					<rhs></rhs>
+				</Condition>
+			</ConditionList>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>474</code>
+			<Str sr="arg0" ve="3">everyDir = tasker.getVariable("everygesture_path");
+
+source(everyDir + "/gesture.java");</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+		<ProfileVariable sr="pv0">
+			<clearout>false</clearout>
+			<exportval></exportval>
+			<immutable>false</immutable>
+			<pvci>false</pvci>
+			<pvd></pvd>
+			<pvdn></pvdn>
+			<pvid>338</pvid>
+			<pvit>t</pvit>
+			<pvn>%everygesture_path</pvn>
+			<pvt>ds</pvt>
+			<strout>true</strout>
+		</ProfileVariable>
+	</Task>
+	<Task sr="task339">
+		<_arrlst_tagIds0>19485ba1-997d-4e77-b564-ceb81bc92fb8</_arrlst_tagIds0>
+		<cdate>1780977791020</cdate>
+		<edate>1787267041406</edate>
+		<id>339</id>
+		<nme>📒 EveryGesture Quick Actions</nme>
+		<pri>100</pri>
+		<Action sr="act0" ve="7">
+			<code>354</code>
+			<Str sr="arg0" ve="3">%option</Str>
+			<Str sr="arg1" ve="3">Open main activity
+
+=Read source code</Str>
+			<Str sr="arg2" ve="3">=</Str>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>378</code>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%ld_button
+Button
+The label of the button that was clicked&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%ld_long
+Long
+true if item was long clicked, false otherwise&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%ld_selected
+Selected
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;%ld_selected_index
+Selected Index
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Int sr="arg1" val="0"/>
+			<Int sr="arg10" val="0"/>
+			<Int sr="arg11" val="0"/>
+			<Int sr="arg12" val="1"/>
+			<Str sr="arg13" ve="3">This project were developed with the assistance of generative AI tools.</Str>
+			<Str sr="arg2" ve="3">Quick post import actions</Str>
+			<Str sr="arg3" ve="3">%option</Str>
+			<Str sr="arg4" ve="3"/>
+			<Str sr="arg5" ve="3"/>
+			<Str sr="arg6" ve="3"/>
+			<Str sr="arg7" ve="3"/>
+			<Str sr="arg8" ve="3"/>
+			<Int sr="arg9" val="120"/>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>37</code>
+			<coll>false</coll>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%ld_selected</lhs>
+					<op>2</op>
+					<rhs>open*</rhs>
+				</Condition>
+			</ConditionList>
+		</Action>
+		<Action sr="act3" ve="7">
+			<code>130</code>
+			<Str sr="arg0" ve="3">🫟 Open EveryGesture Main Activity</Str>
+			<Int sr="arg1">
+				<var>%priority</var>
+			</Int>
+			<Int sr="arg10" val="1"/>
+			<Str sr="arg2" ve="3"/>
+			<Str sr="arg3" ve="3"/>
+			<Str sr="arg4" ve="3"/>
+			<Int sr="arg5" val="0"/>
+			<Int sr="arg6" val="0"/>
+			<Str sr="arg7" ve="3"/>
+			<Int sr="arg8" val="0"/>
+			<Int sr="arg9" val="0"/>
+		</Action>
+		<Action sr="act4" ve="7">
+			<code>43</code>
+			<ConditionList sr="if">
+				<Condition sr="c0" ve="3">
+					<lhs>%ld_selected</lhs>
+					<op>2</op>
+					<rhs>read*</rhs>
+				</Condition>
+			</ConditionList>
+		</Action>
+		<Action sr="act5" ve="7">
+			<code>104</code>
+			<Str sr="arg0" ve="3">https://github.com/mqwec43as/EveryGesture</Str>
+			<App sr="arg1"/>
+			<Int sr="arg2" val="0"/>
+			<Str sr="arg3" ve="3"/>
+		</Action>
+		<Action sr="act6" ve="7">
+			<code>38</code>
+		</Action>
+	</Task>
+	<Task sr="task341">
+		<cdate>1783937635987</cdate>
+		<edate>1793248887155</edate>
+		<id>341</id>
+		<pri>6</pri>
+		<rty>2</rty>
+		<Action sr="act0" ve="7">
+			<code>474</code>
+			<Str sr="arg0" ve="3">try {
+	everyGesture.cancelAllSchedules();
+} catch (e) {}</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+	</Task>
+	<Task sr="task354">
+		<cdate>1783937908319</cdate>
+		<edate>1792724370973</edate>
+		<id>354</id>
+		<pri>6</pri>
+		<Action sr="act0" ve="7">
+			<code>396</code>
+			<Bundle sr="arg0">
+				<Vals sr="val">
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES>&lt;StringArray sr=""&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;%profile_name
+0. Profile name
+Can also be accessed as an array&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES0&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;%mt_groups()
+Groups
+&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES1&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;%mt_match_found
+Is Match
+true if there was a match, false otherwise&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES2&gt;&lt;_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;%mt_match
+Match
+Can also be accessed as an array&lt;/_array_net.dinglisch.android.tasker.RELEVANT_VARIABLES3&gt;&lt;/StringArray&gt;</net.dinglisch.android.tasker.RELEVANT_VARIABLES>
+					<net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>[Ljava.lang.String;</net.dinglisch.android.tasker.RELEVANT_VARIABLES-type>
+				</Vals>
+			</Bundle>
+			<Int sr="arg1" val="1"/>
+			<Str sr="arg2" ve="3">%caller()</Str>
+			<Str sr="arg3" ve="3">profile=enter:(?&lt;profile_name&gt;.*)</Str>
+			<Str sr="arg4" ve="3"/>
+		</Action>
+		<Action sr="act1" ve="7">
+			<code>548</code>
+			<Str sr="arg0" ve="3">Disable this toast after import.
+
+%profile_name</Str>
+			<Int sr="arg1" val="0"/>
+			<Str sr="arg10" ve="3"/>
+			<Int sr="arg11" val="1"/>
+			<Int sr="arg12" val="0"/>
+			<Str sr="arg13" ve="3"/>
+			<Int sr="arg14" val="0"/>
+			<Str sr="arg15" ve="3">%profile_name</Str>
+			<Int sr="arg2" val="1"/>
+			<Str sr="arg3" ve="3">EveryGesture is started</Str>
+			<Str sr="arg4" ve="3"/>
+			<Str sr="arg5" ve="3"/>
+			<Str sr="arg6" ve="3"/>
+			<Str sr="arg7" ve="3"/>
+			<Str sr="arg8" ve="3"/>
+			<Int sr="arg9" val="1"/>
+		</Action>
+		<Action sr="act2" ve="7">
+			<code>474</code>
+			<label>Change this to edit configuration</label>
+			<Str sr="arg0" ve="3">// * Delay before triggering ScreenEvent
+everyGesture.EventDelay = 100;
+
+// * Use dark theme for UI
+everyGesture.useDarkTheme = true;
+
+// * Update uses pre-release or not
+everyGesture.updatePreRelease = false;
+
+// * Maximum displayed action characters in the handle templates activity
+everyGesture.maxDisplayTextLength = 50;
+
+// * Task maximum duration
+everyGesture.taskMaximumDuration = 40000;</Str>
+			<Str sr="arg1" ve="3"/>
+			<Int sr="arg2" val="1"/>
+		</Action>
+	</Task>
+	<Task sr="task704">
+		<cdate>1786845352645</cdate>
+		<edate>1786845421640</edate>
+		<id>704</id>
+		<pri>51</pri>
+		<rty>2</rty>
+		<Action sr="act0" ve="7">
+			<code>385</code>
+			<Str sr="arg0" ve="3">%evtprm2</Str>
+		</Action>
+	</Task>
+</TaskerData>
