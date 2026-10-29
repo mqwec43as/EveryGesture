@@ -79,6 +79,16 @@ handle.unmute();
 // Make it not interactable
 handle.setInteractable(false); 
 ```
+&nbsp;
+<div align="center">
+
+# HOW TO DOWNLOAD
+</div>
+
+1. Download the [project here](/import/EveryGesture.prj.xml) and import manually.
+2. After importing, Tasker should ask you to run `Import Every Gesture` task. If doesn't, then run the task manually.
+3. It will prompt the download dialog.
+4. Confirm and select the a folder. It's recommended to create new folder instead.
 
 &nbsp;
 
