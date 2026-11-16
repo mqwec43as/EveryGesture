@@ -113,7 +113,7 @@ This ListDialog(This config) {
 	MaterialButton okButton;
 	This tm;
 	This monitor;
-	WindowManager getWindowManager();
+	WindowManager windowManager;
 	PackageManager pm;
 	List tagsList;
 	List tagsChips = new ArrayList();
@@ -178,10 +178,14 @@ This ListDialog(This config) {
 	}
 
 	WindowManager getWindowManager() {
-		if (getWindowManager() == null) {
-			getWindowManager() = getContext().getSystemService(Context.WINDOW_SERVICE);
+		if (windowManager == null) {
+			windowManager = getContext().getSystemService(Context.WINDOW_SERVICE);
 		}
-		return getWindowManager();
+		return windowManager;
+	}
+
+	int dp(int dp) {
+		return tm.dp(dp);
 	}
 
 	boolean isActivityContext() {
@@ -592,7 +596,7 @@ This ListDialog(This config) {
 
 			window.setAttributes(params);
 		} else {
-			getWindowManager() = getContext().getSystemService(Context.WINDOW_SERVICE);
+			getWindowManager();
 			int overlayType = isAccessibilityContext() ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
 			int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
@@ -618,10 +622,6 @@ This ListDialog(This config) {
 		tm = ThemeManager(getContext());
 		if (themeId == 0) tm.setThemeDark();
 		else getContext().setTheme(themeId);
-
-		dp(int dp) {
-			return tm.dp(dp);
-		}
 
 		root = new FloatingToolbarLayout(getContext());
 		root.setBackgroundColor(Color.TRANSPARENT);

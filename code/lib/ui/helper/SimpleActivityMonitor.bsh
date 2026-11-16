@@ -53,7 +53,12 @@ SimpleActivityMonitor(Activity activity, This listener) {
 						if (hasMethod(callbackMethod)) {
                             activity.runOnUiThread(new Runnable() {
                                 run() {
-                                    listener.invokeMethod(callbackMethod, new Object[] { event });
+                                    try {
+                                        listener.invokeMethod(callbackMethod, new Object[] { event });
+                                    } catch(e) {
+                                        tasker.showToast("Monitor Callback Error: " + e.getMessage());
+                                        tasker.log(e.getMessage());
+                                    }
                                 }
                             });
                         }

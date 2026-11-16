@@ -406,14 +406,6 @@ Actions() {
 
 		List packages = pm.getInstalledPackages(0);
 
-		packages.sort(new Comparator() {
-			compare(Object o1, Object o2) {
-				String label1 = ((PackageInfo) o1).applicationInfo.loadLabel(pm).toString();
-				String label2 = ((PackageInfo) o2).applicationInfo.loadLabel(pm).toString();
-				return label1.compareToIgnoreCase(label2);
-			}
-		});
-
 		for (int i = 0; i < packages.size(); i++) {
 			PackageInfo pkgInfo = (PackageInfo) packages.get(i);
 
@@ -435,6 +427,17 @@ Actions() {
 			itemMap.put("tags", tags);
 			items.add(itemMap);
 		}
+
+		packages = null;
+		
+		items.sort(new Comparator() {
+			compare(Object o1, Object o2) {
+				String label1 = o1.get("title");
+				String label2 = o2.get("title");
+				return label1.compareToIgnoreCase(label2);
+			}
+		});
+
 		return items;
 	}
 

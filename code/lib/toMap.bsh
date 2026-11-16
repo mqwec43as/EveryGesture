@@ -68,7 +68,6 @@ public Map toMap(This target) {
 	Map map = new HashMap();
 	for (String name: target.variables) {
 		Object value = target.namespace.getVariable(name);
-		tasker.setJavaVariable("lastName", name);
 		if (!(value instanceof This)) {
 			if (value instanceof List) {
 				if (hasThis(value)) continue;
